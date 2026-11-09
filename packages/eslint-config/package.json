@@ -1,0 +1,13 @@
+{
+  "name": "@space-sim/eslint-config",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "next.js"
+  ],
+  "devDependencies": {
+    "eslint": "^9.21.0"
+  }
+}

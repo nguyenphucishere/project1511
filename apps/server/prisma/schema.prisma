@@ -1,0 +1,61 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String             @id @default(uuid())
+  email        String             @unique
+  username     String             @unique
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  missions     Mission[]
+  leaderboards LeaderboardEntry[]
+}
+
+model Mission {
+  id           String             @id @default(uuid())
+  title        String
+  objective    String
+  difficulty   String             @default("beginner")
+  schematic    Json               // Full spacecraft bus, components & orbit design JSONB
+  constraints  Json               // Mission budget, mass, lifetime constraints
+  isCompleted  Boolean            @default(false)
+  score        Float?
+  authorId     String
+  author       User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  sessions     MissionSession[]
+  leaderboards LeaderboardEntry[]
+}
+
+model MissionSession {
+  id             String    @id @default(uuid())
+  missionId      String
+  mission        Mission   @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  roomCode       String    @unique
+  roleLocks      Json      // Role assignment mapping & active field locks
+  crdtDocSnapshot Bytes?   // Compressed binary Yjs CRDT snapshot
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model LeaderboardEntry {
+  id           String    @id @default(uuid())
+  missionId    String
+  mission      Mission   @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score        Float
+  scienceScore Float
+  budgetCost   Float
+  riskPenalty  Float
+  submittedAt  DateTime  @default(now())
+
+  @@index([missionId, score(sort: Desc)])
+}
