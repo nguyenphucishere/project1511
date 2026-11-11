@@ -36,10 +36,14 @@ model Mission {
 
 model MissionSession {
   id             String    @id @default(uuid())
-  missionId      String
-  mission        Mission   @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  // Optional: a session is created on first WebSocket connect, before any Mission row exists.
+  missionId      String?
+  mission        Mission?  @relation(fields: [missionId], references: [id], onDelete: Cascade)
   roomCode       String    @unique
-  roleLocks      Json      // Role assignment mapping & active field locks
+  // Guest identity that owns the room (JWT subject); later connections must match.
+  ownerId        String
+  ownerName      String
+  roleLocks      Json      @default("{}") // Role assignment mapping & active field locks
   crdtDocSnapshot Bytes?   // Compressed binary Yjs CRDT snapshot
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
