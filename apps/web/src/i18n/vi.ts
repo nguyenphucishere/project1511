@@ -89,6 +89,18 @@ export const vi: Dictionary = {
     continue: "Sang xưởng lắp ráp",
     sceneLabel: "Phòng y tế qua mắt phi hành gia",
   },
+  workshop: {
+    chiefSays: "{name} giải thích",
+    mass: "Khối lượng",
+    massValue: "{value} tấn",
+    next: "Tiếp: {name}",
+    readyBadge: "Sẵn sàng ra bệ phóng",
+    doneTitle: "Đã kiểm tra tên lửa",
+    doneBody: "Mọi bộ phận đều đã được kiểm tra. {name} ký duyệt, và tên lửa được đưa ra bệ phóng.",
+    total: "Tổng khối lượng",
+    continue: "Sang phòng điều khiển",
+    sceneLabel: "Xưởng lắp ráp qua mắt kỹ sư phóng, với tên lửa Mặt Trăng trên giá đỡ",
+  },
   portrait: {
     placeholderAlt: "Chân dung {name} (ảnh tạm)",
   },

@@ -92,6 +92,18 @@ export const en = {
     continue: "Continue to the assembly hall",
     sceneLabel: "Medical bay seen through the astronaut's eyes",
   },
+  workshop: {
+    chiefSays: "{name} explains",
+    mass: "Mass",
+    massValue: "{value} t",
+    next: "Next: {name}",
+    readyBadge: "Ready for rollout",
+    doneTitle: "Rocket inspected",
+    doneBody: "Every part is checked. {name} signs off the stack, and the rocket rolls out to the pad.",
+    total: "Total stack mass",
+    continue: "Continue to mission control",
+    sceneLabel: "Assembly hall seen through the launch engineer's eyes, with the Moon rocket on its stand",
+  },
   portrait: {
     placeholderAlt: "Portrait of {name} (placeholder art)",
   },
