@@ -15,11 +15,12 @@ interface ProgressProps extends React.ComponentPropsWithoutRef<typeof ProgressPr
  */
 const Progress = React.forwardRef<React.ElementRef<typeof ProgressPrimitive.Root>, ProgressProps>(
   ({ className, value, max = 100, tone = "default", ...props }, ref) => {
-    const pct = Math.min(100, Math.max(0, ((value ?? 0) / max) * 100));
+    const safe = value == null ? null : Math.min(max, Math.max(0, value));
+    const pct = ((safe ?? 0) / max) * 100;
     return (
       <ProgressPrimitive.Root
         ref={ref}
-        value={value}
+        value={safe}
         max={max}
         className={cn("relative h-3 w-full overflow-hidden bg-space-blue/50", className)}
         {...props}

@@ -73,6 +73,22 @@ export const vi: Dictionary = {
     lookHint: "Kéo chuột hoặc dùng phím mũi tên để nhìn quanh.",
     progress: "Đã kiểm tra {done}/{total}",
   },
+  objectives: {
+    title: "Mục tiêu",
+    done: "Xong",
+  },
+  medical: {
+    start: "Bắt đầu đo",
+    measuring: "Đang đo",
+    withinRange: "Trong ngưỡng bình thường",
+    normal: "Bình thường: {range}",
+    finish: "Xong",
+    doctorSays: "{name} giải thích",
+    clearedTitle: "Đủ điều kiện bay",
+    clearedBody: "Cả ba chỉ số đều trong ngưỡng. {name} đã ký thẻ bay cho bạn.",
+    continue: "Sang xưởng lắp ráp",
+    sceneLabel: "Phòng y tế qua mắt phi hành gia",
+  },
   portrait: {
     placeholderAlt: "Chân dung {name} (ảnh tạm)",
   },

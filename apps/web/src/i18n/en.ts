@@ -76,6 +76,22 @@ export const en = {
     lookHint: "Drag or use the arrow keys to look around.",
     progress: "{done} of {total} checked",
   },
+  objectives: {
+    title: "Objectives",
+    done: "Done",
+  },
+  medical: {
+    start: "Start measurement",
+    measuring: "Measuring",
+    withinRange: "Within range",
+    normal: "Normal: {range}",
+    finish: "Done",
+    doctorSays: "{name} explains",
+    clearedTitle: "Cleared for flight",
+    clearedBody: "All three checks are within range. {name} has signed your flight card.",
+    continue: "Continue to the assembly hall",
+    sceneLabel: "Medical bay seen through the astronaut's eyes",
+  },
   portrait: {
     placeholderAlt: "Portrait of {name} (placeholder art)",
   },

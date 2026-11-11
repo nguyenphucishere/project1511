@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Eye, Footprints } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, ChevronDown, Eye, Footprints } from "lucide-react";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
 import { useSceneStore } from "@/game/sceneStore";
@@ -18,6 +19,12 @@ export function HotspotList({ className }: { className?: string }) {
   const highlightedId = useSceneStore((s) => s.highlightedId);
   const highlight = useSceneStore((s) => s.highlight);
 
+  // Open by default on wide screens; collapsed on phones, where it would cover the view.
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
+    setOpen(window.matchMedia("(min-width: 640px)").matches);
+  }, []);
+
   const items = Object.values(hotspots).sort((a, b) =>
     a.kind === b.kind ? 0 : a.kind === "inspect" ? -1 : 1,
   );
@@ -25,8 +32,22 @@ export function HotspotList({ className }: { className?: string }) {
 
   return (
     <nav aria-label={t.hud.pointsOfInterest} className={cn("bezel w-full max-w-xs bg-space-deep/90 p-3", className)}>
-      <h2 className="px-1 pb-2 text-sm font-medium text-foreground/75">{t.hud.pointsOfInterest}</h2>
-      <ul className="flex max-h-[32dvh] flex-col gap-1 overflow-y-auto">
+      <h2 className="text-sm font-medium text-foreground/75">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls="hotspot-list"
+          onClick={() => setOpen((o) => !o)}
+          className="flex w-full items-center justify-between gap-2 px-1 text-left focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--primary))]"
+        >
+          <span>
+            {t.hud.pointsOfInterest} <span className="font-mono text-xs text-foreground/60">({items.length})</span>
+          </span>
+          <ChevronDown aria-hidden className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+        </button>
+      </h2>
+      {/* A `hidden` attribute would lose to Tailwind's `flex`; toggle the class instead. */}
+      <ul id="hotspot-list" className={cn("mt-2 max-h-[32dvh] flex-col gap-1 overflow-y-auto", open ? "flex" : "hidden")}>
         {items.map((h) => {
           const name = localize(h.label);
           const Icon = h.kind === "move" ? Footprints : h.done ? Check : Eye;
