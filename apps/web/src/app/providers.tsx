@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useSettingsStore } from "@/game/settingsStore";
+import { useGameStore } from "@/game/gameStore";
 
 /** Client-side app shell: restores saved settings and mirrors them onto <html>. */
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -11,6 +12,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     void useSettingsStore.persist.rehydrate();
+    void useGameStore.persist.rehydrate();
   }, []);
 
   useEffect(() => {
