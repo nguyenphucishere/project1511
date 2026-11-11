@@ -6,6 +6,7 @@ import { DialogueOverlay } from "@/components/cutscene/DialogueOverlay";
 import { ScenePlaceholder } from "@/components/cutscene/ScenePlaceholder";
 import { EndScreen } from "@/components/cutscene/EndScreen";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { SCENES } from "@/scenes/registry";
 import { cn } from "@/lib/utils";
 import { getStep, type Step, type Transition } from "./flow";
 import { useGameStore } from "./gameStore";
@@ -74,9 +75,10 @@ function StepView({ step, onDone }: { step: Step; onDone: () => void }) {
       return <CutscenePlayer video={step.video} onComplete={onDone} />;
     case "briefing":
       return <DialogueOverlay briefing={step.briefing} chapter={step.chapter} onDone={onDone} />;
-    case "scene":
-      // Each chapter's 3D scene replaces this placeholder in P3–P6.
-      return <ScenePlaceholder scene={step.scene} onComplete={onDone} />;
+    case "scene": {
+      const Scene = SCENES[step.scene];
+      return Scene ? <Scene onComplete={onDone} /> : <ScenePlaceholder scene={step.scene} onComplete={onDone} />;
+    }
     case "end":
       return <EndScreen />;
   }
