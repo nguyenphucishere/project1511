@@ -66,6 +66,13 @@ export const vi: Dictionary = {
     playAgain: "Chơi lại",
     backToTitle: "Về màn hình chính",
   },
+  hud: {
+    pointsOfInterest: "Điểm tương tác",
+    goTo: "Đi tới {place}",
+    checked: "Đã kiểm tra",
+    lookHint: "Kéo chuột hoặc dùng phím mũi tên để nhìn quanh.",
+    progress: "Đã kiểm tra {done}/{total}",
+  },
   portrait: {
     placeholderAlt: "Chân dung {name} (ảnh tạm)",
   },

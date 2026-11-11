@@ -69,6 +69,13 @@ export const en = {
     playAgain: "Play again",
     backToTitle: "Back to title",
   },
+  hud: {
+    pointsOfInterest: "Points of interest",
+    goTo: "Go to {place}",
+    checked: "Checked",
+    lookHint: "Drag or use the arrow keys to look around.",
+    progress: "{done} of {total} checked",
+  },
   portrait: {
     placeholderAlt: "Portrait of {name} (placeholder art)",
   },
