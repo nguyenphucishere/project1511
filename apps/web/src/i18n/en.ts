@@ -1,6 +1,7 @@
 /**
  * English UI strings. This file defines the dictionary shape; vi.ts must match it.
- * Scene scripts (briefings, part descriptions) live with their data as LocalizedText, not here.
+ * Story text (briefings, part descriptions) lives with its data as LocalizedText, not here.
+ * "{name}" placeholders are filled with format() from ./index.
  */
 export const en = {
   meta: {
@@ -24,8 +25,52 @@ export const en = {
   home: {
     title: "Moonbound",
     subtitle: "Four crew members, one rocket, and the long way to the Moon.",
-    comingSoon: "The start screen is being built. This page checks the foundation.",
-    openUiKit: "Open the UI kit",
+    start: "Start mission",
+    continue: "Continue",
+    resumeAt: "Resume at {chapter}",
+    newGame: "New game",
+    chapterSelect: "Jump to a chapter",
+    chapterSelectHint: "For demos: start any chapter directly.",
+    doorLabel: "Hangar door",
+  },
+  play: {
+    exitToTitle: "Title screen",
+    chapterOf: "Chapter {n} of {total}",
+    youAre: "You are {name}, {role}",
+    epilogue: "Epilogue",
+    tasks: "Your tasks",
+    continueLine: "Continue",
+    previousLine: "Previous line",
+    skipBriefing: "Skip briefing",
+    begin: "Begin",
+    finish: "Finish",
+    loading: "Loading mission",
+  },
+  cutscene: {
+    videoSlot: "Video slot",
+    skip: "Skip video",
+    unmute: "Turn sound on",
+    mute: "Turn sound off",
+    failed: "This video could not play. Skip to continue.",
+    videos: {
+      intro: "Opening cinematic: the crew walks to the launch complex.",
+      launch: "Liftoff: the rocket clears the tower and climbs toward orbit.",
+      flagPlanting: "Touchdown: the astronaut plants the US flag on the Moon.",
+    },
+  },
+  scenePlaceholder: {
+    title: "This 3D scene is still being built",
+    body: "In the finished demo you play this part in first person. For now, mark it done to keep going.",
+    complete: "Mark scene complete",
+  },
+  end: {
+    title: "Mission complete",
+    body: "The crew is on the Moon. The trip home is a story for another day.",
+    playAgain: "Play again",
+    backToTitle: "Back to title",
+  },
+  portrait: {
+    placeholderAlt: "Portrait of {name} (placeholder art)",
   },
 } as const;
 
