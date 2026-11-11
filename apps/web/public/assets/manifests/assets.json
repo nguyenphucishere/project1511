@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "notes": "Runtime assets for the web demo. status 'placeholder' means the file is not delivered yet and the game shows a built-in placeholder. Change to 'final' when the real file is dropped in at the listed path.",
+  "videos": {
+    "intro": {
+      "status": "placeholder",
+      "mp4": "/assets/cutscenes/intro.mp4",
+      "webm": null,
+      "poster": "/assets/cutscenes/intro-poster.webp",
+      "captions": null,
+      "usage": "Opening cinematic after the door opens (before Scene 1)",
+      "credit": "Video editor (TBD)"
+    },
+    "launch": {
+      "status": "placeholder",
+      "mp4": "/assets/cutscenes/launch.mp4",
+      "webm": null,
+      "poster": "/assets/cutscenes/launch-poster.webp",
+      "captions": null,
+      "usage": "Rocket liftoff after a successful Scene 3 launch",
+      "credit": "Video editor (TBD)"
+    },
+    "flagPlanting": {
+      "status": "placeholder",
+      "mp4": "/assets/cutscenes/flag-planting.mp4",
+      "webm": null,
+      "poster": "/assets/cutscenes/flag-planting-poster.webp",
+      "captions": null,
+      "usage": "US flag planted on the Moon after touchdown (end of Scene 4)",
+      "credit": "Video editor (TBD)"
+    }
+  },
+  "portraits": {
+    "astronaut": {
+      "status": "placeholder",
+      "src": "/assets/characters/portraits/astronaut.png",
+      "displayName": "ArmStrong",
+      "usage": "Briefings for Scene 1 and Scene 4 (player POV)",
+      "credit": "Character artist"
+    },
+    "engineer": {
+      "status": "placeholder",
+      "src": "/assets/characters/portraits/engineer.png",
+      "displayName": "Engineer",
+      "usage": "Briefing for Scene 2 (player POV)",
+      "credit": "Character artist"
+    },
+    "flight-director": {
+      "status": "placeholder",
+      "src": "/assets/characters/portraits/flight-director.png",
+      "displayName": "Flight Director",
+      "usage": "Briefing for Scene 3 (player POV)",
+      "credit": "Character artist"
+    },
+    "doctor": {
+      "status": "placeholder",
+      "src": "/assets/characters/portraits/doctor.png",
+      "displayName": "Flight Surgeon",
+      "usage": "Medical bay station panels in Scene 1",
+      "credit": "Character artist"
+    },
+    "workshop-chief": {
+      "status": "placeholder",
+      "src": "/assets/characters/portraits/workshop-chief.png",
+      "displayName": "Workshop Chief",
+      "usage": "NPC who explains rocket parts in Scene 2",
+      "credit": "Character artist"
+    }
+  }
+}

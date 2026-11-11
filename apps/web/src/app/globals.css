@@ -1,3 +1,120 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Palette tokens. The game uses these five colours only (see FRONTEND_AGENT_GUIDELINES §4.1).
+ * Stored as RGB channels so Tailwind opacity modifiers work: bg-space-blue/60.
+ *   space-deep   #112936
+ *   space-blue   #20556A
+ *   space-mist   #D0E0D5
+ *   space-gold   #E9BC54
+ *   space-orange #CB6944
+ */
+@layer base {
+  :root {
+    --space-deep: 17 41 54;
+    --space-blue: 32 85 106;
+    --space-mist: 208 224 213;
+    --space-gold: 233 188 84;
+    --space-orange: 203 105 68;
+
+    /* Semantic roles: components use these, never the raw palette. */
+    --background: var(--space-deep);
+    --surface: var(--space-blue);
+    --foreground: var(--space-mist);
+    --muted: var(--space-mist);
+    --primary: var(--space-gold);
+    --primary-foreground: var(--space-deep);
+    --warning: var(--space-orange);
+    --border: var(--space-mist);
+
+    /* Chamfered corner size for console bezels. */
+    --cut: 10px;
+    --cut-sm: 6px;
+
+    color-scheme: dark;
+  }
+
+  html {
+    background: rgb(var(--background));
+    color: rgb(var(--foreground));
+  }
+
+  body {
+    min-height: 100dvh;
+    background: rgb(var(--background));
+    color: rgb(var(--foreground));
+    font-family: var(--font-inter), system-ui, sans-serif;
+    font-size: 1rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: rgb(var(--primary) / 0.35);
+    color: rgb(var(--foreground));
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--primary));
+    outline-offset: 2px;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--surface)) rgb(var(--background));
+  }
+
+  /* Numbers that change (telemetry, clocks) must not jitter. */
+  .font-mono {
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Set by settingsStore when the player forces reduced motion in-game. */
+  [data-motion="reduce"] *,
+  [data-motion="reduce"] *::before,
+  [data-motion="reduce"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  /*
+   * Console bezel: a panel with chamfered top-left and bottom-right corners and a
+   * hairline edge. clip-path cuts the corners; an inset shadow draws the edge, so
+   * focus states on bezel elements must also use inset shadows (outlines get clipped).
+   */
+  .bezel {
+    clip-path: polygon(
+      var(--cut) 0,
+      100% 0,
+      100% calc(100% - var(--cut)),
+      calc(100% - var(--cut)) 100%,
+      0 100%,
+      0 var(--cut)
+    );
+    box-shadow: inset 0 0 0 1px rgb(var(--border) / 0.28);
+  }
+
+  .bezel-sm {
+    --cut: var(--cut-sm);
+  }
+
+  .bezel-gold {
+    box-shadow: inset 0 0 0 1px rgb(var(--primary) / 0.7);
+  }
+}
