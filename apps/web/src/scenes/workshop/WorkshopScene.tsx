@@ -1,26 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { CharacterPortrait } from "@/components/cutscene/CharacterPortrait";
 import { WorldCanvas } from "@/components/viewport/WorldCanvas";
 import { HotspotList } from "@/components/hud/HotspotList";
 import { ObjectivePanel } from "@/components/hud/ObjectivePanel";
+import { SignOffDialog, SignOffDetails } from "@/components/hud/SignOffDialog";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
 import { cn } from "@/lib/utils";
 import { CHARACTERS } from "@/game/characters";
+import { playSfx } from "@/game/sfx";
 import { BRIEFINGS } from "@/game/script";
-import { useSceneStore } from "@/game/sceneStore";
+import { useGameStore } from "@/game/gameStore";
+import { useSceneStore, useSceneViewpoints } from "@/game/sceneStore";
 import { useSettingsStore } from "@/game/settingsStore";
 import { ROCKET_PARTS, TOTAL_MASS_T, type LevelId, type PartId } from "@/mocks/rocket-parts";
 import { PartPanel } from "./PartPanel";
@@ -39,20 +31,15 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
   const t = useT();
   const localize = useLocalized();
   const locale = useSettingsStore((s) => s.locale);
-  const setViewpoints = useSceneStore((s) => s.setViewpoints);
   const goTo = useSceneStore((s) => s.goTo);
-  const resetScene = useSceneStore((s) => s.reset);
+  const recordParts = useGameStore((s) => s.recordParts);
   const level = (useSceneStore((s) => s.viewpointId) ?? "floor") as LevelId;
 
   const [inspected, setInspected] = useState<Set<PartId>>(new Set());
   const [visited, setVisited] = useState<Set<LevelId>>(new Set(["floor"]));
   const [active, setActive] = useState<PartId | null>(null);
-  const [done, setDone] = useState(false);
 
-  useEffect(() => {
-    setViewpoints(VIEWPOINTS, "floor");
-    return resetScene;
-  }, [setViewpoints, resetScene]);
+  useSceneViewpoints(VIEWPOINTS, "floor");
 
   // Opening a part's panel counts as inspecting it.
   const inspect = useCallback((id: PartId) => {
@@ -63,17 +50,18 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
   const ride = useCallback(
     (to: LevelId) => {
       setActive(null);
+      playSfx("lift");
       setVisited((prev) => (prev.has(to) ? prev : new Set(prev).add(to)));
       goTo(to);
     },
     [goTo],
   );
 
-  const closePanel = useCallback(() => {
-    setActive(null);
-    // Chief Bao signs off when the last panel closes, not while it is still being read.
-    if (inspected.size === ROCKET_PARTS.length) setDone(true);
-  }, [inspected]);
+  const closePanel = useCallback(() => setActive(null), []);
+
+  // Chief Bao signs off once every part is inspected and no panel is open, however the last
+  // panel was closed (its close button, or riding a lift away from it).
+  const done = active === null && inspected.size === ROCKET_PARTS.length;
 
   const part = ROCKET_PARTS.find((p) => p.id === active) ?? null;
   const next = ROCKET_PARTS.find((p) => p.level === level && p.id !== active && !inspected.has(p.id)) ?? null;
@@ -123,42 +111,32 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
         )}
       </div>
 
-      <Dialog open={done} onOpenChange={() => {}}>
-        <DialogContent hideClose onEscapeKeyDown={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <div className="mb-2 flex items-end gap-4">
-              <div className="h-20 w-16 shrink-0">
-                <CharacterPortrait character="workshop-chief" />
-              </div>
-              <StatusBadge status="go" className="mb-1">
-                {t.workshop.readyBadge}
-              </StatusBadge>
+      <SignOffDialog
+        open={done}
+        character="workshop-chief"
+        badge={t.workshop.readyBadge}
+        title={t.workshop.doneTitle}
+        description={format(t.workshop.doneBody, { name: chiefName })}
+        continueLabel={t.workshop.continue}
+        onContinue={() => {
+          recordParts(inspected.size);
+          onComplete();
+        }}
+        demo
+      >
+        <SignOffDetails className="max-h-[40dvh] gap-y-1 overflow-y-auto">
+          {ROCKET_PARTS.map((p) => (
+            <div key={p.id} className="contents">
+              <dt className="text-foreground/80">{localize(p.name)}</dt>
+              <dd className="text-right font-mono">{format(t.workshop.massValue, { value: number.format(p.massT) })}</dd>
             </div>
-            <DialogTitle className="text-2xl">{t.workshop.doneTitle}</DialogTitle>
-            <DialogDescription>{format(t.workshop.doneBody, { name: chiefName })}</DialogDescription>
-          </DialogHeader>
-          <dl className="grid max-h-[40dvh] grid-cols-[1fr_auto] gap-x-6 gap-y-1 overflow-y-auto bg-space-blue/35 px-4 py-3 text-sm">
-            {ROCKET_PARTS.map((p) => (
-              <div key={p.id} className="contents">
-                <dt className="text-foreground/80">{localize(p.name)}</dt>
-                <dd className="text-right font-mono">{format(t.workshop.massValue, { value: number.format(p.massT) })}</dd>
-              </div>
-            ))}
-            <div className="col-span-2 mt-1 flex justify-between gap-6 border-t border-foreground/20 pt-1.5 font-semibold">
-              <dt>{t.workshop.total}</dt>
-              <dd className="font-mono">{format(t.workshop.massValue, { value: number.format(TOTAL_MASS_T) })}</dd>
-            </div>
-          </dl>
-          <StatusBadge status="demo" className="w-fit">
-            {t.common.demoData}
-          </StatusBadge>
-          <DialogFooter>
-            <Button size="lg" onClick={onComplete}>
-              {t.workshop.continue}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          ))}
+          <div className="col-span-2 mt-1 flex justify-between gap-6 border-t border-foreground/20 pt-1.5 font-semibold">
+            <dt>{t.workshop.total}</dt>
+            <dd className="font-mono">{format(t.workshop.massValue, { value: number.format(TOTAL_MASS_T) })}</dd>
+          </div>
+        </SignOffDetails>
+      </SignOffDialog>
     </section>
   );
 }

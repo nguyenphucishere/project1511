@@ -3,6 +3,7 @@
 import { Canvas } from "@react-three/fiber";
 import { useSettingsStore } from "@/game/settingsStore";
 import { FirstPersonCamera } from "./FirstPersonCamera";
+import { PrecompileScene } from "./PrecompileScene";
 import { PixelPostProcess } from "./PixelPostProcess";
 import { ResponsiveFov } from "./ResponsiveFov";
 import { PALETTE } from "@/lib/palette";
@@ -31,6 +32,7 @@ export default function WorldCanvasInner({ children, label }: WorldCanvasInnerPr
       <ResponsiveFov />
       <FirstPersonCamera />
       {children}
+      <PrecompileScene />
       {pixelFX && <PixelPostProcess />}
     </Canvas>
   );

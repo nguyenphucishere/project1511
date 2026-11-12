@@ -43,3 +43,7 @@ pnpm-debug.log*
 # Generated WASM files (can be rebuilt)
 apps/web/public/wasm/*
 !apps/web/public/wasm/.gitkeep
+
+#Agent Guidelines
+.agents/
+skills-lock.json

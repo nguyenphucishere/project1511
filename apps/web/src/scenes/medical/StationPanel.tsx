@@ -10,6 +10,7 @@ import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { CHARACTERS } from "@/game/characters";
+import { playSfx } from "@/game/sfx";
 import type { VitalStation } from "@/mocks/vitals";
 
 const MEASURE_MS = 2200;
@@ -49,6 +50,7 @@ export function StationPanel({ station, alreadyChecked, onMeasured, onClose }: S
 
   useEffect(() => {
     if (phase !== "measuring") return;
+    playSfx("scan");
     const duration = reduced ? 300 : MEASURE_MS;
     const start = performance.now();
     let raf = 0;
@@ -59,6 +61,7 @@ export function StationPanel({ station, alreadyChecked, onMeasured, onClose }: S
       if (p < 1) raf = requestAnimationFrame(tick);
       else {
         setPhase("result");
+        playSfx("go");
         measuredRef.current();
       }
     };

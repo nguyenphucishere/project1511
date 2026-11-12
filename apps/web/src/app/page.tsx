@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { LocaleToggle } from "@/components/hud/LocaleToggle";
+import { SoundToggle } from "@/components/hud/SoundToggle";
 import { BlastDoor } from "@/components/cutscene/BlastDoor";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
@@ -47,6 +48,8 @@ export default function StartScreen() {
         <div className="bezel flex w-full max-w-md flex-col items-center gap-6 bg-space-deep px-6 py-8 text-center sm:px-10 sm:py-10">
           <h1 className="text-4xl font-semibold sm:text-5xl">{t.home.title}</h1>
           <p className="max-w-[34ch] text-base text-foreground/85 sm:text-lg">{t.home.subtitle}</p>
+          {/* Phones only (touch + small screen, either orientation): a heads-up, never a block. */}
+          <p className="bezel bezel-sm -mt-2 hidden bg-space-blue/40 px-3 py-2 text-sm text-foreground/85 [@media(pointer:coarse)_and_(max-height:500px)]:block [@media(pointer:coarse)_and_(max-width:640px)]:block">{t.home.desktopNotice}</p>
 
           <div className="flex w-full flex-col gap-3">
             {canContinue ? (
@@ -95,7 +98,10 @@ export default function StartScreen() {
         <StatusBadge status="demo" className="bg-space-deep">
           {t.common.demoData}
         </StatusBadge>
-        <LocaleToggle className="bg-space-deep" />
+        <div className="flex items-center gap-2">
+          <SoundToggle />
+          <LocaleToggle className="bg-space-deep" />
+        </div>
       </header>
     </main>
   );

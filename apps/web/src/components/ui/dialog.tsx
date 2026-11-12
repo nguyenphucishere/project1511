@@ -31,10 +31,12 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof Dialo
   /** Accessible label for the close button, already translated by the caller. */
   closeLabel?: string;
   hideClose?: boolean;
+  /** A step the player must act on: no close button, and Escape / outside clicks do nothing. */
+  locked?: boolean;
 }
 
 const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.Content>, DialogContentProps>(
-  ({ className, children, tone = "default", closeLabel = "Close", hideClose = false, ...props }, ref) => (
+  ({ className, children, tone = "default", closeLabel = "Close", hideClose = false, locked = false, ...props }, ref) => (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
@@ -47,10 +49,15 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
           "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
           className,
         )}
+        {...(locked && {
+          onEscapeKeyDown: (e: KeyboardEvent) => e.preventDefault(),
+          onPointerDownOutside: (e: Event) => e.preventDefault(),
+          onInteractOutside: (e: Event) => e.preventDefault(),
+        })}
         {...props}
       >
         {children}
-        {!hideClose && (
+        {!hideClose && !locked && (
           <DialogPrimitive.Close
             className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center text-foreground/70 hover:text-foreground"
             aria-label={closeLabel}

@@ -12,7 +12,8 @@
     "cargo:check": "cargo check --workspace",
     "cargo:test": "cargo test --workspace",
     "db:generate": "pnpm --filter @space-sim/server db:generate",
-    "db:push": "pnpm --filter @space-sim/server db:push"
+    "db:push": "pnpm --filter @space-sim/server db:push",
+    "test": "turbo run test"
   },
   "devDependencies": {
     "prettier": "^3.5.2",
