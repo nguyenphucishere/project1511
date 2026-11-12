@@ -17,5 +17,9 @@ const loading = () => <div className="h-dvh w-full bg-space-deep" aria-hidden />
  */
 export const SCENES: Partial<Record<SceneId, ComponentType<SceneProps>>> = {
   medical: dynamic(() => import("./medical/MedicalScene").then((m) => m.MedicalScene), { ssr: false, loading }),
+  "mission-control": dynamic(() => import("./mission-control/MissionControlScene").then((m) => m.MissionControlScene), {
+    ssr: false,
+    loading,
+  }),
   workshop: dynamic(() => import("./workshop/WorkshopScene").then((m) => m.WorkshopScene), { ssr: false, loading }),
 };
