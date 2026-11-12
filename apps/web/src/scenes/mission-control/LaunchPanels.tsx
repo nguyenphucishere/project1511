@@ -9,6 +9,7 @@ import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { CHARACTERS } from "@/game/characters";
+import { playSfx } from "@/game/sfx";
 import { cn } from "@/lib/utils";
 import { TRACE_TEXT } from "@/lib/simulation/launch.mock";
 import { WIND_LIMIT_KMH } from "@/mocks/launch-options";
@@ -51,6 +52,12 @@ export function PollPanel({
 
   const done = answered >= items.length;
   const allGo = items.every((i) => i.go);
+
+  // Each station's answer is heard as it comes in; only weather (the last) can be NO-GO.
+  useEffect(() => {
+    if (answered === 0) return;
+    playSfx(answered === items.length && !assessment.weatherGo ? "noGo" : "go");
+  }, [answered, items.length, assessment.weatherGo]);
 
   useEffect(() => {
     if (!done) return;
@@ -126,6 +133,7 @@ export function CountdownPanel({ onIgnition, onHold }: { onIgnition: () => void;
       ignitionRef.current();
       return;
     }
+    playSfx(left <= 3 ? "tickFinal" : "tick");
     const id = window.setTimeout(() => setLeft((l) => l - 1), 1000);
     return () => window.clearTimeout(id);
   }, [left]);

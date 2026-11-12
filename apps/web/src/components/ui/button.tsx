@@ -2,6 +2,7 @@ import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+import { playSfx } from "@/game/sfx";
 
 // aria-disabled is for buttons that must keep keyboard focus while briefly unavailable: it looks
 // like disabled (minus the shadow, so the focus ring still shows) and Button ignores its clicks.
@@ -49,7 +50,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         type={asChild ? undefined : (type ?? "button")}
         className={cn(buttonVariants({ variant, size }), className)}
-        onClick={unavailable ? (e: React.MouseEvent<HTMLButtonElement>) => e.preventDefault() : onClick}
+        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+          if (unavailable) return e.preventDefault();
+          playSfx("click");
+          onClick?.(e);
+        }}
         {...props}
       />
     );

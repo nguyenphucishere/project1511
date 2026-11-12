@@ -14,6 +14,7 @@ export const en = {
     language: "Language",
   },
   settings: {
+    soundEffects: "Sound effects",
     pixelEffect: "Pixel effect",
     reducedMotion: "Reduce motion",
     on: "On",

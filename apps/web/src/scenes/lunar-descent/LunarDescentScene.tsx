@@ -9,6 +9,7 @@ import { BRIEFINGS } from "@/game/script";
 import { useGameStore } from "@/game/gameStore";
 import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
+import { playSfx, startLoop } from "@/game/sfx";
 import { DESCENT_STEPS, TOUCHDOWN } from "@/mocks/descent";
 import { DescentPanel, formatVs } from "./DescentPanel";
 import { LunarWorld } from "./LunarWorld";
@@ -45,7 +46,15 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
 
   useSceneViewpoints(VIEWPOINTS, "window");
 
-  useEffect(() => () => timers.current.forEach((id) => window.clearTimeout(id)), []);
+  // The descent engine burns from powered descent to engine stop.
+  const engine = useRef<() => void>(() => {});
+  useEffect(
+    () => () => {
+      timers.current.forEach((id) => window.clearTimeout(id));
+      engine.current();
+    },
+    [],
+  );
 
   // Panel clock: ticks while a segment plays, then settles on the exact hold point.
   useEffect(() => {
@@ -64,16 +73,21 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
       if (armed !== index) return;
       const start = performance.now();
       addTrauma(PRESS_TRAUMA[index]);
+      playSfx("switch");
+      if (index === 0) engine.current = startLoop("engine");
       setClock({ stepsDone: index + 1, segmentStart: start });
       setPhase("playing");
       const last = index === DESCENT_STEPS.length - 1;
+      if (last) engine.current();
       timers.current.push(
         window.setTimeout(() => {
           if (!last) {
             setPhase("hold");
+            if (index === DESCENT_STEPS.length - 2) playSfx("contact");
             return;
           }
           addTrauma(TOUCHDOWN_TRAUMA);
+          playSfx("touchdown");
           setTouchdownAt(performance.now());
           setPhase("landed");
           recordLanding({ touchdownMs: Math.abs(TOUCHDOWN.vsMs), fuelLeftPct: TOUCHDOWN.fuelPct });

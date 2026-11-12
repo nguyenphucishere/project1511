@@ -10,6 +10,7 @@ import { useLocalized, useT } from "@/i18n/useT";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
 import { CHARACTERS } from "@/game/characters";
+import { playSfx } from "@/game/sfx";
 import { BRIEFINGS } from "@/game/script";
 import { useSceneStore, useSceneViewpoints } from "@/game/sceneStore";
 import { VITAL_STATIONS, type StationId } from "@/mocks/vitals";
@@ -42,6 +43,7 @@ export function MedicalScene({ onComplete }: { onComplete: () => void }) {
 
   const openDoor = useCallback(() => {
     setDoorOpen(true);
+    playSfx("door");
     walkIn.current = window.setTimeout(() => goTo("inside"), reduced ? 0 : WALK_IN_MS);
   }, [goTo, reduced]);
 

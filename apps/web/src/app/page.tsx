@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { LocaleToggle } from "@/components/hud/LocaleToggle";
+import { SoundToggle } from "@/components/hud/SoundToggle";
 import { BlastDoor } from "@/components/cutscene/BlastDoor";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
@@ -97,7 +98,10 @@ export default function StartScreen() {
         <StatusBadge status="demo" className="bg-space-deep">
           {t.common.demoData}
         </StatusBadge>
-        <LocaleToggle className="bg-space-deep" />
+        <div className="flex items-center gap-2">
+          <SoundToggle />
+          <LocaleToggle className="bg-space-deep" />
+        </div>
       </header>
     </main>
   );

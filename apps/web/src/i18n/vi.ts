@@ -11,6 +11,7 @@ export const vi: Dictionary = {
     language: "Ngôn ngữ",
   },
   settings: {
+    soundEffects: "Hiệu ứng âm thanh",
     pixelEffect: "Hiệu ứng pixel",
     reducedMotion: "Giảm chuyển động",
     on: "Bật",

@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useT } from "@/i18n/useT";
 import { LocaleToggle } from "./LocaleToggle";
 import { PixelToggle } from "./PixelToggle";
+import { SoundToggle } from "./SoundToggle";
 
 /** In-game bar: back to the title screen, demo label, language. Progress is kept for Continue. */
 export function TopBar() {
@@ -23,6 +24,7 @@ export function TopBar() {
         <StatusBadge status="demo" className="whitespace-nowrap bg-space-deep/80">
           {t.common.demoData}
         </StatusBadge>
+        <SoundToggle />
         <PixelToggle />
         <LocaleToggle className="bg-space-deep/80" />
       </div>

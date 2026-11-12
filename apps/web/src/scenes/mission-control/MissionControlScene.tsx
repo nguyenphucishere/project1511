@@ -20,6 +20,7 @@ import { BRIEFINGS } from "@/game/script";
 import { useGameStore } from "@/game/gameStore";
 import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
+import { playSfx, startLoop } from "@/game/sfx";
 import { launchSimulator } from "@/lib/simulation/launch.adapter";
 import { TRACE_TEXT } from "@/lib/simulation/launch.mock";
 import type { LaunchConfig, LaunchResult } from "@/lib/simulation/launch.types";
@@ -28,6 +29,9 @@ import { ControlRoomWorld } from "./ControlRoomWorld";
 import { CountdownPanel, FlightPanel, PollPanel } from "./LaunchPanels";
 import { formatMissionTime } from "@/lib/format";
 import { VIEWPOINTS } from "./layout";
+
+/** How long the liftoff roar lasts, in real time (the climb out of sight). */
+const ROAR_MS = 8000;
 
 type Phase = "config" | "poll" | "countdown" | "flight" | "anomaly" | "orbit";
 
@@ -57,6 +61,9 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
   const [result, setResult] = useState<LaunchResult | null>(null);
   const [alarm, setAlarm] = useState(0);
   const pending = useRef<Promise<LaunchResult> | null>(null);
+  // The liftoff roar is heard while the rocket is low; stopped early on adjust or leaving.
+  const roar = useRef<() => void>(() => {});
+  useEffect(() => () => roar.current(), []);
   const consoleRef = useRef<HTMLElement>(null);
 
   useSceneViewpoints(VIEWPOINTS, "console");
@@ -81,6 +88,10 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
     setResult(r);
     setIgnitionAt(performance.now());
     addTrauma(0.45);
+    playSfx("ignition");
+    const stop = startLoop("engine", { gain: 0.3 });
+    roar.current = stop;
+    window.setTimeout(stop, ROAR_MS);
     setPhase("flight");
   }, []);
 
@@ -91,12 +102,14 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
       setPhase("orbit");
     } else {
       addTrauma(0.35);
+      playSfx("alarm");
       setAlarm((a) => a + 1);
       setPhase("anomaly");
     }
   }, [config, result, recordLaunch]);
 
   const adjust = useCallback(() => {
+    roar.current();
     setIgnitionAt(null); // the replacement vehicle is back on the pad
     setResult(null);
     setAttempt((a) => a + 1);

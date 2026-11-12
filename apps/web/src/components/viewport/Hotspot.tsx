@@ -8,6 +8,7 @@ import { format, type LocalizedText } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
 import { useSceneStore, type HotspotKind, type Vec3 } from "@/game/sceneStore";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { playSfx } from "@/game/sfx";
 import { PALETTE } from "@/lib/palette";
 import { cn } from "@/lib/utils";
 
@@ -90,6 +91,7 @@ export function Hotspot({
 
   const over = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
+    if (!hovering) playSfx("hover");
     setHovering(true);
     highlight(id);
   };
@@ -100,6 +102,7 @@ export function Hotspot({
   const click = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     if (e.delta > CLICK_SLOP) return;
+    playSfx("click");
     activateRef.current();
   };
 

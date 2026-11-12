@@ -9,6 +9,7 @@ import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
 import { cn } from "@/lib/utils";
 import { CHARACTERS } from "@/game/characters";
+import { playSfx } from "@/game/sfx";
 import { BRIEFINGS } from "@/game/script";
 import { useGameStore } from "@/game/gameStore";
 import { useSceneStore, useSceneViewpoints } from "@/game/sceneStore";
@@ -49,6 +50,7 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
   const ride = useCallback(
     (to: LevelId) => {
       setActive(null);
+      playSfx("lift");
       setVisited((prev) => (prev.has(to) ? prev : new Set(prev).add(to)));
       goTo(to);
     },

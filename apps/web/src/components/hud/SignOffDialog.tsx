@@ -11,7 +11,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CharacterPortrait } from "@/components/cutscene/CharacterPortrait";
+import { useEffect } from "react";
 import { useT } from "@/i18n/useT";
+import { playSfx } from "@/game/sfx";
 import type { CharacterId } from "@/game/characters";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +45,9 @@ export function SignOffDialog({
   children,
 }: SignOffDialogProps) {
   const t = useT();
+  useEffect(() => {
+    if (open) playSfx("success");
+  }, [open]);
   return (
     <Dialog open={open}>
       <DialogContent locked>
