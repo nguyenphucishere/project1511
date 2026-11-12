@@ -3,9 +3,11 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+// aria-disabled is for buttons that must keep keyboard focus while briefly unavailable: it looks
+// like disabled (minus the shadow, so the focus ring still shows) and Button ignores its clicks.
 // Buttons are chamfered (.bezel), so focus is drawn with an inset shadow: an outline would be clipped.
 const buttonVariants = cva(
-  "bezel bezel-sm inline-flex items-center justify-center gap-2 font-medium transition-[background-color,color,box-shadow] duration-150 focus-visible:outline-none disabled:pointer-events-none disabled:bg-surface/25 disabled:text-foreground/45 disabled:shadow-[inset_0_0_0_1px_rgb(var(--border)/0.15)]",
+  "bezel bezel-sm inline-flex items-center justify-center gap-2 font-medium transition-[background-color,color,box-shadow] duration-150 focus-visible:outline-none disabled:pointer-events-none disabled:bg-surface/25 disabled:text-foreground/45 disabled:shadow-[inset_0_0_0_1px_rgb(var(--border)/0.15)] aria-disabled:cursor-not-allowed aria-disabled:bg-surface/25 aria-disabled:text-foreground/45 aria-disabled:hover:bg-surface/25",
   {
     variants: {
       variant: {
@@ -39,13 +41,15 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, type, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, type, onClick, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
+    const unavailable = props["aria-disabled"] === true || props["aria-disabled"] === "true";
     return (
       <Comp
         ref={ref}
         type={asChild ? undefined : (type ?? "button")}
         className={cn(buttonVariants({ variant, size }), className)}
+        onClick={unavailable ? (e: React.MouseEvent<HTMLButtonElement>) => e.preventDefault() : onClick}
         {...props}
       />
     );

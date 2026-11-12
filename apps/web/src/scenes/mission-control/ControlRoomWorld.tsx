@@ -4,7 +4,8 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { DoubleSide, type Group } from "three";
 import { LightingRig } from "@/components/viewport/LightingRig";
-import { CameraShake } from "@/components/viewport/CameraShake";
+import { Starfield } from "@/components/viewport/Starfield";
+import { seeded } from "@/lib/random";
 import { addTrauma } from "@/game/shake";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { PALETTE } from "@/lib/palette";
@@ -28,7 +29,6 @@ export function ControlRoomWorld({ ignitionAt }: ControlRoomWorldProps) {
   return (
     <>
       <LightingRig />
-      <CameraShake />
       <Room />
       <Consoles />
       <Outside />
@@ -153,9 +153,7 @@ function Consoles() {
 
 function Outside() {
   const stars = useMemo(() => {
-    // Deterministic scatter so the sky doesn't reshuffle on every mount.
-    let seed = 7;
-    const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const rand = seeded(7);
     return Array.from({ length: 70 }, () => [(rand() - 0.5) * 360, 25 + rand() * 120, -175 - rand() * 10] as const);
   }, []);
   return (
@@ -173,12 +171,7 @@ function Outside() {
         <planeGeometry args={[140, 2]} />
         <meshBasicMaterial color={PALETTE.gold} />
       </mesh>
-      {stars.map(([x, y, z], i) => (
-        <mesh key={i} position={[x, y, z]}>
-          <planeGeometry args={[0.7, 0.7]} />
-          <meshBasicMaterial color={PALETTE.mist} />
-        </mesh>
-      ))}
+      <Starfield positions={stars} />
       {/* Access road to the pad. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[3, GROUND_Y + 0.02, -70]}>
         <planeGeometry args={[3, 100]} />

@@ -1,18 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
 import { Check, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CharacterPortrait } from "@/components/cutscene/CharacterPortrait";
 import { TelemetryChart } from "@/components/dashboard/TelemetryChart";
+import { ReadoutGrid } from "@/components/hud/ReadoutGrid";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
 import { cn } from "@/lib/utils";
 import { DESCENT_STEPS, KEYFRAMES, SAFE_TOUCHDOWN_MS, TOUCHDOWN, sampleAt } from "@/mocks/descent";
-import { formatMissionTime } from "../mission-control/flight";
+import { formatMissionTime } from "@/lib/format";
 
-export const formatAltitude = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`);
+const formatAltitude = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`);
 const formatAltitudeTick = (m: number) => (m >= 1000 ? `${Math.round(m / 1000)} km` : `${Math.round(m)} m`);
 export const formatVs = (v: number) => `${v.toFixed(1)} m/s`;
 const formatVsTick = (v: number) => `${Math.round(v)}`;
@@ -43,12 +43,11 @@ export function DescentPanel({ t, stepsDone, armed, landed, contactLight, onPres
   const localize = useLocalized();
   const now = sampleAt(t);
 
-  // The traces grow with the clock: samples so far, plus the live point.
-  const { xs, alt, vs } = useMemo(() => {
-    const past = SERIES.filter((s) => s.t < t);
-    const pts = t > 0 ? [...past, sampleAt(t)] : [sampleAt(0)];
-    return { xs: pts.map((p) => p.t), alt: pts.map((p) => p.altM), vs: pts.map((p) => p.vsMs) };
-  }, [t]);
+  // The traces grow with the clock: samples so far (SERIES is on a 2 s grid), plus the live point.
+  const pts = [...SERIES.slice(0, Math.ceil(t / 2)), now];
+  const xs = pts.map((p) => p.t);
+  const alt = pts.map((p) => p.altM);
+  const vs = pts.map((p) => p.vsMs);
 
   const current = DESCENT_STEPS[Math.min(stepsDone, DESCENT_STEPS.length - 1)];
   const cueStep = armed !== null ? DESCENT_STEPS[armed] : null;
@@ -84,9 +83,11 @@ export function DescentPanel({ t, stepsDone, armed, landed, contactLight, onPres
         <div className="flex flex-col gap-1.5">
           <Button
             size="lg"
+            // aria-disabled, not disabled: a disabled button drops keyboard focus to the page while
+            // the segment plays; this one keeps it, so Enter works again at the next hold.
             className="h-14 text-lg"
-            disabled={armed === null}
-            onClick={() => armed !== null && onPress(armed)}
+            aria-disabled={armed === null}
+            onClick={() => onPress(stepsDone)}
             aria-describedby="press-hint"
           >
             {localize(current.label)}
@@ -132,19 +133,15 @@ export function DescentPanel({ t, stepsDone, armed, landed, contactLight, onPres
         </ol>
       </section>
 
-      <dl className="grid grid-cols-2 gap-px bg-space-blue/60">
-        {[
+      <ReadoutGrid
+        className="grid-cols-2"
+        items={[
           [d.clock, formatMissionTime(t)],
           [d.altitude, formatAltitude(now.altM)],
           [d.verticalSpeed, formatVs(now.vsMs)],
           [d.fuel, `${Math.round(now.fuelPct)}%`],
-        ].map(([label, value]) => (
-          <div key={label} className="bg-space-deep/85 px-3 py-2">
-            <dt className="text-xs text-foreground/65">{label}</dt>
-            <dd className="font-mono text-lg tabular-nums">{value}</dd>
-          </div>
-        ))}
-      </dl>
+        ]}
+      />
 
       <div
         className={cn(

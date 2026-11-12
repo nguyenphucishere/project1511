@@ -10,9 +10,6 @@ export const en = {
   },
   common: {
     close: "Close",
-    next: "Next",
-    skip: "Skip",
-    back: "Back",
     demoData: "Demo data",
     language: "Language",
   },
@@ -32,6 +29,7 @@ export const en = {
     chapterSelect: "Jump to a chapter",
     chapterSelectHint: "For demos: start any chapter directly.",
     doorLabel: "Hangar door",
+    desktopNotice: "Best played on a computer or tablet. On a phone everything still works, but the 3D view is small.",
   },
   play: {
     exitToTitle: "Title screen",
@@ -57,11 +55,6 @@ export const en = {
       launch: "Liftoff: the rocket clears the tower and climbs toward orbit.",
       flagPlanting: "Touchdown: the astronaut plants the US flag on the Moon.",
     },
-  },
-  scenePlaceholder: {
-    title: "This 3D scene is still being built",
-    body: "In the finished demo you play this part in first person. For now, mark it done to keep going.",
-    complete: "Mark scene complete",
   },
   end: {
     title: "Mission complete",
@@ -157,7 +150,6 @@ export const en = {
     countdownTitle: "Final countdown",
     hold: "Hold",
     ignition: "Ignition",
-    liftoff: "Liftoff",
     flightTitle: "Flight",
     clock: "Mission clock",
     altitude: "Altitude",

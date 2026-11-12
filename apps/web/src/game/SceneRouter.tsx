@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CutscenePlayer } from "@/components/cutscene/CutscenePlayer";
 import { DialogueOverlay } from "@/components/cutscene/DialogueOverlay";
-import { ScenePlaceholder } from "@/components/cutscene/ScenePlaceholder";
 import { EndScreen } from "@/components/cutscene/EndScreen";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { SCENES } from "@/scenes/registry";
@@ -77,7 +76,7 @@ function StepView({ step, onDone }: { step: Step; onDone: () => void }) {
       return <DialogueOverlay briefing={step.briefing} chapter={step.chapter} onDone={onDone} />;
     case "scene": {
       const Scene = SCENES[step.scene];
-      return Scene ? <Scene onComplete={onDone} /> : <ScenePlaceholder scene={step.scene} onComplete={onDone} />;
+      return <Scene onComplete={onDone} />;
     }
     case "end":
       return <EndScreen />;

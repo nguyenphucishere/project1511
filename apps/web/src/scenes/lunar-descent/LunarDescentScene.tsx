@@ -1,23 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { CharacterPortrait } from "@/components/cutscene/CharacterPortrait";
 import { WorldCanvas } from "@/components/viewport/WorldCanvas";
 import { ObjectivePanel } from "@/components/hud/ObjectivePanel";
+import { SignOffDialog, SignOffDetails } from "@/components/hud/SignOffDialog";
 import { useLocalized, useT } from "@/i18n/useT";
 import { BRIEFINGS } from "@/game/script";
 import { useGameStore } from "@/game/gameStore";
-import { useSceneStore } from "@/game/sceneStore";
+import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
 import { DESCENT_STEPS, TOUCHDOWN } from "@/mocks/descent";
 import { DescentPanel, formatVs } from "./DescentPanel";
@@ -44,8 +34,6 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
   const t = useT();
   const d = t.lunarDescent;
   const localize = useLocalized();
-  const setViewpoints = useSceneStore((s) => s.setViewpoints);
-  const resetScene = useSceneStore((s) => s.reset);
   const recordLanding = useGameStore((s) => s.recordLanding);
 
   const [clock, setClock] = useState<DescentClock>({ stepsDone: 0, segmentStart: null });
@@ -55,10 +43,7 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
   const [dialog, setDialog] = useState(false);
   const timers = useRef<number[]>([]);
 
-  useEffect(() => {
-    setViewpoints(VIEWPOINTS, "window");
-    return resetScene;
-  }, [setViewpoints, resetScene]);
+  useSceneViewpoints(VIEWPOINTS, "window");
 
   useEffect(() => () => timers.current.forEach((id) => window.clearTimeout(id)), []);
 
@@ -137,36 +122,23 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
         />
       </aside>
 
-      <Dialog open={dialog} onOpenChange={() => {}}>
-        <DialogContent hideClose onEscapeKeyDown={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <div className="mb-2 flex items-end gap-4">
-              <div className="h-20 w-16 shrink-0">
-                <CharacterPortrait character="astronaut" />
-              </div>
-              <StatusBadge status="go" className="mb-1">
-                {d.soft}
-              </StatusBadge>
-            </div>
-            <DialogTitle className="text-2xl">{d.touchdownTitle}</DialogTitle>
-            <DialogDescription>{d.touchdownBody}</DialogDescription>
-          </DialogHeader>
-          <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1.5 bg-space-blue/35 px-4 py-3 text-sm">
-            <dt className="text-foreground/80">{d.touchdownSpeed}</dt>
-            <dd className="text-right font-mono">{formatVs(Math.abs(TOUCHDOWN.vsMs))}</dd>
-            <dt className="text-foreground/80">{d.fuelLeft}</dt>
-            <dd className="text-right font-mono">{TOUCHDOWN.fuelPct}%</dd>
-          </dl>
-          <StatusBadge status="demo" className="w-fit">
-            {t.common.demoData}
-          </StatusBadge>
-          <DialogFooter>
-            <Button size="lg" onClick={onComplete}>
-              {d.continue}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SignOffDialog
+        open={dialog}
+        character="astronaut"
+        badge={d.soft}
+        title={d.touchdownTitle}
+        description={d.touchdownBody}
+        continueLabel={d.continue}
+        onContinue={onComplete}
+        demo
+      >
+        <SignOffDetails>
+          <dt className="text-foreground/80">{d.touchdownSpeed}</dt>
+          <dd className="text-right font-mono">{formatVs(Math.abs(TOUCHDOWN.vsMs))}</dd>
+          <dt className="text-foreground/80">{d.fuelLeft}</dt>
+          <dd className="text-right font-mono">{TOUCHDOWN.fuelPct}%</dd>
+        </SignOffDetails>
+      </SignOffDialog>
     </section>
   );
 }

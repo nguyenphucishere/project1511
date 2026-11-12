@@ -1,5 +1,5 @@
 import type { Viewpoint, Vec3 } from "@/game/sceneStore";
-import { DESCENT_STEPS, KEYFRAMES, missionTimeAt, type DescentStepId } from "@/mocks/descent";
+import { DESCENT_STEPS, KEYFRAMES, missionTimeAt } from "@/mocks/descent";
 
 /**
  * Scene 4 metrics, in metres. The astronaut stands (as lander crews did) at a small window with
@@ -73,5 +73,3 @@ export function missionTimeNow(clock: DescentClock, now = performance.now()): nu
   if (clock.stepsDone === 0 || clock.segmentStart === null) return 0;
   return missionTimeAt(clock.stepsDone - 1, (now - clock.segmentStart) / 1000);
 }
-
-export const STEP_IDS: DescentStepId[] = DESCENT_STEPS.map((s) => s.id);

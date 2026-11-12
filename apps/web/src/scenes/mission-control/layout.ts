@@ -5,7 +5,7 @@ import type { Viewpoint, Vec3 } from "@/game/sceneStore";
  * room; the room is on a high floor, so the pad (kilometres away in story, 85 m here) sits below the
  * horizon line, framed by the big window above the front row of consoles.
  */
-export const EYE_Y = 2.6;
+const EYE_Y = 2.6;
 export const TIER = { y: 1.4, frontZ: 1.0 } as const;
 export const ROOM = { minX: -6.5, maxX: 6.5, minZ: -4, maxZ: 5, height: 4.8 } as const;
 export const WINDOW = { minX: -5.5, maxX: 5.5, bottom: 0.6, top: 4.3 } as const;

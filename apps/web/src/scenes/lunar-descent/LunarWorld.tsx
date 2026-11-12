@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { memo, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group, Mesh, MeshBasicMaterial } from "three";
 import { LightingRig } from "@/components/viewport/LightingRig";
-import { CameraShake } from "@/components/viewport/CameraShake";
+import { Starfield } from "@/components/viewport/Starfield";
+import { seeded } from "@/lib/random";
 import { Hotspot } from "@/components/viewport/Hotspot";
 import { shake } from "@/game/shake";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -43,20 +44,20 @@ const BURN_TRAUMA = 0.28;
  * Scene 4 geometry: the lander cabin (window, console, four descent switches) and outside the
  * lunar surface rising to meet it. All motion is derived each frame from the descent clock.
  */
-export function LunarWorld({ clock, armed, onPress, contactLight, touchdownAt }: LunarWorldProps) {
+/** Memoised: the panel clock re-renders the scene ~12 times a second, and none of these props change then. */
+export const LunarWorld = memo(function LunarWorld({ clock, armed, onPress, contactLight, touchdownAt }: LunarWorldProps) {
   return (
     <>
       <LightingRig intensity={0.8} />
       {/* Low sun from the left: long light across the ground, the lander's side in shade. */}
       <directionalLight position={[-8, 2.5, -3]} color={PALETTE.mist} intensity={1.6} />
-      <CameraShake />
       <BurnRumble clock={clock} />
       <Cabin />
       <Console clock={clock} armed={armed} onPress={onPress} contactLight={contactLight} />
       <Outside clock={clock} touchdownAt={touchdownAt} />
     </>
   );
-}
+});
 
 function BurnRumble({ clock }: { clock: DescentClock }) {
   useFrame(() => {
@@ -215,10 +216,6 @@ function ContactLamp({ lit }: { lit: boolean }) {
 
 /* ---------------------------------------------------------------- outside */
 
-function seeded(seed: number) {
-  return () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-}
-
 function Outside({ clock, touchdownAt }: { clock: DescentClock; touchdownAt: number | null }) {
   const reduced = useReducedMotion();
   const root = useRef<Group>(null);
@@ -290,12 +287,7 @@ function Outside({ clock, touchdownAt }: { clock: DescentClock; touchdownAt: num
 
   return (
     <group ref={root} position={EYE}>
-      {stars.map(([x, y, z], i) => (
-        <mesh key={i} position={[x, y, z]}>
-          <planeGeometry args={[0.7, 0.7]} />
-          <meshBasicMaterial color={PALETTE.mist} />
-        </mesh>
-      ))}
+      <Starfield positions={stars} />
       {/* Earth, half lit, low over the horizon to the right. */}
       <mesh position={[38, 30, -165]}>
         <sphereGeometry args={[7, 24, 16]} />

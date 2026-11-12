@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ReadoutGrid } from "@/components/hud/ReadoutGrid";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
@@ -12,7 +13,8 @@ import { cn } from "@/lib/utils";
 import { TRACE_TEXT } from "@/lib/simulation/launch.mock";
 import { WIND_LIMIT_KMH } from "@/mocks/launch-options";
 import type { LaunchAssessment, LaunchConfig, LaunchResult } from "@/lib/simulation/launch.types";
-import { NOMINAL_EVENTS, altitudeKm, formatMissionTime, missionSecondsAt, speedKms } from "./flight";
+import { formatMissionTime } from "@/lib/format";
+import { NOMINAL_EVENTS, altitudeKm, missionSecondsAt, speedKms } from "./flight";
 
 /* ---------------------------------------------------------------- GO / NO-GO poll */
 
@@ -206,18 +208,14 @@ export function FlightPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <dl className="grid grid-cols-3 gap-px bg-space-blue/60">
-        {[
+      <ReadoutGrid
+        className="grid-cols-3"
+        items={[
           [m.clock, formatMissionTime(sec)],
           [m.altitude, `${altitudeKm(sec, config.orbitKm).toFixed(0)} km`],
           [m.speed, `${speedKms(sec).toFixed(1)} km/s`],
-        ].map(([label, value]) => (
-          <div key={label} className="bg-space-deep/85 px-3 py-2">
-            <dt className="text-xs text-foreground/65">{label}</dt>
-            <dd className="font-mono text-lg tabular-nums">{value}</dd>
-          </div>
-        ))}
-      </dl>
+        ]}
+      />
       <ol className="flex flex-col gap-1" aria-live="polite" aria-relevant="additions">
         {rows.map((r) => {
           const reached = sec >= r.t;

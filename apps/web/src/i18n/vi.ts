@@ -7,9 +7,6 @@ export const vi: Dictionary = {
   },
   common: {
     close: "Đóng",
-    next: "Tiếp",
-    skip: "Bỏ qua",
-    back: "Quay lại",
     demoData: "Dữ liệu demo",
     language: "Ngôn ngữ",
   },
@@ -28,6 +25,7 @@ export const vi: Dictionary = {
     newGame: "Chơi mới",
     chapterSelect: "Chuyển tới một màn",
     chapterSelectHint: "Dùng khi demo: vào thẳng màn bất kỳ.",
+    desktopNotice: "Chơi trên máy tính hoặc máy tính bảng sẽ tốt nhất. Trên điện thoại vẫn chơi được, nhưng khung 3D khá nhỏ.",
     doorLabel: "Cửa nhà chứa",
   },
   play: {
@@ -54,11 +52,6 @@ export const vi: Dictionary = {
       launch: "Cất cánh: tên lửa rời tháp phóng và vươn lên quỹ đạo.",
       flagPlanting: "Đáp xuống: phi hành gia cắm cờ Mỹ trên Mặt Trăng.",
     },
-  },
-  scenePlaceholder: {
-    title: "Cảnh 3D này đang được xây dựng",
-    body: "Trong bản demo hoàn chỉnh, bạn sẽ chơi phần này ở góc nhìn thứ nhất. Hiện tại hãy đánh dấu hoàn thành để đi tiếp.",
-    complete: "Đánh dấu hoàn thành",
   },
   end: {
     title: "Hoàn thành nhiệm vụ",
@@ -154,7 +147,6 @@ export const vi: Dictionary = {
     countdownTitle: "Đếm ngược cuối",
     hold: "Tạm dừng",
     ignition: "Đánh lửa",
-    liftoff: "Cất cánh",
     flightTitle: "Đang bay",
     clock: "Đồng hồ nhiệm vụ",
     altitude: "Độ cao",

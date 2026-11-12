@@ -11,14 +11,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CharacterPortrait } from "@/components/cutscene/CharacterPortrait";
 import { WorldCanvas } from "@/components/viewport/WorldCanvas";
 import { ObjectivePanel } from "@/components/hud/ObjectivePanel";
+import { SignOffDialog } from "@/components/hud/SignOffDialog";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
 import { BRIEFINGS } from "@/game/script";
 import { useGameStore } from "@/game/gameStore";
-import { useSceneStore } from "@/game/sceneStore";
+import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
 import { launchSimulator } from "@/lib/simulation/launch.adapter";
 import { TRACE_TEXT } from "@/lib/simulation/launch.mock";
@@ -26,7 +26,7 @@ import type { LaunchConfig, LaunchResult } from "@/lib/simulation/launch.types";
 import { ConfigPanel } from "./ConfigPanel";
 import { ControlRoomWorld } from "./ControlRoomWorld";
 import { CountdownPanel, FlightPanel, PollPanel } from "./LaunchPanels";
-import { formatMissionTime } from "./flight";
+import { formatMissionTime } from "@/lib/format";
 import { VIEWPOINTS } from "./layout";
 
 type Phase = "config" | "poll" | "countdown" | "flight" | "anomaly" | "orbit";
@@ -46,25 +46,20 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
   const t = useT();
   const m = t.missionControl;
   const localize = useLocalized();
-  const setViewpoints = useSceneStore((s) => s.setViewpoints);
-  const resetScene = useSceneStore((s) => s.reset);
   const recordLaunch = useGameStore((s) => s.recordLaunch);
 
   const [config, setConfig] = useState<LaunchConfig>(INITIAL_CONFIG);
   const [phase, setPhase] = useState<Phase>("config");
   const [attempt, setAttempt] = useState(1);
+  // Sticky: once a configuration has gone to countdown, that objective stays ticked after a hold or a failure.
+  const [configured, setConfigured] = useState(false);
   const [ignitionAt, setIgnitionAt] = useState<number | null>(null);
   const [result, setResult] = useState<LaunchResult | null>(null);
   const [alarm, setAlarm] = useState(0);
-  // Sticky: once a configuration has gone to countdown, that objective stays ticked after a failure.
-  const [configured, setConfigured] = useState(false);
   const pending = useRef<Promise<LaunchResult> | null>(null);
   const consoleRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    setViewpoints(VIEWPOINTS, "console");
-    return resetScene;
-  }, [setViewpoints, resetScene]);
+  useSceneViewpoints(VIEWPOINTS, "console");
 
   // The console scrolls on small screens; each phase starts at its top.
   useEffect(() => {
@@ -161,8 +156,8 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
         )}
       </aside>
 
-      <Dialog open={phase === "anomaly"} onOpenChange={() => {}}>
-        <DialogContent hideClose onEscapeKeyDown={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
+      <Dialog open={phase === "anomaly"}>
+        <DialogContent locked>
           <DialogHeader>
             <StatusBadge status="fault" className="mb-2 w-fit">
               {m.anomalyTitle}
@@ -204,27 +199,15 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
         </DialogContent>
       </Dialog>
 
-      <Dialog open={phase === "orbit"} onOpenChange={() => {}}>
-        <DialogContent hideClose onEscapeKeyDown={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <div className="mb-2 flex items-end gap-4">
-              <div className="h-20 w-16 shrink-0">
-                <CharacterPortrait character="flight-director" />
-              </div>
-              <StatusBadge status="go" className="mb-1">
-                {m.go}
-              </StatusBadge>
-            </div>
-            <DialogTitle className="text-2xl">{m.orbitTitle}</DialogTitle>
-            <DialogDescription>{format(m.orbitBody, { km: config.orbitKm })}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button size="lg" onClick={onComplete}>
-              {m.continue}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SignOffDialog
+        open={phase === "orbit"}
+        character="flight-director"
+        badge={m.go}
+        title={m.orbitTitle}
+        description={format(m.orbitBody, { km: config.orbitKm })}
+        continueLabel={m.continue}
+        onContinue={onComplete}
+      />
     </section>
   );
 }
