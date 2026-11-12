@@ -20,6 +20,7 @@ import { useLocalized, useT } from "@/i18n/useT";
 import { cn } from "@/lib/utils";
 import { CHARACTERS } from "@/game/characters";
 import { BRIEFINGS } from "@/game/script";
+import { useGameStore } from "@/game/gameStore";
 import { useSceneStore } from "@/game/sceneStore";
 import { useSettingsStore } from "@/game/settingsStore";
 import { ROCKET_PARTS, TOTAL_MASS_T, type LevelId, type PartId } from "@/mocks/rocket-parts";
@@ -42,6 +43,7 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
   const setViewpoints = useSceneStore((s) => s.setViewpoints);
   const goTo = useSceneStore((s) => s.goTo);
   const resetScene = useSceneStore((s) => s.reset);
+  const recordParts = useGameStore((s) => s.recordParts);
   const level = (useSceneStore((s) => s.viewpointId) ?? "floor") as LevelId;
 
   const [inspected, setInspected] = useState<Set<PartId>>(new Set());
@@ -153,7 +155,13 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
             {t.common.demoData}
           </StatusBadge>
           <DialogFooter>
-            <Button size="lg" onClick={onComplete}>
+            <Button
+              size="lg"
+              onClick={() => {
+                recordParts(inspected.size);
+                onComplete();
+              }}
+            >
               {t.workshop.continue}
             </Button>
           </DialogFooter>

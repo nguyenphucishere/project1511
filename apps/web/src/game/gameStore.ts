@@ -10,9 +10,19 @@ export interface MissionLog {
   launchAttempts: number;
   /** The configuration that reached orbit. */
   launchConfig: LaunchConfig | null;
+  /** Rocket parts inspected in Scene 2 (0 if that chapter was skipped). */
+  partsInspected: number;
+  /** Scene 4 touchdown readings, null until the lander is down. */
+  landing: LandingRecord | null;
 }
 
-const EMPTY_LOG: MissionLog = { launchAttempts: 0, launchConfig: null };
+export interface LandingRecord {
+  /** Vertical speed at contact, m/s (positive number). */
+  touchdownMs: number;
+  fuelLeftPct: number;
+}
+
+const EMPTY_LOG: MissionLog = { launchAttempts: 0, launchConfig: null, partsInspected: 0, landing: null };
 
 export interface GameState {
   /** Current step in FLOW, or null before the player presses Start. This is the checkpoint. */
@@ -30,6 +40,8 @@ export interface GameState {
   reset: () => void;
   log: MissionLog;
   recordLaunch: (config: LaunchConfig, success: boolean) => void;
+  recordParts: (count: number) => void;
+  recordLanding: (landing: LandingRecord) => void;
 }
 
 export const useGameStore = create<GameState>()(
@@ -50,10 +62,13 @@ export const useGameStore = create<GameState>()(
       recordLaunch: (config, success) =>
         set((s) => ({
           log: {
+            ...s.log,
             launchAttempts: s.log.launchAttempts + 1,
             launchConfig: success ? config : s.log.launchConfig,
           },
         })),
+      recordParts: (count) => set((s) => ({ log: { ...s.log, partsInspected: count } })),
+      recordLanding: (landing) => set((s) => ({ log: { ...s.log, landing } })),
     }),
     {
       name: "moonbound.progress",
@@ -65,6 +80,8 @@ export const useGameStore = create<GameState>()(
         const saved = persisted as { stepId?: unknown; log?: Partial<MissionLog> } | undefined;
         const id = saved?.stepId;
         const attempts = saved?.log?.launchAttempts;
+        const parts = saved?.log?.partsInspected;
+        const landing = saved?.log?.landing;
         return {
           ...current,
           // Drop checkpoints that no longer exist after a flow change.
@@ -72,6 +89,9 @@ export const useGameStore = create<GameState>()(
           log: {
             launchAttempts: typeof attempts === "number" ? attempts : 0,
             launchConfig: saved?.log?.launchConfig ?? null,
+            partsInspected: typeof parts === "number" ? parts : 0,
+            landing:
+              landing && typeof landing.touchdownMs === "number" && typeof landing.fuelLeftPct === "number" ? landing : null,
           },
         };
       },

@@ -21,5 +21,9 @@ export const SCENES: Partial<Record<SceneId, ComponentType<SceneProps>>> = {
     ssr: false,
     loading,
   }),
+  "lunar-descent": dynamic(() => import("./lunar-descent/LunarDescentScene").then((m) => m.LunarDescentScene), {
+    ssr: false,
+    loading,
+  }),
   workshop: dynamic(() => import("./workshop/WorkshopScene").then((m) => m.WorkshopScene), { ssr: false, loading }),
 };

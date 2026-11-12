@@ -23,6 +23,8 @@ interface HotspotProps {
    * stage, where straight above the origin is inside the hull). Overrides markerHeight.
    */
   markerOffset?: Vec3;
+  /** Marker size multiplier, for hotspots seen from arm's length (e.g. console switches). */
+  markerScale?: number;
   done?: boolean;
   onActivate: () => void;
   children?: React.ReactNode;
@@ -42,6 +44,7 @@ export function Hotspot({
   position,
   markerHeight = 0.6,
   markerOffset,
+  markerScale = 1,
   done = false,
   onActivate,
   children,
@@ -74,7 +77,7 @@ export function Hotspot({
     marker.current.rotation.y = reduced ? 0.785 : t * 1.2;
     marker.current.position.y = oy + (reduced ? 0 : Math.sin(t * 2 + x) * 0.04);
     const s = highlighted ? 1.5 : done ? 0.7 : 1;
-    marker.current.scale.setScalar(s);
+    marker.current.scale.setScalar(s * markerScale);
   });
 
   const [hovering, setHovering] = useState(false);
