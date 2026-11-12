@@ -2,9 +2,9 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { BackSide, DoubleSide, type Group, type MeshBasicMaterial } from "three";
+import { DoubleSide, type Group, type MeshBasicMaterial } from "three";
 import { LightingRig } from "@/components/viewport/LightingRig";
-import { Starfield } from "@/components/viewport/Starfield";
+import { Environment } from "@react-three/drei";
 import { seeded } from "@/lib/random";
 import { addTrauma } from "@/game/shake";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -511,17 +511,11 @@ function WalkingStaff({
 /* ---------------------------------------------------------------- outside */
 
 function Outside() {
-  const stars = useMemo(() => {
-    const rand = seeded(7);
-    return Array.from({ length: 85 }, () => [(rand() - 0.5) * 420, 48 + rand() * 115, -210 - rand() * 35] as const);
-  }, []);
-
   return (
     <group>
-      {/* Seamless atmospheric dawn sky dome & ocean horizon */}
-      <SkyAndOcean />
-      <Starfield positions={stars} />
-      <DriftingClouds />
+      {/* Real dawn-sky HDRI (background + image-based light) and the ocean horizon */}
+      <Environment files="/assets/env/sky_day.hdr" background environmentIntensity={1.0} backgroundIntensity={1} />
+      <Ocean />
 
       {/* Coastal Florida Space Coast Terrain */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, GROUND_Y, -100]}>
@@ -546,89 +540,13 @@ function Outside() {
   );
 }
 
-/** Curved multi-band sky dome + distant Atlantic Ocean horizon so edges never clip. */
-function SkyAndOcean() {
+/** Distant Atlantic Ocean strip beyond the coastal scrubland; the sky itself is the HDRI. */
+function Ocean() {
   return (
-    <group>
-      {/* Deep cosmic upper sky dome */}
-      <mesh position={[0, GROUND_Y, -20]}>
-        <sphereGeometry args={[360, 32, 16]} />
-        <meshBasicMaterial color={SCENE_COLORS.skyUpper} side={BackSide} />
-      </mesh>
-      {/* Curved atmospheric bands wrapping around horizon */}
-      <mesh position={[0, GROUND_Y + 34, -20]}>
-        <cylinderGeometry args={[340, 340, 44, 48, 1, true]} />
-        <meshBasicMaterial color={SCENE_COLORS.skyMid} side={BackSide} />
-      </mesh>
-      <mesh position={[0, GROUND_Y + 10, -20]}>
-        <cylinderGeometry args={[335, 335, 20, 48, 1, true]} />
-        <meshBasicMaterial color={SCENE_COLORS.skyHorizon} side={BackSide} />
-      </mesh>
-      {/* Warm dawn glow along the eastern horizon */}
-      <mesh position={[-70, GROUND_Y + 4, -245]} rotation={[0, 0.2, 0]}>
-        <planeGeometry args={[280, 10]} />
-        <meshBasicMaterial color={SCENE_COLORS.dawnGlow} transparent opacity={0.85} />
-      </mesh>
-      <mesh position={[-75, GROUND_Y + 1.8, -240]} rotation={[0, 0.2, 0]}>
-        <planeGeometry args={[120, 4]} />
-        <meshBasicMaterial color={SCENE_COLORS.sunCore} />
-      </mesh>
-      {/* Atlantic Ocean horizon strip beyond the coastal scrubland */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, GROUND_Y - 0.05, -260]}>
-        <planeGeometry args={[900, 120]} />
-        <meshStandardMaterial color="#1E4B7A" roughness={0.35} metalness={0.2} />
-      </mesh>
-    </group>
-  );
-}
-
-/** Multi-puff 3D clouds gently drifting across the dawn sky. */
-function DriftingClouds() {
-  const group = useRef<Group>(null);
-  const reduced = useReducedMotion();
-
-  const clouds = useMemo(
-    () => [
-      { pos: [-78, GROUND_Y + 26, -155] as const, s: 1.5 },
-      { pos: [-28, GROUND_Y + 34, -175] as const, s: 1.8 },
-      { pos: [38, GROUND_Y + 28, -160] as const, s: 1.6 },
-      { pos: [88, GROUND_Y + 23, -150] as const, s: 1.35 },
-      { pos: [-110, GROUND_Y + 20, -145] as const, s: 1.2 },
-      { pos: [12, GROUND_Y + 40, -195] as const, s: 2.1 },
-    ],
-    [],
-  );
-
-  useFrame(({ clock }) => {
-    if (!group.current || reduced) return;
-    group.current.position.x = Math.sin(clock.elapsedTime * 0.04) * 14;
-  });
-
-  return (
-    <group ref={group}>
-      {clouds.map((c, idx) => (
-        <group key={idx} position={c.pos} scale={c.s}>
-          {/* Lower sunlit warm cloud base */}
-          <mesh position={[0, -0.7, 0]} scale={[3.4, 0.85, 1.3]}>
-            <icosahedronGeometry args={[1.6, 1]} />
-            <meshStandardMaterial color="#FED7AA" roughness={0.95} flatShading />
-          </mesh>
-          {/* Upper fluffy white puffs */}
-          <mesh position={[-2.2, 0.3, 0.2]} scale={[1.6, 1.1, 1.2]}>
-            <icosahedronGeometry args={[1.5, 1]} />
-            <meshStandardMaterial color={SCENE_COLORS.spaceWhite} roughness={0.9} flatShading />
-          </mesh>
-          <mesh position={[0.2, 0.9, -0.1]} scale={[2.0, 1.35, 1.4]}>
-            <icosahedronGeometry args={[1.6, 1]} />
-            <meshStandardMaterial color={SCENE_COLORS.spaceWhite} roughness={0.9} flatShading />
-          </mesh>
-          <mesh position={[2.6, 0.2, 0.3]} scale={[1.5, 1.0, 1.1]}>
-            <icosahedronGeometry args={[1.4, 1]} />
-            <meshStandardMaterial color={SCENE_COLORS.spaceWhite} roughness={0.9} flatShading />
-          </mesh>
-        </group>
-      ))}
-    </group>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, GROUND_Y - 0.05, -260]}>
+      <planeGeometry args={[900, 120]} />
+      <meshStandardMaterial color="#1E4B7A" roughness={0.25} metalness={0.3} envMapIntensity={1.4} />
+    </mesh>
   );
 }
 
