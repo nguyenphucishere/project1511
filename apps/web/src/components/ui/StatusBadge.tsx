@@ -4,12 +4,12 @@ import { cn } from "@/lib/utils";
 export type Status = "go" | "pending" | "caution" | "fault" | "demo";
 
 const styles: Record<Status, { className: string; Icon: typeof CircleCheck }> = {
-  go: { className: "text-foreground bg-surface/50", Icon: CircleCheck },
-  pending: { className: "text-foreground/75 bg-transparent shadow-[inset_0_0_0_1px_rgb(var(--border)/0.35)]", Icon: CircleDashed },
-  caution: { className: "text-space-deep bg-primary", Icon: TriangleExclamationPoint },
-  fault: { className: "text-space-deep bg-warning", Icon: OctagonExclamationPoint },
+  go: { className: "text-white bg-space-emerald/90 shadow-[0_0_8px_rgba(16,185,129,0.35)]", Icon: CircleCheck },
+  pending: { className: "text-foreground/80 bg-space-blue/30 shadow-[inset_0_0_0_1px_rgb(var(--border)/0.35)]", Icon: CircleDashed },
+  caution: { className: "text-space-deep bg-space-gold font-semibold shadow-[0_0_8px_rgba(255,199,44,0.35)]", Icon: TriangleExclamationPoint },
+  fault: { className: "text-white bg-nasa-red font-semibold shadow-[0_0_8px_rgba(252,61,33,0.45)]", Icon: OctagonExclamationPoint },
   demo: {
-    className: "text-foreground bg-transparent shadow-[inset_0_0_0_1px_rgb(var(--primary)/0.8)]",
+    className: "text-space-cyan bg-space-blue/40 shadow-[inset_0_0_0_1px_rgb(var(--space-cyan)/0.7)]",
     Icon: FlaskConical,
   },
 };

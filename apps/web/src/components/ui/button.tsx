@@ -13,13 +13,13 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-primary text-primary-foreground shadow-none hover:bg-primary/85 focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--space-deep)),inset_0_0_0_4px_rgb(var(--primary))]",
+          "bg-primary text-primary-foreground font-semibold shadow-none hover:bg-primary/90 focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--space-deep)),inset_0_0_0_4px_rgb(var(--primary))]",
         secondary:
-          "bg-surface/40 text-foreground hover:bg-surface/70 focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--primary))]",
+          "bg-surface/50 text-foreground hover:bg-nasa-blue hover:text-white focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--primary))]",
         ghost:
-          "bg-transparent text-foreground shadow-none hover:bg-surface/40 focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--primary))]",
+          "bg-transparent text-foreground shadow-none hover:bg-nasa-blue/40 hover:text-white focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--primary))]",
         danger:
-          "bg-warning text-space-deep shadow-none hover:bg-warning/85 focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--space-deep)),inset_0_0_0_4px_rgb(var(--warning))]",
+          "bg-nasa-red text-white font-semibold shadow-none hover:bg-nasa-red/90 focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--space-deep)),inset_0_0_0_4px_rgb(var(--nasa-red))]",
       },
       size: {
         sm: "h-8 px-3 text-sm",

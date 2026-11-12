@@ -26,7 +26,7 @@ export default function WorldCanvasInner({ children, label }: WorldCanvasInnerPr
       // The pixel pass renders at ~270 lines, so device pixels above 1.5 only cost fill rate.
       dpr={[1, 1.5]}
       gl={{ antialias: !pixelFX, powerPreference: "high-performance" }}
-      camera={{ fov: 70, near: 0.05, far: 200, position: [0, 1.6, 0] }}
+      camera={{ fov: 70, near: 0.05, far: 600, position: [0, 1.6, 0] }}
     >
       <color attach="background" args={[PALETTE.deep]} />
       <ResponsiveFov />

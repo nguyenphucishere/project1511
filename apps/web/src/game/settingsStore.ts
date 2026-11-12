@@ -24,7 +24,7 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       locale: DEFAULT_LOCALE,
-      pixelFX: true,
+      pixelFX: false,
       reduceMotion: false,
       sound: true,
       setLocale: (locale) => set({ locale }),
@@ -34,7 +34,7 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "moonbound.settings",
-      version: 1,
+      version: 2,
       storage: safeLocalStorage,
       skipHydration: true,
       partialize: ({ locale, pixelFX, reduceMotion, sound }) => ({ locale, pixelFX, reduceMotion, sound }),

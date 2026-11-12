@@ -9,7 +9,7 @@ import { seeded } from "@/lib/random";
 import { Hotspot } from "@/components/viewport/Hotspot";
 import { shake } from "@/game/shake";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { PALETTE } from "@/lib/palette";
+import { PALETTE, SCENE_COLORS } from "@/lib/palette";
 import { DESCENT_STEPS, sampleAt } from "@/mocks/descent";
 import {
   CABIN,
@@ -79,58 +79,57 @@ function Cabin() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, cz]}>
         <planeGeometry args={[w, d]} />
-        <meshStandardMaterial color={PALETTE.deep} />
+        <meshStandardMaterial color={SCENE_COLORS.steelDark} roughness={0.8} />
       </mesh>
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, h, cz]}>
         <planeGeometry args={[w, d]} />
-        <meshStandardMaterial color={PALETTE.deep} />
+        <meshStandardMaterial color={SCENE_COLORS.steelMid} roughness={0.7} />
       </mesh>
-      {/* Front wall around the window opening. */}
+      {/* Front cabin bulkhead: brushed aerospace slate-titanium */}
       <mesh position={[0, WINDOW.bottom / 2, CABIN.front]}>
         <boxGeometry args={[w, WINDOW.bottom, 0.08]} />
-        <meshStandardMaterial color={PALETTE.blue} />
+        <meshStandardMaterial color={SCENE_COLORS.steelMid} metalness={0.35} roughness={0.55} />
       </mesh>
       <mesh position={[0, (WINDOW.top + h) / 2, CABIN.front]}>
         <boxGeometry args={[w, h - WINDOW.top, 0.08]} />
-        <meshStandardMaterial color={PALETTE.blue} />
+        <meshStandardMaterial color={SCENE_COLORS.steelMid} metalness={0.35} roughness={0.55} />
       </mesh>
       {[-1, 1].map((s) => (
         <mesh key={s} position={[s * (WINDOW.maxX + sideW / 2), (WINDOW.bottom + WINDOW.top) / 2, CABIN.front]}>
           <boxGeometry args={[sideW, WINDOW.top - WINDOW.bottom, 0.08]} />
-          <meshStandardMaterial color={PALETTE.blue} />
+          <meshStandardMaterial color={SCENE_COLORS.steelMid} metalness={0.35} roughness={0.55} />
         </mesh>
       ))}
-      {/* Window frame: a thin mist bezel, with a gold sighting mark etched on the glass. */}
+      {/* Window frame: brushed aluminum bezel, with a glowing cyan sighting reticle on the glass. */}
       {[WINDOW.bottom, WINDOW.top].map((y) => (
         <mesh key={y} position={[0, y, CABIN.front + 0.05]}>
           <boxGeometry args={[WINDOW.maxX - WINDOW.minX + 0.08, 0.04, 0.02]} />
-          <meshStandardMaterial color={PALETTE.mist} />
+          <meshStandardMaterial color={SCENE_COLORS.aluminum} metalness={0.6} roughness={0.3} />
         </mesh>
       ))}
       {[WINDOW.minX, WINDOW.maxX].map((x) => (
         <mesh key={x} position={[x, (WINDOW.bottom + WINDOW.top) / 2, CABIN.front + 0.05]}>
           <boxGeometry args={[0.04, WINDOW.top - WINDOW.bottom, 0.02]} />
-          <meshStandardMaterial color={PALETTE.mist} />
+          <meshStandardMaterial color={SCENE_COLORS.aluminum} metalness={0.6} roughness={0.3} />
         </mesh>
       ))}
       {[0, 1].map((i) => (
         <mesh key={i} position={[0, (WINDOW.bottom + WINDOW.top) / 2, CABIN.front + 0.02]} rotation={[0, 0, i * (Math.PI / 2)]}>
           <planeGeometry args={[0.18, 0.008]} />
-          <meshBasicMaterial color={PALETTE.gold} />
+          <meshBasicMaterial color={SCENE_COLORS.screenCyan} />
         </mesh>
       ))}
       {[CABIN.minX, CABIN.maxX].map((x) => (
         <mesh key={x} position={[x, h / 2, cz]} rotation={[0, x < 0 ? Math.PI / 2 : -Math.PI / 2, 0]}>
           <planeGeometry args={[d, h]} />
-          <meshStandardMaterial color={PALETTE.deep} />
+          <meshStandardMaterial color={SCENE_COLORS.steelDark} roughness={0.7} />
         </mesh>
       ))}
       <mesh position={[0, h / 2, CABIN.back]} rotation={[0, Math.PI, 0]}>
         <planeGeometry args={[w, h]} />
-        <meshStandardMaterial color={PALETTE.deep} />
+        <meshStandardMaterial color={SCENE_COLORS.steelDark} roughness={0.7} />
       </mesh>
-      {/* Fill so the cabin walls read as blue, not as the pixel pass's flat deep. */}
-      <pointLight position={[0, 2.2, 0.6]} color={PALETTE.mist} intensity={1.2} distance={4} />
+      <pointLight position={[0, 2.2, 0.6]} color={SCENE_COLORS.spaceWhite} intensity={1.5} distance={5} />
     </group>
   );
 }
@@ -147,11 +146,12 @@ function Console({
     <group>
       <mesh position={[0, CONSOLE.y - 0.5, CONSOLE.z]}>
         <boxGeometry args={[CONSOLE.width, 1, CONSOLE.depth]} />
-        <meshStandardMaterial color={PALETTE.blue} />
+        <meshStandardMaterial color={SCENE_COLORS.steelDark} metalness={0.4} roughness={0.5} />
       </mesh>
+      {/* NASA Blue & white instrument panel face */}
       <mesh position={[0, CONSOLE.y + 0.01, CONSOLE.z]} rotation={[CONSOLE.tilt * 0.2, 0, 0]}>
         <boxGeometry args={[CONSOLE.width + 0.04, 0.03, CONSOLE.depth]} />
-        <meshStandardMaterial color={PALETTE.deep} />
+        <meshStandardMaterial color={SCENE_COLORS.steelMid} metalness={0.5} roughness={0.4} />
       </mesh>
       <ContactLamp lit={contactLight} />
       {DESCENT_STEPS.map((step, i) => {
@@ -177,23 +177,23 @@ function Switch({ done, armed }: { done: boolean; armed: boolean }) {
   const lamp = useRef<MeshBasicMaterial>(null);
   useFrame((state) => {
     if (!lamp.current) return;
-    // The armed switch's lamp blinks gold; thrown ones glow mist; the rest stay dark.
+    // The armed switch's lamp blinks gold; thrown ones glow green; the rest stay dark.
     const on = armed ? reduced || Math.sin(state.clock.elapsedTime * 6) > -0.2 : done;
-    lamp.current.color.set(armed ? (on ? PALETTE.gold : PALETTE.blue) : done ? PALETTE.mist : PALETTE.deep);
+    lamp.current.color.set(armed ? (on ? SCENE_COLORS.solarGold : SCENE_COLORS.steelDark) : done ? SCENE_COLORS.screenGreen : SCENE_COLORS.steelDark);
   });
   return (
     <group>
       <mesh>
         <boxGeometry args={[0.24, 0.03, 0.2]} />
-        <meshStandardMaterial color={armed ? PALETTE.gold : PALETTE.deep} />
+        <meshStandardMaterial color={armed ? SCENE_COLORS.nasaRed : SCENE_COLORS.steelLight} metalness={0.5} />
       </mesh>
       <mesh position={[0, 0.05, done ? -0.03 : 0.03]} rotation={[done ? -0.6 : 0.6, 0, 0]}>
         <boxGeometry args={[0.035, 0.1, 0.035]} />
-        <meshStandardMaterial color={PALETTE.mist} />
+        <meshStandardMaterial color={SCENE_COLORS.spaceWhite} metalness={0.7} roughness={0.2} />
       </mesh>
       <mesh position={[0, 0.025, -0.075]}>
         <boxGeometry args={[0.07, 0.025, 0.035]} />
-        <meshBasicMaterial ref={lamp} color={PALETTE.deep} />
+        <meshBasicMaterial ref={lamp} color={SCENE_COLORS.steelDark} />
       </mesh>
     </group>
   );
@@ -204,11 +204,11 @@ function ContactLamp({ lit }: { lit: boolean }) {
     <group position={[0, CONSOLE.y + 0.05, CONSOLE.z - 0.2]}>
       <mesh>
         <boxGeometry args={[0.34, 0.08, 0.06]} />
-        <meshStandardMaterial color={PALETTE.deep} />
+        <meshStandardMaterial color={SCENE_COLORS.steelDark} />
       </mesh>
       <mesh position={[0, 0, 0.032]}>
         <planeGeometry args={[0.28, 0.05]} />
-        <meshBasicMaterial color={lit ? PALETTE.gold : PALETTE.blue} />
+        <meshBasicMaterial color={lit ? SCENE_COLORS.screenCyan : SCENE_COLORS.steelMid} />
       </mesh>
     </group>
   );
@@ -288,59 +288,60 @@ function Outside({ clock, touchdownAt }: { clock: DescentClock; touchdownAt: num
   return (
     <group ref={root} position={EYE}>
       <Starfield positions={stars} />
-      {/* Earth, half lit, low over the horizon to the right. */}
+      {/* Earth: vibrant blue ocean planet with white cloud swirls */}
       <mesh position={[38, 30, -165]}>
         <sphereGeometry args={[7, 24, 16]} />
-        <meshStandardMaterial color={PALETTE.blue} emissive={PALETTE.deep} />
+        <meshStandardMaterial color={SCENE_COLORS.earthBlue} emissive="#0B3D91" emissiveIntensity={0.3} />
       </mesh>
       <mesh position={[36.2, 31.6, -158.5]}>
         <sphereGeometry args={[2.2, 12, 8]} />
-        <meshBasicMaterial color={PALETTE.mist} />
+        <meshBasicMaterial color={SCENE_COLORS.earthCloud} />
       </mesh>
 
       <group ref={surface}>
+        {/* Realistic grey/silver lunar regolith */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -110]}>
           <planeGeometry args={[520, 520]} />
-          <meshStandardMaterial color={PALETTE.blue} />
+          <meshStandardMaterial color={SCENE_COLORS.lunarMid} roughness={0.95} />
         </mesh>
         {craters.map((c, i) => (
           <group key={i} position={[c.x, 0, c.z]} rotation={[-Math.PI / 2, 0, 0]}>
             <mesh position={[0, 0, 0.04]}>
               <ringGeometry args={[c.r * 0.82, c.r, 20]} />
-              <meshBasicMaterial color={PALETTE.mist} />
+              <meshStandardMaterial color={SCENE_COLORS.lunarLight} roughness={0.9} />
             </mesh>
             <mesh position={[0, 0, 0.03]}>
               <circleGeometry args={[c.r * 0.82, 20]} />
-              <meshBasicMaterial color={PALETTE.deep} />
+              <meshStandardMaterial color={SCENE_COLORS.lunarDark} roughness={0.95} />
             </mesh>
           </group>
         ))}
-        {/* The boulder field on the original aim point: the reason to redesignate. */}
+        {/* The boulder field on the original aim point: realistic dark lunar rock */}
         {boulders.map((b, i) => (
           <mesh key={i} position={[b.x, b.r * 0.5, b.z]} rotation={[b.rot, b.rot * 0.7, 0]}>
             <dodecahedronGeometry args={[b.r, 0]} />
-            <meshStandardMaterial color={PALETTE.mist} />
+            <meshStandardMaterial color={SCENE_COLORS.lunarDark} roughness={0.9} flatShading />
           </mesh>
         ))}
         <group ref={reticle} position={[SITE_OFFSET_X, 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
           <mesh>
             <ringGeometry args={[1.7, 2.1, 32]} />
-            <meshBasicMaterial color={PALETTE.gold} />
+            <meshBasicMaterial color={SCENE_COLORS.screenCyan} />
           </mesh>
           {[0, 1].map((k) => (
             <mesh key={k} rotation={[0, 0, k * (Math.PI / 2)]}>
               <planeGeometry args={[1.2, 0.18]} />
-              <meshBasicMaterial color={PALETTE.gold} />
+              <meshBasicMaterial color={SCENE_COLORS.screenCyan} />
             </mesh>
           ))}
         </group>
         <mesh ref={dust} position={[SITE_OFFSET_X, 0.15, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
           <ringGeometry args={[0.4, 1, 24]} />
-          <meshBasicMaterial ref={dustMat} color={PALETTE.mist} transparent opacity={0} depthWrite={false} />
+          <meshBasicMaterial ref={dustMat} color={SCENE_COLORS.lunarLight} transparent opacity={0} depthWrite={false} />
         </mesh>
         <mesh ref={burst} position={[SITE_OFFSET_X, 0.2, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
           <ringGeometry args={[0.7, 1, 32]} />
-          <meshBasicMaterial ref={burstMat} color={PALETTE.mist} transparent opacity={0} depthWrite={false} />
+          <meshBasicMaterial ref={burstMat} color={SCENE_COLORS.lunarLight} transparent opacity={0} depthWrite={false} />
         </mesh>
       </group>
     </group>
