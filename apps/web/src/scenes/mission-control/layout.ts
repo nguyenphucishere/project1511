@@ -1,4 +1,4 @@
-import type { Viewpoint, Vec3 } from "@/game/sceneStore";
+import type { Viewpoint, Vec3, WalkArea } from "@/game/sceneStore";
 
 /**
  * Scene 3 metrics, in metres. The flight director sits on the raised back tier of the control
@@ -17,6 +17,20 @@ export const ROCKET_HEIGHT = 30;
 
 const EYE: Vec3 = [0, EYE_Y, 2.4];
 
+/** Standing eye height above whichever floor the player is on: main floor or the raised back tier. */
+const STAND = 1.65;
+const CONTROL_ROOM_WALK: WalkArea = {
+  bounds: { minX: ROOM.minX + 0.4, maxX: ROOM.maxX - 0.4, minZ: ROOM.minZ + 0.9, maxZ: ROOM.maxZ - 0.4 },
+  // The three console desks (and the seated controllers behind them): gaps between them are walkable.
+  blockers: [
+    { minX: -4.9, maxX: -1.9, minZ: -2.2, maxZ: -0.35 },
+    { minX: -1.5, maxX: 1.5, minZ: -2.2, maxZ: -0.35 },
+    { minX: 1.9, maxX: 4.9, minZ: -2.2, maxZ: -0.35 },
+  ],
+  eyeHeight: (_x, z) => (z > TIER.frontZ ? TIER.y + STAND : STAND),
+  speed: 2.6,
+};
+
 export const VIEWPOINTS: Viewpoint[] = [
   {
     id: "console",
@@ -27,5 +41,6 @@ export const VIEWPOINTS: Viewpoint[] = [
     pitch: Math.atan2(PAD[1] + ROCKET_HEIGHT * 0.45 - EYE[1], Math.hypot(PAD[0] - EYE[0], PAD[2] - EYE[2])),
     yawRange: 0.6,
     pitchRange: 0.4,
+    walk: CONTROL_ROOM_WALK,
   },
 ];

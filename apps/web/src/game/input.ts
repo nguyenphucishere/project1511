@@ -12,6 +12,9 @@ export const BINDINGS: Record<Action, string[]> = {
   lookDown: ["ArrowDown", "KeyS"],
 };
 
+/** Walking keys (only active at viewpoints that define a walk area). */
+export const MOVE_KEYS = { forward: "KeyW", back: "KeyS", left: "KeyA", right: "KeyD", sprint: "ShiftLeft" } as const;
+
 export function actionFor(code: string): Action | undefined {
   return (Object.keys(BINDINGS) as Action[]).find((a) => BINDINGS[a].includes(code));
 }
@@ -19,5 +22,5 @@ export function actionFor(code: string): Action | undefined {
 /** Keys typed into a field or used by a widget (tabs, radio groups) must not move the camera. */
 export function isTypingTarget(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
-  return !!el?.closest("input, textarea, select, [contenteditable='true'], [role='group'], [role='tablist'], [role='slider']");
+  return !!el?.closest?.("input, textarea, select, [contenteditable='true'], [role='group'], [role='tablist'], [role='slider']");
 }

@@ -3,7 +3,7 @@ import type { VideoId } from "@/lib/assets";
 import type { BriefingId } from "./script";
 import type { CharacterId } from "./characters";
 
-export type ChapterId = "medical" | "workshop" | "mission-control" | "lunar-descent";
+export type ChapterId = "medical" | "workshop" | "mission-control" | "ascent" | "lunar-descent";
 export type SceneId = ChapterId;
 
 /** How the screen changes when this step starts. */
@@ -25,6 +25,7 @@ export const CHAPTERS: Chapter[] = [
   { id: "medical", title: { en: "Medical check", vi: "Khám sức khoẻ" }, pov: "astronaut" },
   { id: "workshop", title: { en: "Assembly hall", vi: "Xưởng lắp ráp" }, pov: "engineer" },
   { id: "mission-control", title: { en: "Mission Control", vi: "Trung tâm điều khiển" }, pov: "flight-director" },
+  { id: "ascent", title: { en: "Ascent to orbit", vi: "Bay lên quỹ đạo" }, pov: "astronaut" },
   { id: "lunar-descent", title: { en: "Lunar descent", vi: "Hạ cánh Mặt Trăng" }, pov: "astronaut" },
 ];
 
@@ -41,6 +42,8 @@ export const FLOW: Step[] = [
   { id: "mission-control-briefing", kind: "briefing", briefing: "mission-control", chapter: "mission-control", enter: "fade" },
   { id: "mission-control-scene", kind: "scene", scene: "mission-control", chapter: "mission-control", enter: "fade" },
   { id: "launch-video", kind: "cutscene", video: "launch", chapter: "mission-control", enter: "fade" },
+  { id: "ascent-briefing", kind: "briefing", briefing: "ascent", chapter: "ascent", enter: "black-hold" },
+  { id: "ascent-scene", kind: "scene", scene: "ascent", chapter: "ascent", enter: "fade" },
   { id: "lunar-descent-briefing", kind: "briefing", briefing: "lunar-descent", chapter: "lunar-descent", enter: "black-hold" },
   { id: "lunar-descent-scene", kind: "scene", scene: "lunar-descent", chapter: "lunar-descent", enter: "fade" },
   { id: "flag-video", kind: "cutscene", video: "flagPlanting", chapter: "lunar-descent", enter: "fade" },

@@ -1,4 +1,4 @@
-import type { Viewpoint, Vec3 } from "@/game/sceneStore";
+import type { Viewpoint, Vec3, WalkArea } from "@/game/sceneStore";
 import type { LevelId, PartId } from "@/mocks/rocket-parts";
 
 /**
@@ -35,6 +35,21 @@ const FLOOR_EYE: Vec3 = [0, EYE, 13];
 const L2_EYE: Vec3 = [-5.28, 13.95, 3.96];
 const L3_EYE: Vec3 = [6.0, 22.9, 4.5];
 
+/** Hall floor: free walking everywhere except the rocket mount and the two gantry tower bases. */
+let floorWalkCache: WalkArea | undefined;
+function floorWalk(): WalkArea {
+  const tower = (level: "level2" | "level3") => {
+    const [x, z] = towerCentre(level);
+    return { minX: x - 1.5, maxX: x + 1.5, minZ: z - 1.5, maxZ: z + 1.5 };
+  };
+  return {
+    bounds: { minX: HALL.minX + 1, maxX: HALL.maxX - 1, minZ: HALL.minZ + 1, maxZ: HALL.maxZ - 1 },
+    blockers: [{ minX: -3.4, maxX: 3.4, minZ: -3.4, maxZ: 3.4 }, tower("level2"), tower("level3")],
+    eyeHeight: () => EYE,
+    speed: 3.2,
+  };
+}
+
 export const VIEWPOINTS: Viewpoint[] = [
   {
     id: "floor",
@@ -43,6 +58,9 @@ export const VIEWPOINTS: Viewpoint[] = [
     ...aim(FLOOR_EYE, [0, 6, 0]),
     yawRange: 0.75,
     pitchRange: 0.5,
+    get walk() {
+      return (floorWalkCache ??= floorWalk());
+    },
   },
   {
     id: "level2",

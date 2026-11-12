@@ -18,7 +18,7 @@ export interface Briefing {
   objectives: LocalizedText[];
 }
 
-export type BriefingId = "medical" | "workshop" | "mission-control" | "lunar-descent" | "epilogue";
+export type BriefingId = "medical" | "workshop" | "mission-control" | "ascent" | "lunar-descent" | "epilogue";
 
 export const BRIEFINGS: Record<BriefingId, Briefing> = {
   medical: {
@@ -88,6 +88,30 @@ export const BRIEFINGS: Record<BriefingId, Briefing> = {
     objectives: [
       { en: "Configure the launch", vi: "Thiết lập thông số phóng" },
       { en: "Run the countdown and launch", vi: "Đếm ngược và phóng" },
+    ],
+  },
+  ascent: {
+    pov: "astronaut",
+    lines: [
+      {
+        speaker: "astronaut",
+        text: {
+          en: "Strapped in, helmet sealed. The countdown ended and the whole rocket is alive under my back.",
+          vi: "Đã thắt dây, đã đóng mũ. Đếm ngược xong rồi, cả con tên lửa đang rung lên ngay dưới lưng tôi.",
+        },
+      },
+      {
+        speaker: "astronaut",
+        text: {
+          en: "Nine minutes to orbit. Hold on through Max Q, then unbuckle and take a look at home.",
+          vi: "Chín phút nữa là tới quỹ đạo. Giữ chắc qua Max Q, rồi tháo dây và ngắm nhìn quê nhà.",
+        },
+      },
+    ],
+    objectives: [
+      { en: "Ride the rocket to orbit", vi: "Cưỡi tên lửa lên quỹ đạo" },
+      { en: "Release your harness", vi: "Tháo dây an toàn" },
+      { en: "Float to the window and look at Earth", vi: "Bơi tới cửa sổ và ngắm Trái Đất" },
     ],
   },
   "lunar-descent": {

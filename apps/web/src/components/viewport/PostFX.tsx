@@ -11,7 +11,7 @@ import { ToneMappingMode } from "postprocessing";
 export function PostFX() {
   return (
     <EffectComposer multisampling={4} enableNormalPass={false}>
-      <Bloom intensity={0.55} luminanceThreshold={0.85} luminanceSmoothing={0.25} mipmapBlur />
+      <Bloom intensity={0.5} luminanceThreshold={1.0} luminanceSmoothing={0.2} mipmapBlur />
       <Vignette eskil={false} offset={0.25} darkness={0.55} />
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       <SMAA />

@@ -24,7 +24,12 @@ export type SfxId =
   | "alarm"
   | "switch"
   | "contact"
-  | "touchdown";
+  | "touchdown"
+  | "chime"
+  | "caution"
+  | "bang"
+  | "whoosh"
+  | "unlatch";
 
 export type LoopId = "engine";
 
@@ -161,6 +166,28 @@ const RECIPES: Record<SfxId, (c: AudioContext, out: AudioNode, t: number) => voi
     tone(c, out, t, { freq: 1760, dur: 0.1, gain: 0.08 });
     tone(c, out, t + 0.16, { freq: 1760, dur: 0.1, gain: 0.08 });
   },
+  // Ship's computer announcement: a soft two-note chime before the voice/caption.
+  chime: (c, out, t) => {
+    tone(c, out, t, { type: "sine", freq: 880, dur: 0.22, gain: 0.1 });
+    tone(c, out, t + 0.16, { type: "sine", freq: 1174.7, dur: 0.3, gain: 0.1 });
+  },
+  // Master caution: three urgent descending beeps.
+  caution: (c, out, t) => {
+    for (let i = 0; i < 3; i++) tone(c, out, t + i * 0.16, { type: "square", freq: 1050 - i * 120, dur: 0.12, gain: 0.07 });
+  },
+  // Pyrotechnic separation: a hard crack with a low thud, then a short rush of gas.
+  bang: (c, out, t) => {
+    burst(c, out, t, { dur: 0.12, gain: 0.55, filter: "highpass", freq: 1200 });
+    tone(c, out, t, { freq: 110, freqEnd: 38, dur: 0.5, gain: 0.7, attack: 0.004 });
+    burst(c, out, t + 0.05, { dur: 0.9, gain: 0.22, filter: "bandpass", freq: 3000, freqEnd: 500, q: 0.8 });
+  },
+  whoosh: (c, out, t) => burst(c, out, t, { dur: 1.2, gain: 0.18, filter: "bandpass", freq: 300, freqEnd: 2600, q: 0.9, attack: 0.3 }),
+  // Harness buckle: metal clack, then the webbing springing loose.
+  unlatch: (c, out, t) => {
+    burst(c, out, t, { dur: 0.04, gain: 0.35, filter: "highpass", freq: 3000 });
+    tone(c, out, t, { type: "square", freq: 180, dur: 0.06, gain: 0.09 });
+    burst(c, out, t + 0.12, { dur: 0.35, gain: 0.08, filter: "bandpass", freq: 1800, freqEnd: 900 });
+  },
   touchdown: (c, out, t) => {
     tone(c, out, t, { freq: 70, freqEnd: 35, dur: 0.6, gain: 0.6, attack: 0.01 });
     burst(c, out, t, { dur: 1, gain: 0.3, filter: "lowpass", freq: 500, freqEnd: 150 });
@@ -223,3 +250,91 @@ export function startLoop(id: LoopId, { gain = 0.22 }: { gain?: number } = {}): 
 useSettingsStore.subscribe((s, prev) => {
   if (prev.sound && !s.sound) for (const stop of [...liveLoops]) stop();
 });
+
+export interface Rumble {
+  /** 0..1: loudness and brightness of the roar. Smoothed, so it can be set every frame. */
+  setLevel: (level: number) => void;
+  stop: () => void;
+}
+
+/**
+ * The sound of riding a rocket from inside the cabin: a deep, band-limited roar whose weight
+ * follows `setLevel`, with a slow rattle on top. Returns a no-op handle when muted or unsupported.
+ */
+export function startRumble(): Rumble {
+  const none: Rumble = { setLevel: () => {}, stop: () => {} };
+  if (!enabled()) return none;
+  const a = audio();
+  if (!a) return none;
+  const { c, out } = a;
+  const src = c.createBufferSource();
+  src.buffer = noise(c);
+  src.loop = true;
+  const f = c.createBiquadFilter();
+  f.type = "lowpass";
+  f.frequency.value = 120;
+  const body = c.createOscillator();
+  body.type = "sawtooth";
+  body.frequency.value = 38;
+  const bodyGain = c.createGain();
+  bodyGain.gain.value = 0;
+  const lfo = c.createOscillator();
+  const lfoGain = c.createGain();
+  lfo.frequency.value = 11;
+  lfoGain.gain.value = 30;
+  lfo.connect(lfoGain).connect(f.frequency);
+  const g = c.createGain();
+  g.gain.value = 0.0001;
+  src.connect(f).connect(g);
+  body.connect(bodyGain).connect(g);
+  g.connect(out);
+  src.start();
+  body.start();
+  lfo.start();
+
+  let stopped = false;
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    liveLoops.delete(stop);
+    const now = c.currentTime;
+    g.gain.cancelScheduledValues(now);
+    g.gain.setTargetAtTime(0.0001, now, 0.25);
+    src.stop(now + 1.5);
+    body.stop(now + 1.5);
+    lfo.stop(now + 1.5);
+  };
+  liveLoops.add(stop);
+  return {
+    setLevel: (level) => {
+      if (stopped) return;
+      const l = Math.min(1, Math.max(0, level));
+      const now = c.currentTime;
+      g.gain.setTargetAtTime(Math.max(0.0001, l * 0.55), now, 0.15);
+      f.frequency.setTargetAtTime(110 + l * 700, now, 0.2);
+      bodyGain.gain.setTargetAtTime(l * 0.25, now, 0.2);
+      body.frequency.setTargetAtTime(32 + l * 22, now, 0.3);
+    },
+    stop,
+  };
+}
+
+/**
+ * Speaks a short ship's-computer line with the browser's speech synthesis, if available.
+ * Best-effort: no voice installed or sound muted simply means the caption stands alone.
+ */
+export function speak(text: string, locale: "en" | "vi") {
+  if (!enabled() || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  const synth = window.speechSynthesis;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = locale === "vi" ? "vi-VN" : "en-US";
+  u.rate = 1.05;
+  u.pitch = 0.85;
+  u.volume = 0.8;
+  synth.cancel();
+  synth.speak(u);
+}
+
+export function stopSpeaking() {
+  if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+}

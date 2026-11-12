@@ -20,6 +20,7 @@ export const SCENES: Record<SceneId, ComponentType<SceneProps>> = {
     ssr: false,
     loading,
   }),
+  ascent: dynamic(() => import("./ascent/AscentScene").then((m) => m.AscentScene), { ssr: false, loading }),
   "lunar-descent": dynamic(() => import("./lunar-descent/LunarDescentScene").then((m) => m.LunarDescentScene), {
     ssr: false,
     loading,

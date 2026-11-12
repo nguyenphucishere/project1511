@@ -4,6 +4,27 @@ import type { LocalizedText } from "@/i18n";
 
 export type Vec3 = [number, number, number];
 
+/** Axis-aligned box on the floor plane (x, z), in metres. */
+export interface FloorRect {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
+/**
+ * Where WASD may take the player from a viewpoint. Without `walk`, WASD turns the head like the
+ * arrow keys do (seated viewpoints). `bounds` is the walkable floor, `blockers` are furniture the
+ * player cannot enter, and `eyeHeight(x, z)` lets the floor rise (steps, platforms).
+ */
+export interface WalkArea {
+  bounds: FloorRect;
+  blockers?: FloorRect[];
+  eyeHeight?: (x: number, z: number) => number;
+  /** Metres per second; defaults to a relaxed walking pace. */
+  speed?: number;
+}
+
 /** A fixed place the first-person camera can stand. Angles in radians. */
 export interface Viewpoint {
   id: string;
@@ -15,6 +36,8 @@ export interface Viewpoint {
   /** How far the player may look away from the resting yaw/pitch. */
   yawRange: number;
   pitchRange: number;
+  /** When set, WASD walks around inside this area and the yaw limit is lifted. */
+  walk?: WalkArea;
 }
 
 export type HotspotKind = "inspect" | "move";
