@@ -29,12 +29,14 @@ export interface RockScore {
   setIntensity: (level: number) => void;
   /** An orchestral hit: cymbal swell and timpani, for the moment of ignition or a big cut. */
   hit: () => void;
+  /** A rising sweep of noise, strings and a pitched tone, building for `seconds` to the next hit. */
+  riser: (seconds: number) => void;
   /** Fades out over `seconds` and stops. */
   stop: (seconds?: number) => void;
 }
 
 export function startRockScore(initial = 0.15): RockScore {
-  const none: RockScore = { setIntensity: () => {}, hit: () => {}, stop: () => {} };
+  const none: RockScore = { setIntensity: () => {}, hit: () => {}, riser: () => {}, stop: () => {} };
   if (!enabled()) return none;
   const a = audio();
   if (!a) return none;
@@ -264,7 +266,169 @@ export function startRockScore(initial = 0.15): RockScore {
       timpani(t, 55, 1);
       timpani(t + STEP * 2, 55, 0.8);
       level = Math.max(level, 0.5);
+      // Sub-bass boom and a low brass "braam": detuned saws through a falling filter.
+      osc("sine", 38, t, 2.4, master, 1.0, 0.01);
+      const lp = c.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.setValueAtTime(1800, t);
+      lp.frequency.exponentialRampToValueAtTime(220, t + 1.6);
+      lp.connect(master);
+      for (const det of [-14, -5, 5, 14]) {
+        osc("sawtooth", 55, t, 1.8, lp, 0.22, 0.03, det);
+        osc("sawtooth", 82.4, t, 1.8, lp, 0.14, 0.03, det);
+      }
+    },
+    riser: (seconds) => {
+      if (stopped) return;
+      const t = c.currentTime + 0.02;
+      const end = t + seconds;
+      // Filtered noise sweeping up
+      const s = c.createBufferSource();
+      s.buffer = noiseBuf;
+      s.loop = true;
+      const f = c.createBiquadFilter();
+      f.type = "bandpass";
+      f.Q.value = 1.4;
+      f.frequency.setValueAtTime(300, t);
+      f.frequency.exponentialRampToValueAtTime(7000, end);
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.4, end);
+      g.gain.linearRampToValueAtTime(0.0001, end + 0.03);
+      s.connect(f).connect(g).connect(master);
+      s.start(t, Math.random());
+      s.stop(end + 0.1);
+      // Tremolo strings climbing an octave and a half, getting faster
+      const o = c.createOscillator();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(110, t);
+      o.frequency.exponentialRampToValueAtTime(330, end);
+      const trem = c.createGain();
+      const lfo = c.createOscillator();
+      lfo.frequency.setValueAtTime(5, t);
+      lfo.frequency.linearRampToValueAtTime(22, end);
+      const depth = c.createGain();
+      depth.gain.value = 0.2;
+      lfo.connect(depth).connect(trem.gain);
+      trem.gain.value = 0.25;
+      const lp = c.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.setValueAtTime(600, t);
+      lp.frequency.exponentialRampToValueAtTime(4000, end);
+      const og = c.createGain();
+      og.gain.setValueAtTime(0.0001, t);
+      og.gain.exponentialRampToValueAtTime(0.22, end);
+      og.gain.linearRampToValueAtTime(0.0001, end + 0.03);
+      o.connect(lp).connect(trem).connect(og).connect(master);
+      o.start(t);
+      lfo.start(t);
+      o.stop(end + 0.1);
+      lfo.stop(end + 0.1);
+      // Timpani roll that tightens
+      for (let k = 0, at = t; at < end; k++) {
+        timpani(at, 55, 0.25 + 0.55 * ((at - t) / seconds));
+        at += Math.max(0.07, 0.3 - k * 0.018);
+      }
     },
     stop,
   };
+}
+
+/**
+ * The quiet after the last step: a slow, spacious pad, a deep drone and a few high bell notes with
+ * long tails. Meant for the stretch where nothing happens but the Earth in the window.
+ */
+export function startCalmScore(): { stop: (seconds?: number) => void } {
+  const none = { stop: () => {} };
+  if (!enabled()) return none;
+  const a = audio();
+  if (!a) return none;
+  const { c, out } = a;
+
+  const master = c.createGain();
+  master.gain.value = 0.0001;
+  master.gain.setTargetAtTime(0.5, c.currentTime, 1.6);
+  const lp = c.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 1800;
+  lp.Q.value = 0.5;
+  // A long, dark reverb made of a few feedback delays
+  const wet = c.createGain();
+  wet.gain.value = 0.45;
+  for (const [time, fb] of [[0.37, 0.5], [0.53, 0.45], [0.71, 0.4]] as const) {
+    const d = c.createDelay(1.5);
+    d.delayTime.value = time;
+    const g = c.createGain();
+    g.gain.value = fb;
+    const damp = c.createBiquadFilter();
+    damp.type = "lowpass";
+    damp.frequency.value = 1600;
+    lp.connect(d);
+    d.connect(damp).connect(g).connect(d);
+    d.connect(wet);
+  }
+  wet.connect(master);
+  lp.connect(master);
+  master.connect(out);
+
+  const note = (freq: number, t: number, dur: number, peak: number, attack: number, type: OscillatorType = "sine", detune = 0) => {
+    const o = c.createOscillator();
+    o.type = type;
+    o.frequency.value = freq;
+    o.detune.value = detune;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(lp);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  };
+
+  // Am9, Fmaj7, Cmaj9, Gadd9: six seconds each
+  const CHORDS: number[][] = [
+    [55, 82.41, 110, 164.81, 246.94],
+    [43.65, 65.41, 87.31, 130.81, 220],
+    [65.41, 98, 130.81, 196, 293.66],
+    [49, 73.42, 98, 146.83, 246.94],
+  ];
+  const BELLS = [880, 987.77, 1174.66, 1318.51, 1567.98];
+  const SPAN = 6;
+  let bar = 0;
+  let next = c.currentTime + 0.05;
+  let stopped = false;
+
+  const schedule = () => {
+    if (stopped) return;
+    while (next < c.currentTime + 1) {
+      const chord = CHORDS[bar % CHORDS.length]!;
+      chord.forEach((f, i) => {
+        note(f, next, SPAN + 2.5, i === 0 ? 0.3 : 0.1, 2.4, i < 2 ? "sine" : "triangle", i % 2 ? 5 : -5);
+        if (i >= 2) note(f * 2, next + 0.3, SPAN + 1, 0.025, 2.6, "sine", 4);
+      });
+      // A few bell notes, unhurried
+      for (let k = 0; k < 3; k++) {
+        const at = next + 0.8 + k * 1.9 + (bar % 2) * 0.4;
+        note(BELLS[(bar * 2 + k * 3) % BELLS.length]!, at, 4.5, 0.05, 0.01);
+      }
+      next += SPAN;
+      bar += 1;
+    }
+  };
+  schedule();
+  const timer = window.setInterval(schedule, 500);
+
+  const stop = (seconds = 2) => {
+    if (stopped) return;
+    stopped = true;
+    liveLoops.delete(stopNow);
+    window.clearInterval(timer);
+    master.gain.cancelScheduledValues(c.currentTime);
+    master.gain.setValueAtTime(Math.max(master.gain.value, 0.0001), c.currentTime);
+    master.gain.linearRampToValueAtTime(0.0001, c.currentTime + seconds);
+    window.setTimeout(() => master.disconnect(), seconds * 1000 + 400);
+  };
+  const stopNow = () => stop(0.2);
+  liveLoops.add(stopNow);
+  return { stop };
 }

@@ -7,8 +7,11 @@ import { addTrauma } from "@/game/shake";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { SCENE_COLORS } from "@/lib/palette";
 import {
+  A3_ACCEL,
   ADAPTER_T,
+  CUTOFF_T,
   HOLD_DOWN,
+  INTER_T,
   SEP2_T,
   SEPARATION_T,
   SPENT_VISIBLE,
@@ -17,25 +20,40 @@ import {
   detachedPose,
   rocketRise,
 } from "./ascent";
+import { CabinView } from "./CabinView";
+import { Capsule, LunarModule, VaporCone } from "./DockedParts";
 import { LaunchSmoke } from "./LaunchSmoke";
-import { EscapeTower, LanderBay, NozzleExtension, PetalRing, UllageMotors } from "./Mechanics";
+import {
+  AdapterPanels,
+  CutFlash,
+  EscapeTower,
+  Fairings,
+  FlangeBolts,
+  InstrumentUnit,
+  InterstageShell,
+  RetroRockets,
+  UllageMotors,
+} from "./Mechanics";
 
 /**
- * The three-stage vehicle in pad-local space, every coordinate a height above the stack's base:
- *   stage 1   2.2 – 11.4   five engines, the big tank, fins
- *   interstage 11.4 – 13.6  four petals that open at the first separation
- *   stage 2   13.6 – 19.0   five engines in the skirt, tank
- *   interstage 19.0 – 20.6  second set of petals
- *   stage 3   20.6 – 23.8   one engine whose nozzle telescopes out
- *   adapter   24.2 – 27.6   four panels folding away from the lander inside
- *   capsule   27.6 – 31.2   service module and command module
- *   tower     31.2 – ROCKET_HEIGHT  the launch escape system
+ * The three-stage vehicle in pad-local space, every coordinate a height above the stack's base,
+ * built the way Saturn V is put together:
+ *   stage 1    2.2 – 11.4   five engines (four on gimbals), engine fairings hiding the retros, fins
+ *   interstage 11.4 – 13.6  stays on stage 2 until a second cut drops it; eight ullage motors
+ *   stage 2    13.6 – 19.0   five engines in the skirt, tank, retros for the next separation
+ *   interstage 19.0 – 20.6   goes with stage 2
+ *   stage 3    20.6 – 23.8   one engine
+ *   instrument unit 23.8 – 24.2   the guidance electronics
+ *   adapter    24.2 – 27.6   four panels that open to 45 degrees and spring away from the lander
+ *   capsule    27.6 – 31.2   service module and command module
+ *   tower      31.2 – 38     the launch escape system
  * Each stage is its own group so it can fall away on its own when it separates.
  */
 export function LaunchVehicle({ ignitionAt, burnEndT }: { ignitionAt: number | null; burnEndT: number }) {
   const reduced = useReducedMotion();
   const upper = useRef<Group>(null);
   const stage1 = useRef<Group>(null);
+  const inter = useRef<Group>(null);
   const stage2 = useRef<Group>(null);
   const flame1 = useRef<Group>(null);
   const flame2 = useRef<Group>(null);
@@ -49,38 +67,31 @@ export function LaunchVehicle({ ignitionAt, burnEndT }: { ignitionAt: number | n
     const rise = t < 0 ? 0 : rocketRise(t);
     const sep1 = t >= SEPARATION_T;
     const sep2 = t >= SEP2_T;
+    const dropped = t >= INTER_T;
 
     if (upper.current) {
       upper.current.position.y = rise;
-      upper.current.visible = rise < 900;
+      upper.current.visible = rise < 6000;
     }
 
     // A spent stage keeps its speed, slows, and tumbles away about its own middle.
-    const detach = (g: Group | null, sepT: number, mid: number, dir: number, fall: number) => {
+    const detach = (g: Group | null, sepT: number, mid: number, dir: number, fall: number, slow = 1) => {
       if (!g) return;
       const tau = t - sepT;
-      const pose = detachedPose(sepT, tau, { fall, drift: 0.3 * dir, tumble: 0.055 * dir });
+      const pose = detachedPose(sepT, tau, { fall, drift: 0.3 * dir * slow, tumble: 0.055 * dir * slow });
       g.rotation.set(pose.tumble * 0.35, 0, pose.tumble);
       g.position.set(pose.drift + Math.sin(pose.tumble) * mid, pose.rise + mid - Math.cos(pose.tumble) * mid, 0);
       g.visible = tau < SPENT_VISIBLE;
     };
-    if (stage1.current) {
-      if (!sep1) {
-        stage1.current.position.set(0, rise, 0);
-        stage1.current.rotation.set(0, 0, 0);
-        stage1.current.visible = true;
-      } else {
-        detach(stage1.current, SEPARATION_T, 7.9, 1, 2.2);
-      }
-    }
-    if (stage2.current) {
-      if (!sep2) {
-        stage2.current.position.set(0, rise, 0);
-        stage2.current.rotation.set(0, 0, 0);
-      } else {
-        detach(stage2.current, SEP2_T, 16.3, -1, 1.8);
-      }
-    }
+    const follow = (g: Group | null) => {
+      if (!g) return;
+      g.position.set(0, rise, 0);
+      g.rotation.set(0, 0, 0);
+      g.visible = true;
+    };
+    if (stage1.current) (sep1 ? detach : (g: Group | null) => follow(g))(stage1.current, SEPARATION_T, 7.9, 1, 2.2);
+    if (inter.current) (dropped ? detach : (g: Group | null) => follow(g))(inter.current, INTER_T, 12.5, -1, 0.5, 0.6);
+    if (stage2.current) (sep2 ? detach : (g: Group | null) => follow(g))(stage2.current, SEP2_T, 16.3, -1, 1.8);
 
     // The four outer engines of stage 1 swing on their gimbals as the vehicle steers.
     gimbals.current.forEach((g, i) => {
@@ -94,7 +105,9 @@ export function LaunchVehicle({ ignitionAt, burnEndT }: { ignitionAt: number | n
     if (flame1.current) {
       flame1.current.visible = t >= 0 && !sep1;
       const climb = Math.max(0, t - HOLD_DOWN);
-      flame1.current.scale.set(1 + Math.min(climb, 6) * 0.05, Math.min(1, t / 0.9) * (1 + Math.min(climb, 5) * 0.28) * flicker, 1 + Math.min(climb, 6) * 0.05);
+      // The centre engine shuts down a moment early, so the plume narrows before the cut.
+      const narrow = t > SEPARATION_T - 1.8 ? 0.78 : 1;
+      flame1.current.scale.set((1 + Math.min(climb, 6) * 0.05) * narrow, Math.min(1, t / 0.9) * (1 + Math.min(climb, 5) * 0.28) * flicker, (1 + Math.min(climb, 6) * 0.05) * narrow);
     }
     // Stage 2: a broad plume from five engines, until it is dropped.
     if (flame2.current) {
@@ -108,7 +121,7 @@ export function LaunchVehicle({ ignitionAt, burnEndT }: { ignitionAt: number | n
     }
     // Stage 3: one engine, the plume ballooning out in the thin air.
     if (flame3.current) {
-      const on = t >= STAGE3_T && t < burnEndT;
+      const on = t >= STAGE3_T && t < Math.min(burnEndT, CUTOFF_T);
       flame3.current.visible = on;
       if (on) {
         const k = Math.min(1, (t - STAGE3_T) / 0.5);
@@ -134,64 +147,45 @@ export function LaunchVehicle({ ignitionAt, burnEndT }: { ignitionAt: number | n
 
       <group ref={stage1}>
         <FirstStage gimbals={gimbals} />
-        <PetalRing
-          ignitionAt={ignitionAt}
-          at={SEPARATION_T}
-          y0={11.4}
-          h={2.2}
-          r0={1.6}
-          r1={1.52}
-          color={SCENE_COLORS.nasaBlue}
-          open={1.75}
-          retro
-        />
+        <Fairings ignitionAt={ignitionAt} at={SEPARATION_T} />
+        <RetroRockets ignitionAt={ignitionAt} at={SEPARATION_T} y={4.2} r={1.9} count={8} dur={0.8} length={2.8} rotate={Math.PI / 8} />
+        <FlangeBolts y={11.3} r={1.62} n={48} />
         <group ref={flame1} visible={false} position={[0, 1.5, 0]}>
           <Flame radius={1.9} length={7.5} />
         </group>
       </group>
 
+      {/* The interstage stays on stage 2 until its own cut, with eight ullage motors on its rim */}
+      <group ref={inter}>
+        <InterstageShell y0={11.4} h={2.2} r0={1.6} r1={1.52} color="#d8dde6" />
+        <UllageMotors ignitionAt={ignitionAt} y={13.3} r={1.58} from={SEPARATION_T - 0.1} to={SEPARATION_T + 3.6} count={8} />
+        <CutFlash ignitionAt={ignitionAt} at={SEPARATION_T} y={11.4} r={1.62} />
+      </group>
+
       <group ref={stage2}>
         <SecondStage />
-        <PetalRing
-          ignitionAt={ignitionAt}
-          at={SEP2_T}
-          y0={19}
-          h={1.6}
-          r0={1.5}
-          r1={1.16}
-          color="#2b3445"
-          stripe={SCENE_COLORS.nasaRed}
-          open={1.7}
-          retro
-        />
-        <UllageMotors ignitionAt={ignitionAt} y={13.7} r={1.55} from={SEPARATION_T - 0.1} to={STAGE2_T + 0.3} />
-        <group ref={flame2} visible={false} position={[0, 12.7, 0]}>
+        <InterstageShell y0={19} h={1.6} r0={1.5} r1={1.16} color="#2b3445" />
+        <RetroRockets ignitionAt={ignitionAt} at={SEP2_T} y={18.5} r={1.56} count={4} dur={1.1} length={2.2} rotate={Math.PI / 4} />
+        <CutFlash ignitionAt={ignitionAt} at={INTER_T} y={13.6} r={1.52} />
+        <VaporCone ignitionAt={ignitionAt} from={11.0} to={14.6} y={24} />
+        <group ref={flame2} visible={false} position={[0, 12.6, 0]}>
           <Flame radius={1.3} length={6} />
         </group>
       </group>
 
       <group ref={upper}>
-        <ThirdStageAndCapsule />
-        <UllageMotors ignitionAt={ignitionAt} y={20.7} r={1.17} from={SEP2_T - 0.1} to={STAGE3_T + 0.3} />
-        <NozzleExtension ignitionAt={ignitionAt} y={19.5} r={0.62} from={SEP2_T + 0.9} lightAt={STAGE3_T} />
-        <group ref={flame3} visible={false} position={[0, 18.9, 0]}>
+        <ThirdStage />
+        <InstrumentUnit ignitionAt={ignitionAt} y0={23.8} />
+        <UllageMotors ignitionAt={ignitionAt} y={20.7} r={1.17} from={SEP2_T - 0.1} to={STAGE3_T + 0.3} count={4} />
+        <CutFlash ignitionAt={ignitionAt} at={SEP2_T} y={20.6} r={1.16} />
+        <group ref={flame3} visible={false} position={[0, 19.5, 0]}>
           <Flame radius={0.8} length={4.2} />
         </group>
-        <PetalRing
-          ignitionAt={ignitionAt}
-          at={ADAPTER_T}
-          y0={24.2}
-          h={3.4}
-          r0={1.16}
-          r1={0.96}
-          color={SCENE_COLORS.spaceWhite}
-          stripe={SCENE_COLORS.nasaRed}
-          open={2.0}
-          release
-        >
-          <LanderBay />
-        </PetalRing>
+        <AdapterPanels ignitionAt={ignitionAt} at={ADAPTER_T} y0={24.2} h={3.4} r0={1.16} r1={0.96} stackAccel={A3_ACCEL} />
+        <LunarModule ignitionAt={ignitionAt} />
+        <Capsule ignitionAt={ignitionAt} />
         <EscapeTower ignitionAt={ignitionAt} y0={31.2} />
+        <CabinView ignitionAt={ignitionAt} />
       </group>
 
       <LaunchSmoke ignitionAt={ignitionAt} burnEndT={burnEndT} />
@@ -258,6 +252,29 @@ function Conduits({ y0, y1, r, count }: { y0: number; y1: number; r: number; cou
   );
 }
 
+/** A bell with two hydraulic actuators that steer it, mounted from the thrust structure. */
+function Engine({ x, z, y }: { x: number; z: number; y: number }) {
+  const a = Math.atan2(x, z);
+  return (
+    <group>
+      <mesh position={[x, y - 0.45, z]}>
+        <cylinderGeometry args={[0.22, 0.45, 0.9, 10, 1, true]} />
+        <meshStandardMaterial color={SCENE_COLORS.steelLight} metalness={0.6} roughness={0.35} side={DoubleSide} />
+      </mesh>
+      <mesh position={[x, y + 0.05, z]}>
+        <sphereGeometry args={[0.2, 8, 6]} />
+        <meshStandardMaterial color="#b0823f" metalness={0.9} roughness={0.3} />
+      </mesh>
+      {[-0.28, 0.28].map((side) => (
+        <mesh key={side} position={[x + Math.cos(a) * side * 1.2, y + 0.35, z - Math.sin(a) * side * 1.2]} rotation={[Math.sin(a) * 0.35, 0, -Math.cos(a) * 0.35]}>
+          <cylinderGeometry args={[0.04, 0.05, 0.9, 6]} />
+          <meshStandardMaterial color="#9aa5b1" metalness={0.85} roughness={0.3} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 /** Stage 1: engine cluster, thrust skirt with fins, the big tank and its plumbing. */
 function FirstStage({ gimbals }: { gimbals: React.MutableRefObject<(Group | null)[]> }) {
   return (
@@ -273,28 +290,22 @@ function FirstStage({ gimbals }: { gimbals: React.MutableRefObject<(Group | null
         ]}
       />
       <Conduits y0={4.4} y1={10.8} r={1.66} count={4} />
-      {/* The centre engine is fixed; the four outer ones swing on gimbals */}
+      <FlangeBolts y={3.3} r={1.62} n={40} />
+      <FlangeBolts y={10.8} r={1.62} n={40} />
+      {/* The centre engine is fixed */}
       <mesh position={[0, 1.75, 0]}>
         <cylinderGeometry args={[0.22, 0.45, 0.9, 10, 1, true]} />
         <meshStandardMaterial color={SCENE_COLORS.steelLight} metalness={0.6} roughness={0.35} side={DoubleSide} />
       </mesh>
+      {/* The four outer engines swing on gimbals, each with its pair of actuators */}
       {[
         [0.95, 0],
         [-0.95, 0],
         [0, 0.95],
         [0, -0.95],
       ].map(([x, z], i) => (
-        <group key={`${x}${z}`} position={[x!, 2.2, z!]}>
-          <group ref={(el) => (gimbals.current[i] = el)}>
-            <mesh position={[0, -0.45, 0]}>
-              <cylinderGeometry args={[0.22, 0.45, 0.9, 10, 1, true]} />
-              <meshStandardMaterial color={SCENE_COLORS.steelLight} metalness={0.6} roughness={0.35} side={DoubleSide} />
-            </mesh>
-            <mesh position={[0, 0.0, 0]}>
-              <sphereGeometry args={[0.2, 8, 6]} />
-              <meshStandardMaterial color="#b0823f" metalness={0.9} roughness={0.3} />
-            </mesh>
-          </group>
+        <group key={`${x}${z}`} ref={(el) => (gimbals.current[i] = el)} position={[x!, 2.2, z!]}>
+          <Engine x={0} z={0} y={0} />
         </group>
       ))}
       {/* Four fins */}
@@ -310,7 +321,7 @@ function FirstStage({ gimbals }: { gimbals: React.MutableRefObject<(Group | null
   );
 }
 
-/** Stage 2: the engine cluster in its skirt (hidden until the first interstage opens) and its tank. */
+/** Stage 2: the engine cluster (hidden inside the interstage until it is dropped) and its tank. */
 function SecondStage() {
   return (
     <group>
@@ -323,6 +334,8 @@ function SecondStage() {
         ]}
       />
       <Conduits y0={14.4} y1={18.2} r={1.55} count={3} />
+      <FlangeBolts y={13.7} r={1.52} n={40} />
+      <FlangeBolts y={18.9} r={1.52} n={40} />
       {[
         [0, 0],
         [0.7, 0],
@@ -330,17 +343,14 @@ function SecondStage() {
         [0, 0.7],
         [0, -0.7],
       ].map(([x, z]) => (
-        <mesh key={`${x}${z}`} position={[x!, 13.2, z!]}>
-          <cylinderGeometry args={[0.2, 0.42, 1.2, 10, 1, true]} />
-          <meshStandardMaterial color={SCENE_COLORS.steelLight} metalness={0.6} roughness={0.35} side={DoubleSide} />
-        </mesh>
+        <Engine key={`${x}${z}`} x={x!} z={z!} y={13.8} />
       ))}
     </group>
   );
 }
 
-/** Stage 3 with its engine bell, the instrument ring, the service and command modules. */
-function ThirdStageAndCapsule() {
+/** Stage 3: its single engine and the tank; the instrument unit sits on top. */
+function ThirdStage() {
   return (
     <group>
       <mesh position={[0, 20.1, 0]}>
@@ -351,27 +361,10 @@ function ThirdStageAndCapsule() {
         list={[
           [20.6, 23.8, 1.15, 1.15, SCENE_COLORS.spaceWhite],
           [22.0, 22.3, 1.17, 1.17, SCENE_COLORS.steelDark],
-          [23.8, 24.2, 1.2, 1.2, SCENE_COLORS.steelDark],
-          // Service module, a gold band, then the command module
-          [27.6, 29.6, 0.96, 0.96, SCENE_COLORS.steelLight],
-          [28.2, 28.5, 0.98, 0.98, SCENE_COLORS.kaptonGold],
-          [29.6, 31.2, 0.96, 0.3, SCENE_COLORS.spaceWhite],
         ]}
       />
-      <mesh position={[0, 27.5, 0]}>
-        <cylinderGeometry args={[0.25, 0.5, 0.6, 10, 1, true]} />
-        <meshStandardMaterial color={SCENE_COLORS.steelLight} metalness={0.6} roughness={0.35} side={DoubleSide} />
-      </mesh>
-      {/* Reaction control quads on the service module */}
-      {[0, 1, 2, 3].map((i) => {
-        const a = (i * Math.PI) / 2;
-        return (
-          <mesh key={i} position={[Math.sin(a) * 1.0, 28.9, Math.cos(a) * 1.0]}>
-            <boxGeometry args={[0.16, 0.3, 0.16]} />
-            <meshStandardMaterial color={SCENE_COLORS.steelDark} roughness={0.5} />
-          </mesh>
-        );
-      })}
+      <Conduits y0={20.9} y1={23.6} r={1.2} count={3} />
+      <FlangeBolts y={20.7} r={1.15} n={32} />
       {/* The tower sits on a short collar */}
       <mesh position={[0, 31.25, 0]}>
         <cylinderGeometry args={[0.32, 0.4, 0.2, 10]} />

@@ -36,8 +36,9 @@ import { CountdownPanel, FlightPanel, PollPanel } from "./LaunchPanels";
 import { formatMissionTime } from "@/lib/format";
 import { VIEWPOINTS } from "./layout";
 import { realSecondsAt } from "./flight";
-import { ADAPTER_T, LES_T, SEP2_T, SEPARATION_T, STAGE2_T, STAGE3_T } from "./ascent";
-import { startRockScore, type RockScore } from "@/game/rockScore";
+import { ADAPTER_T, DOCK_T, EPILOGUE, FILM_END, HOLD_DOWN, LES_T, SEP2_T, SEPARATION_T, STAGE2_T, STAGE3_T } from "./ascent";
+import { shotAt } from "./launchShots";
+import { startCalmScore, startRockScore, type RockScore } from "@/game/rockScore";
 import { consoleSeed, engineOption, tankOption } from "@/scenes/workshop/loadout";
 
 /** How long the liftoff roar lasts, in real time (the climb out of sight). */
@@ -189,48 +190,82 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
   // The launch score: a held organ at the countdown, building to full band and orchestra at
   // staging, then fading as the capsule reaches orbit. Cut off quickly if the flight fails.
   const score = useRef<RockScore | null>(null);
+  const calmStop = useRef<((s?: number) => void) | null>(null);
   useEffect(() => {
     if (phase === "countdown") {
       if (!score.current) score.current = startRockScore(0.15);
       return;
     }
     if (phase === "flight" && ignitionAt !== null) {
-      score.current ??= startRockScore(0.3);
-      score.current.hit();
+      const pastBand = (performance.now() - ignitionAt) / 1000 >= FILM_END + 0.6;
+      if (!pastBand) {
+        score.current ??= startRockScore(0.3);
+        score.current.hit();
+      }
       // The score follows the film: it builds with the climb, drops to a held organ for half a beat
-      // before every separation, then hits hard as the bolts fire.
+      // before every separation and whenever the film cuts to the people waiting, then hits hard as
+      // the bolts fire. The room goes quiet from release and erupts a moment before orbit.
       const beats = [SEPARATION_T, STAGE2_T, LES_T, SEP2_T, STAGE3_T, ADAPTER_T];
       const hits = new Set<number>();
+      const risers = new Set<number>();
+      let calm: { stop: (s?: number) => void } | null = calmStop.current ? { stop: calmStop.current } : null;
       const id = window.setInterval(() => {
         const t = (performance.now() - ignitionAt) / 1000;
         const climb = Math.min(1, t / SEPARATION_T);
         const late = Math.min(1, Math.max(0, (t - SEPARATION_T) / (ADAPTER_T - SEPARATION_T)));
         let level = 0.45 + 0.4 * climb + 0.15 * late;
+        const cut = shotAt(t).id;
+        const people = cut.startsWith("room-") || cut.startsWith("crowd-");
+        if (people) level = cut.endsWith("cheer") ? 1 : Math.min(level, 0.24);
         for (const b of beats) {
-          if (t >= b - 0.7 && t < b - 0.1) level = 0.12; // the breath before the bolts
+          if (t >= b - 2 && t < b - 1.9 && !risers.has(b)) {
+            risers.add(b);
+            score.current?.riser(1.7); // tremolo strings, noise sweep and a timpani roll building to the cut
+          }
+          if (t >= b - 0.35 && t < b - 0.1) level = 0; // total drop-out, then the hit
           if (t >= b - 0.1 && !hits.has(b) && t < b + 1) {
             hits.add(b);
             score.current?.hit();
           }
         }
-        if (t > ADAPTER_T + 3) level -= 0.1;
-        score.current?.setIntensity(level);
+        if (t > ADAPTER_T + 3 && !people && t < DOCK_T - 3) level = Math.max(level, 0.85); // the long chase out of the atmosphere
+        // After the last step the band falls away and a quiet pad takes over for the epilogue.
+        if (t >= FILM_END + 0.6 && !calm) {
+          score.current?.stop(2.5);
+          score.current = null;
+          calm = startCalmScore();
+          calmStop.current = calm.stop;
+        }
+        if (!calm) score.current?.setIntensity(level);
+        const cheer = t >= DOCK_T && t < FILM_END + 0.6;
+        mood.hush = t > HOLD_DOWN - 1 && !cheer ? 1 : 0;
+        mood.joy = cheer ? 1 : 0;
       }, 100);
       return () => window.clearInterval(id);
     }
     if (phase === "orbit") {
+      calmStop.current?.(4);
+      calmStop.current = null;
+      mood.hush = 0;
+      mood.joy = 1;
       score.current?.setIntensity(0.35);
       score.current?.stop(5);
       score.current = null;
       return;
     }
+    mood.hush = 0;
+    mood.joy = 0;
     score.current?.stop(phase === "failure-pov" ? 0.6 : 1.2);
     score.current = null;
+    calmStop.current?.(1);
+    calmStop.current = null;
   }, [phase, ignitionAt]);
   useEffect(
     () => () => {
       score.current?.stop(0.3);
       score.current = null;
+      calmStop.current?.(0.3);
+      calmStop.current = null;
     },
     [],
   );
@@ -306,7 +341,7 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => setIgnitionAt(performance.now() - (realSecondsAt(result.endSec) + 0.3) * 1000)}
+            onClick={() => setIgnitionAt(performance.now() - (realSecondsAt(result.endSec) + (result.isSuccess ? EPILOGUE : 0) + 0.3) * 1000)}
           >
             {m.skipCinematic}
           </Button>

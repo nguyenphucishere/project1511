@@ -13,7 +13,9 @@ import { rocketRise, rocketSpeed } from "./ascent";
 import { LaunchVehicle } from "./LaunchVehicle";
 import { shotAt } from "./launchShots";
 import { HoldDownClamps, SwingArm } from "./Mechanics";
-import { GROUND_Y, LAUNCH_VANTAGE, PAD, ROCKET_HEIGHT, ROOM, TIER, WINDOW } from "./layout";
+import { Crowd, binocularGeometry } from "./Crowd";
+import { SpaceDome } from "./SpaceDome";
+import { BEACH_R, CROWD_BEACH, CROWD_FIELD, FIELD_R, GROUND_Y, LAUNCH_VANTAGE, PAD, ROCKET_HEIGHT, ROOM, TIER, WINDOW } from "./layout";
 import { mood } from "./mood";
 import { SkyExplosion } from "./SkyExplosion";
 
@@ -41,6 +43,9 @@ export function ControlRoomWorld({ ignitionAt, launchView, burnEndT, explodeAt =
       <Consoles />
       <MissionStaff />
       <Outside />
+      <SpaceDome ignitionAt={ignitionAt} />
+      <Crowd position={CROWD_FIELD} count={110} radius={FIELD_R} ignitionAt={ignitionAt} seed={3} />
+      <Crowd position={CROWD_BEACH} count={70} radius={BEACH_R} ignitionAt={ignitionAt} seed={8} />
       {/* Remount per launch so smoke and position reset for the replacement vehicle. */}
       <LaunchPad key={ignitionAt ?? "idle"} ignitionAt={ignitionAt} burnEndT={burnEndT} />
       {explodeAt !== null && <SkyExplosion explodeAt={explodeAt} />}
@@ -408,6 +413,8 @@ function MissionStaff() {
 }
 
 /** Flight controller seated on a console chair, typing and checking monitors. */
+const binocularGeo = binocularGeometry();
+
 function SeatedOperator({
   position,
   shirtColor,
@@ -422,9 +429,11 @@ function SeatedOperator({
   const head = useRef<Group>(null);
   const leftArm = useRef<Group>(null);
   const rightArm = useRef<Group>(null);
+  const binoculars = useRef<Group>(null);
   const reduced = useReducedMotion();
 
   useFrame(({ clock }) => {
+    if (binoculars.current) binoculars.current.visible = mood.hush > 0 && mood.joy === 0 && mood.dismay === 0;
     if (mood.dismay > 0) {
       // Work stops: head drops forward, both hands come up to the face.
       if (head.current) {
@@ -433,6 +442,27 @@ function SeatedOperator({
       }
       if (leftArm.current) leftArm.current.rotation.x = MathUtils.lerp(leftArm.current.rotation.x, -2.55, 0.08);
       if (rightArm.current) rightArm.current.rotation.x = MathUtils.lerp(rightArm.current.rotation.x, -2.55, 0.08);
+      return;
+    }
+    if (mood.joy > 0) {
+      // Standing ovation in the chair: arms thrown up, head back.
+      const t = clock.elapsedTime * 7 + phase;
+      if (head.current) {
+        head.current.rotation.x = MathUtils.lerp(head.current.rotation.x, -0.35, 0.12);
+        head.current.rotation.y = MathUtils.lerp(head.current.rotation.y, 0, 0.1);
+      }
+      if (leftArm.current) leftArm.current.rotation.x = MathUtils.lerp(leftArm.current.rotation.x, -3.0 + Math.sin(t) * 0.25, 0.15);
+      if (rightArm.current) rightArm.current.rotation.x = MathUtils.lerp(rightArm.current.rotation.x, -3.0 + Math.cos(t * 1.1) * 0.25, 0.15);
+      return;
+    }
+    if (mood.hush > 0) {
+      // Work stops. Eyes front on the window, both hands clasped at the mouth.
+      if (head.current) {
+        head.current.rotation.x = MathUtils.lerp(head.current.rotation.x, -0.08, 0.06);
+        head.current.rotation.y = MathUtils.lerp(head.current.rotation.y, 0, 0.06);
+      }
+      if (leftArm.current) leftArm.current.rotation.x = MathUtils.lerp(leftArm.current.rotation.x, -2.0, 0.05);
+      if (rightArm.current) rightArm.current.rotation.x = MathUtils.lerp(rightArm.current.rotation.x, -2.0, 0.05);
       return;
     }
     if (reduced) return;
@@ -480,6 +510,35 @@ function SeatedOperator({
           <boxGeometry args={[0.21, 0.08, 0.22]} />
           <meshStandardMaterial color="#1E293B" roughness={0.85} />
         </mesh>
+        {/* Binoculars, raised to the eyes while the room holds its breath, both hands on them */}
+        <group ref={binoculars} visible={false}>
+          <group position={[0, 0.02, -0.13]} rotation={[0, Math.PI, 0]}>
+            <mesh geometry={binocularGeo}>
+              <meshStandardMaterial vertexColors metalness={0.55} roughness={0.35} />
+            </mesh>
+          </group>
+          {[-1, 1].map((side) => {
+            const hand: [number, number, number] = [side * 0.1, 0.0, -0.17];
+            const elbow: [number, number, number] = [side * 0.21, -0.23, -0.04];
+            const d: [number, number, number] = [elbow[0] - hand[0], elbow[1] - hand[1], elbow[2] - hand[2]];
+            const len = Math.hypot(...d);
+            return (
+              <group key={side}>
+                <mesh position={hand}>
+                  <boxGeometry args={[0.055, 0.05, 0.06]} />
+                  <meshStandardMaterial color="#E2B49A" roughness={0.6} />
+                </mesh>
+                <mesh
+                  position={[(hand[0] + elbow[0]) / 2, (hand[1] + elbow[1]) / 2, (hand[2] + elbow[2]) / 2]}
+                  rotation={[-Math.asin(d[1] / len), Math.atan2(d[0], d[2]), 0, "YXZ"]}
+                >
+                  <boxGeometry args={[0.07, 0.07, len]} />
+                  <meshStandardMaterial color={shirtColor} roughness={0.65} />
+                </mesh>
+              </group>
+            );
+          })}
+        </group>
         {/* Headset band & ear cups */}
         <mesh position={[0, 0.12, 0]}>
           <boxGeometry args={[0.24, 0.03, 0.04]} />
@@ -543,11 +602,12 @@ function WalkingStaff({
 
   useFrame(({ clock }) => {
     if (!root.current) return;
-    if (mood.dismay > 0) {
-      // Freeze in place, turn toward the window, hands on head.
+    if (mood.dismay > 0 || mood.hush > 0 || mood.joy > 0) {
+      // Freeze in place, turn toward the window, hands on head (or, once it works, thrown in the air).
       root.current.rotation.y = MathUtils.lerp(root.current.rotation.y, Math.PI, 0.06);
       for (const leg of [leftLeg.current, rightLeg.current]) if (leg) leg.rotation.x = MathUtils.lerp(leg.rotation.x, 0, 0.1);
-      for (const arm of [leftArm.current, rightArm.current]) if (arm) arm.rotation.x = MathUtils.lerp(arm.rotation.x, -2.6, 0.08);
+      const armUp = mood.joy > 0 ? -3.0 + Math.sin(clock.elapsedTime * 8 + phase) * 0.25 : mood.hush > 0 ? -2.0 : -2.6;
+      for (const arm of [leftArm.current, rightArm.current]) if (arm) arm.rotation.x = MathUtils.lerp(arm.rotation.x, armUp, 0.08);
       if (body.current) body.current.rotation.x = MathUtils.lerp(body.current.rotation.x, 0.18, 0.06);
       return;
     }

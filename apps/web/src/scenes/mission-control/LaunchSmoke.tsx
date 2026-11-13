@@ -18,7 +18,7 @@ import {
 import { seeded } from "@/lib/random";
 import { SCENE_COLORS } from "@/lib/palette";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { ADAPTER_T, HOLD_DOWN, SEP2_T, SEPARATION_T, STAGE2_T, STAGE3_T, rocketRise, rocketSpeed } from "./ascent";
+import { ADAPTER_T, CUTOFF_T, HOLD_DOWN, SEP2_T, SEPARATION_T, STAGE2_T, STAGE3_T, rocketRise, rocketSpeed } from "./ascent";
 import { STRETCH } from "./flight";
 import { PAD } from "./layout";
 
@@ -36,10 +36,10 @@ const MAX = 1600;
 /** Heights on the stack (pad-local, above the stack base) where exhaust leaves the engines. */
 const STAGE1_NOZZLE_Y = 1.4;
 const STAGE2_NOZZLE_Y = 12.6;
-const STAGE3_NOZZLE_Y = 18.8;
-const INTERSTAGE_Y = 12.5;
-const INTERSTAGE2_Y = 19.8;
-const ADAPTER_Y = 25.5;
+const STAGE3_NOZZLE_Y = 19.5;
+const INTERSTAGE_Y = 11.6;
+const INTERSTAGE2_Y = 20.4;
+const ADAPTER_Y = 24.6;
 
 interface LaunchSmokeProps {
   ignitionAt: number | null;
@@ -114,7 +114,7 @@ function emit(
   // Exhaust trail from whichever engine is burning.
   const stage1 = t < SEPARATION_T;
   const stage2 = t >= STAGE2_T && t < Math.min(SEP2_T, burnEndT);
-  const stage3 = t >= STAGE3_T && t < burnEndT;
+  const stage3 = t >= STAGE3_T && t < Math.min(burnEndT, CUTOFF_T);
   if ((stage1 || stage2 || stage3) && rise > 0.5) {
     const nozzle = stage1 ? STAGE1_NOZZLE_Y : stage2 ? STAGE2_NOZZLE_Y : STAGE3_NOZZLE_Y;
     const rate = stage1 ? 60 : stage2 ? 46 : 30;

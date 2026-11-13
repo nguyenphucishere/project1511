@@ -32,7 +32,18 @@ export type SfxId =
   | "unlatch"
   | "boom"
   | "groan"
-  | "sputter";
+  | "sputter"
+  | "servo"
+  | "clunk"
+  | "hiss"
+  | "pyro"
+  | "relay"
+  | "clank"
+  | "hydraulic"
+  | "ratchet"
+  | "thud"
+  | "retro"
+  | "gas";
 
 export type LoopId = "engine";
 
@@ -209,6 +220,51 @@ const RECIPES: Record<SfxId, (c: AudioContext, out: AudioNode, t: number) => voi
       burst(c, out, t + d, { dur: 0.16, gain: 0.35, filter: "lowpass", freq: 700, freqEnd: 150, attack: 0.01 }),
     );
   },
+  // Hardware, the way it sounds on a real vehicle: sharp, dry, short, with no musical pitch to it.
+  // A pyrotechnic cut: a supersonic crack, a thump through the structure, a ringing tail.
+  pyro: (c, out, t) => {
+    burst(c, out, t, { dur: 0.05, gain: 0.8, filter: "highpass", freq: 1800, attack: 0.001 });
+    tone(c, out, t, { freq: 95, freqEnd: 38, dur: 0.4, gain: 0.55, attack: 0.002 });
+    tone(c, out, t, { type: "triangle", freq: 2300, freqEnd: 1900, dur: 0.28, gain: 0.05, attack: 0.001 });
+    burst(c, out, t + 0.02, { dur: 0.55, gain: 0.14, filter: "bandpass", freq: 1200, q: 1, attack: 0.01 });
+  },
+  // A relay or contactor: two tiny dry clicks.
+  relay: (c, out, t) => {
+    burst(c, out, t, { dur: 0.012, gain: 0.3, filter: "bandpass", freq: 3500, q: 4, attack: 0.001 });
+    burst(c, out, t + 0.028, { dur: 0.01, gain: 0.22, filter: "bandpass", freq: 4200, q: 4, attack: 0.001 });
+    tone(c, out, t, { type: "square", freq: 190, dur: 0.012, gain: 0.04, attack: 0.001 });
+  },
+  // Metal on metal: a noise transient and inharmonic ringing partials.
+  clank: (c, out, t) => {
+    burst(c, out, t, { dur: 0.03, gain: 0.4, filter: "bandpass", freq: 2500, q: 1.2, attack: 0.001 });
+    tone(c, out, t, { freq: 380, dur: 0.35, gain: 0.16, attack: 0.001 });
+    tone(c, out, t, { freq: 1050, dur: 0.25, gain: 0.09, attack: 0.001 });
+    tone(c, out, t, { freq: 2050, dur: 0.15, gain: 0.05, attack: 0.001 });
+  },
+  // A hydraulic actuator pushing: a rush of fluid and a low motor whine under it.
+  hydraulic: (c, out, t) => {
+    burst(c, out, t, { dur: 0.7, gain: 0.1, filter: "bandpass", freq: 420, freqEnd: 700, q: 2, attack: 0.12 });
+    tone(c, out, t, { type: "sawtooth", freq: 70, freqEnd: 105, dur: 0.7, gain: 0.03, attack: 0.15 });
+  },
+  // A ratchet or latch mechanism running: a quick row of tiny clicks.
+  ratchet: (c, out, t) => {
+    for (let i = 0; i < 8; i++) burst(c, out, t + i * 0.045, { dur: 0.012, gain: 0.18, filter: "bandpass", freq: 2600, q: 5, attack: 0.001 });
+  },
+  thud: (c, out, t) => {
+    tone(c, out, t, { freq: 72, freqEnd: 32, dur: 0.45, gain: 0.7, attack: 0.003 });
+    burst(c, out, t, { dur: 0.3, gain: 0.3, filter: "lowpass", freq: 200, attack: 0.002 });
+  },
+  // A solid rocket motor: a hard whoosh with crackle.
+  retro: (c, out, t) => {
+    burst(c, out, t, { dur: 0.9, gain: 0.4, filter: "lowpass", freq: 600, freqEnd: 2200, attack: 0.02 });
+    burst(c, out, t, { dur: 0.9, gain: 0.12, filter: "highpass", freq: 2500, attack: 0.02 });
+    for (let i = 0; i < 14; i++) burst(c, out, t + Math.random() * 0.8, { dur: 0.01, gain: 0.2, filter: "highpass", freq: 3200, attack: 0.001 });
+  },
+  gas: (c, out, t) => burst(c, out, t, { dur: 0.5, gain: 0.12, filter: "highpass", freq: 2500, freqEnd: 5000, attack: 0.03 }),
+  // The old names, now mapped onto the real hardware sounds.
+  servo: (c, out, t) => RECIPES.hydraulic(c, out, t),
+  clunk: (c, out, t) => RECIPES.clank(c, out, t),
+  hiss: (c, out, t) => RECIPES.gas(c, out, t),
   touchdown: (c, out, t) => {
     tone(c, out, t, { freq: 70, freqEnd: 35, dur: 0.6, gain: 0.6, attack: 0.01 });
     burst(c, out, t, { dur: 1, gain: 0.3, filter: "lowpass", freq: 500, freqEnd: 150 });

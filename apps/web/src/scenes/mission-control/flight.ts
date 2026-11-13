@@ -10,7 +10,7 @@ import type { Dictionary } from "@/i18n";
  * real time, then each stage event gets its own slow stretch so it can be filmed from several
  * angles: stage 1 drops away (T+02:42), stage 2 lights (T+02:46), the escape tower is jettisoned
  * (T+03:20), stage 2 drops away (T+06:40), stage 3 lights (T+06:48), the spacecraft adapter opens
- * (T+07:20) and orbit follows at T+09:00. Between events time runs fast.
+ * (T+07:20), stage 3 cuts off at T+08:20 and the capsule turns round to dock with the lander before orbit at T+09:00. Between events time runs fast.
  */
 const TIME_WARP: [real: number, mission: number][] = [
   [0, 0],
@@ -21,10 +21,11 @@ const TIME_WARP: [real: number, mission: number][] = [
   [35, 400],
   [38.5, 408],
   [41, 440],
-  [48.5, 540],
+  [55, 500],
+  [74, 540],
 ];
 
-/** Scale of the early launch beats (hold-down, smoke); the whole launch runs about 48 s. */
+/** Scale of the early launch beats (hold-down, smoke); the whole launch runs about a minute. */
 export const STRETCH = 2.7;
 
 function interpolate(table: [number, number][], x: number, from: 0 | 1): number {
@@ -56,6 +57,8 @@ export const LES_SEC = 200;
 export const STAGE2_SEP_SEC = 400;
 export const STAGE3_IGNITION_SEC = 408;
 export const ADAPTER_SEC = 440;
+/** Stage 3 shuts down; the capsule then turns round and docks with the lander. */
+export const S3_CUTOFF_SEC = 500;
 
 export interface FlightEvent {
   t: number;

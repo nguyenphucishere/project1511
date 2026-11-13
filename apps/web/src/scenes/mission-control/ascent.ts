@@ -3,6 +3,7 @@ import {
   LES_SEC,
   STAGE2_IGNITION_SEC,
   STAGE2_SEP_SEC,
+  S3_CUTOFF_SEC,
   STAGE3_IGNITION_SEC,
   STAGING_SEC,
   STRETCH,
@@ -25,14 +26,29 @@ export const HOLD_DOWN = 1.2 * STRETCH;
 export const SEPARATION_T = realSecondsAt(STAGING_SEC);
 export const STAGE2_T = realSecondsAt(STAGE2_IGNITION_SEC);
 export const LES_T = realSecondsAt(LES_SEC);
+/** The second cut: the interstage is dropped from stage 2 half a minute (compressed) after staging. */
+export const INTER_T = LES_T - 2.6;
 export const SEP2_T = realSecondsAt(STAGE2_SEP_SEC);
 export const STAGE3_T = realSecondsAt(STAGE3_IGNITION_SEC);
 export const ADAPTER_T = realSecondsAt(ADAPTER_SEC);
+/** Stage 3 shuts off, then the capsule separates, turns round, docks with the lander and tows it out. */
+export const CUTOFF_T = realSecondsAt(S3_CUTOFF_SEC);
+export const CSM_SEP_T = CUTOFF_T + 1;
+export const FLIP_FROM = CUTOFF_T + 3.5;
+export const FLIP_TO = CUTOFF_T + 7.5;
+export const DOCK_T = CUTOFF_T + 11.5;
+export const TOW_T = CUTOFF_T + 12.5;
+/** When the film ends: orbit insertion, the capsule at the edge of space. */
+export const FILM_END = realSecondsAt(540);
+/** After the last step the film stays quiet for a while: the view from inside the capsule, the Earth below. */
+export const EPILOGUE = 13;
+export const FILM_TOTAL = FILM_END + EPILOGUE;
 
 /** Accelerations (m/s²) while each stage burns: slow and heavy, like a film. */
 const A1 = 1.0;
 const A2 = 0.45;
-const A3 = 0.4;
+const A3 = 0.7;
+export const A3_ACCEL = A3;
 
 /** Phases of the climb, each starting at the speed and height the last one ended with. */
 const SEGMENTS = (() => {
@@ -43,6 +59,7 @@ const SEGMENTS = (() => {
     [STAGE2_T, A2],
     [SEP2_T, 0],
     [STAGE3_T, A3],
+    [CUTOFF_T, 0], // engine off, coasting
   ];
   let rise = 0;
   let speed = 0;
