@@ -11,7 +11,7 @@ import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
 import { playSfx, startLoop } from "@/game/sfx";
 import { DESCENT_STEPS, TOUCHDOWN } from "@/mocks/descent";
-import { DescentPanel, formatVs } from "./DescentPanel";
+import { DescentCommand, DescentTelemetry, formatVs } from "./DescentPanel";
 import { LunarWorld } from "./LunarWorld";
 import { VIEWPOINTS, missionTimeNow, type DescentClock } from "./layout";
 
@@ -121,19 +121,21 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
         />
       </div>
 
+      {/*
+        Compact console, anchored top-right over the sky so the lunar surface and the switches on
+        the 3D console stay in view. On phones it docks to the bottom edge as a short sheet.
+      */}
       <aside
         aria-label={d.panelLabel}
-        className="bezel absolute inset-x-3 bottom-3 max-h-[56dvh] overflow-y-auto bg-space-deep/95 p-4 sm:inset-x-auto sm:bottom-6 sm:right-8 sm:top-20 sm:max-h-none sm:w-[25rem] sm:p-5"
+        className="absolute inset-x-3 bottom-3 flex max-h-[46dvh] flex-col gap-2 overflow-y-auto sm:inset-x-auto sm:bottom-auto sm:right-8 sm:top-20 sm:max-h-[calc(100dvh-6.5rem)] sm:w-[17rem]"
       >
-        <h2 className="mb-4 text-lg font-semibold">{d.panelLabel}</h2>
-        <DescentPanel
-          t={missionT}
-          stepsDone={clock.stepsDone}
-          armed={armed}
-          landed={phase === "landed"}
-          contactLight={contactLight}
-          onPress={press}
-        />
+        <h2 className="sr-only">{d.panelLabel}</h2>
+        <div className="bezel bezel-sm shrink-0 bg-space-deep/85 p-3 backdrop-blur-sm">
+          <DescentCommand stepsDone={clock.stepsDone} armed={armed} landed={phase === "landed"} onPress={press} />
+        </div>
+        <div className="bezel bezel-sm shrink-0 bg-space-deep/85 px-3 py-2.5 backdrop-blur-sm">
+          <DescentTelemetry t={missionT} contactLight={contactLight} />
+        </div>
       </aside>
 
       <SignOffDialog
