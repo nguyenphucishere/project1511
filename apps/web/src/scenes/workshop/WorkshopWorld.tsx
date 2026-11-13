@@ -69,7 +69,7 @@ export function WorkshopWorld({ level, phase, inspected, activeId, onInspect, on
   return (
     <>
       <fogExp2 attach="fog" args={["#8398b0", 0.0072]} />
-      <hemisphereLight args={["#d8e6ff", "#6a5d4e", 1.05]} />
+      <hemisphereLight args={["#d8e6ff", "#6a5d4e", 1.35]} />
       {/* Key light from the skylight side: soft shadows across the whole hall */}
       <directionalLight
         position={[-16, 40, 20]}
@@ -86,9 +86,9 @@ export function WorkshopWorld({ level, phase, inspected, activeId, onInspect, on
         shadow-camera-top={34}
         shadow-camera-bottom={-12}
       />
-      <directionalLight position={[16, 26, -12]} color="#cfe6ff" intensity={0.9} />
-      <spotLight position={[10, 34, 14]} color="#fff1d6" intensity={380} angle={0.34} penumbra={0.9} distance={60} decay={1.2} />
-      <pointLight position={[0, 6, 6]} color="#ffe9c4" intensity={20} distance={22} decay={1.6} />
+      {/* Every light is paid for on every lit pixel, so the hall keeps few: sun, cool fill, sky. */}
+      <directionalLight position={[16, 26, -12]} color="#cfe6ff" intensity={1.1} />
+      <directionalLight position={[10, 34, 14]} color="#fff1d6" intensity={0.8} />
 
       <StaticBatch>
         <Hall />

@@ -395,7 +395,6 @@ export function Level2Technician() {
           <sphereGeometry args={[0.06, 8, 8]} />
           <meshBasicMaterial ref={sparkMesh} color="#E0F2FE" />
         </mesh>
-        <pointLight ref={sparkLight} position={[0, 0.25, 0]} color="#38BDF8" intensity={0} distance={4} />
         <group position={[0, 0.26, 0.02]}>
           <WeldSparks count={40} floorY={-12.1} intensity={0.4} />
         </group>
