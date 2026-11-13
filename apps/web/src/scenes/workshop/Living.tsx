@@ -7,6 +7,9 @@ import { DoubleSide, MathUtils, type Group, type MeshBasicMaterial, type PointLi
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { SCENE_COLORS } from "@/lib/palette";
 
+/** Where the forklift is and whether it is manoeuvring, for the hall soundscape. */
+export const forkliftAudio = { x: -12.2, z: 8.5, turning: false };
+
 /** Heavy industrial forklift shuttling along the west aisle: drives, turns around, drives back. */
 export function IndustrialForklift() {
   const root = useRef<Group>(null);
@@ -40,6 +43,9 @@ export function IndustrialForklift() {
       yaw = Math.PI + Math.PI * MathUtils.smootherstep((t - 2 * LEG - TURN) / TURN, 0, 1);
     }
     g.position.set(AISLE_X, 0, z);
+    forkliftAudio.x = AISLE_X;
+    forkliftAudio.z = z;
+    forkliftAudio.turning = (t >= LEG && t < LEG + TURN) || t >= 2 * LEG + TURN;
     g.rotation.y = yaw;
     if (strobe.current) strobe.current.color.set(Math.sin(clock.elapsedTime * 9) > 0 ? "#fbbf24" : "#3a2a08");
   });
@@ -358,7 +364,7 @@ export function Level2Technician() {
   });
 
   return (
-    <group position={[-3.8, 12.3, 2.8]} rotation={[0, 0.8, 0]}>
+    <group position={[-5.32, 12.3, 2.24]} rotation={[0, 1.97, 0]}>
       {/* Technician in work coveralls */}
       <mesh position={[0, 0.45, 0]}>
         <boxGeometry args={[0.34, 0.75, 0.22]} />

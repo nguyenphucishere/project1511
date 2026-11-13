@@ -67,6 +67,7 @@ export const BRIEFINGS: Record<BriefingId, Briefing> = {
       { en: "Move around the assembly hall", vi: "Di chuyển quanh xưởng lắp ráp" },
       { en: "Inspect every rocket part", vi: "Kiểm tra mọi bộ phận tên lửa" },
       { en: "Find the hidden faults with the scanner", vi: "Tìm các lỗi ẩn bằng máy quét" },
+      { en: "Torque the flange bolts in a star pattern", vi: "Siết các bu-lông mặt bích theo hình sao" },
       { en: "Run the pre-flight checklist in order", vi: "Chạy checklist trước chuyến bay đúng thứ tự" },
       { en: "Choose the engines and tanks", vi: "Chọn động cơ và bồn nhiên liệu" },
     ],

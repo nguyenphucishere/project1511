@@ -6,6 +6,7 @@ import { Bloom, ChromaticAberration, EffectComposer, Noise, SMAA, ToneMapping, V
 import { BlendFunction, ToneMappingMode } from "postprocessing";
 import { Vector2 } from "three";
 import { fx } from "@/game/fx";
+import { Sharpening } from "./SharpenEffect";
 
 const BASE_ABERRATION = 0.00035;
 
@@ -22,13 +23,14 @@ export function PostFX() {
     offset.current.set(a, a);
   });
   return (
-    <EffectComposer multisampling={4} enableNormalPass={false}>
+    <EffectComposer multisampling={0} enableNormalPass={false}>
       <Bloom intensity={0.5} luminanceThreshold={1.0} luminanceSmoothing={0.2} mipmapBlur />
       <ChromaticAberration offset={offset.current} radialModulation={false} modulationOffset={0} />
       <Vignette eskil={false} offset={0.25} darkness={0.6} />
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={0.12} />
       <SMAA />
+      <Sharpening strength={0.8} />
     </EffectComposer>
   );
 }

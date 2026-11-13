@@ -18,11 +18,15 @@ import { addTrauma } from "@/game/shake";
 import { useSettingsStore } from "@/game/settingsStore";
 import { ROCKET_PARTS, TOTAL_MASS_T, type LevelId, type PartId } from "@/mocks/rocket-parts";
 import { checkStation, type StationId } from "./checks";
-import { PA_LINES, SAY, UI, type Line } from "./content";
+import { PA_LINES, SAY, TOOL_NAME, UI, type Line, type ToolId } from "./content";
 import type { CraneEvent } from "./crane";
 import { advanceCrane, createRig, startLift } from "./CraneRig";
 import { FAULTS, SCAN_SECONDS, type FaultId } from "./faults";
-import { ALL_VIEWPOINTS, CRANE_LIFTS, VIEWPOINTS } from "./layout";
+import { ALL_VIEWPOINTS, BAY, CRANE_LIFTS, STATIONS, VIEWPOINTS } from "./layout";
+import { player } from "./Bay";
+import { resetBolts, bolts } from "./Handwork";
+import { FuelGame, TightenStatus, TorqueGame } from "./HandworkHud";
+import { BOLT_COUNT, BOLT_LABEL, checkBolt } from "./handworkRules";
 import { DEFAULT_LOADOUT, assessLoadout, type Loadout } from "./loadout";
 import { PartPanel } from "./PartPanel";
 import { Callout, ChecklistPanel, CraneHud, LoadoutPanel, PaStrip, PressureGame, ScanHud, ScanOverlay } from "./WorkshopHud";
@@ -75,6 +79,14 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
   const [mistakes, setMistakes] = useState(0);
   const [pressureOpen, setPressureOpen] = useState(false);
 
+  const [tool, setTool] = useState<ToolId | null>(null);
+  const [wrongTool, setWrongTool] = useState<{ id: ToolId; n: number } | null>(null);
+  const [boltsDone, setBoltsDone] = useState<number[]>([]);
+  const [boltMistakes, setBoltMistakes] = useState(0);
+  const [torqueBolt, setTorqueBolt] = useState<number | null>(null);
+  const [fuelOpen, setFuelOpen] = useState(false);
+  const bayWarned = useRef(false);
+
   const [loadout, setLoadout] = useState<Loadout>(DEFAULT_LOADOUT);
   const [signedOff, setSignedOff] = useState(false);
 
@@ -98,16 +110,21 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
     };
   }, []);
 
+  // Read through a ref so `say` keeps one identity: effects that depend on it must not re-run (and
+  // restart the crane or a phase) when the player switches language.
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
   const lineTimer = useRef<number | undefined>(undefined);
   const speaking = useRef(false);
   const say = useCallback(
     (l: Line, opts: { voice?: boolean; ms?: number } = {}) => {
       setLine(l);
       window.clearTimeout(lineTimer.current);
-      const text = l.text[locale];
+      const loc = localeRef.current;
+      const text = l.text[loc];
       if (opts.voice !== false) {
         playSfx("chime");
-        speak(text, locale);
+        speak(text, loc);
       }
       speaking.current = true;
       lineTimer.current = window.setTimeout(() => {
@@ -115,7 +132,7 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
         speaking.current = false;
       }, opts.ms ?? Math.max(5200, text.length * 62));
     },
-    [locale],
+    [],
   );
   useEffect(() => () => window.clearTimeout(lineTimer.current), []);
 
@@ -152,8 +169,12 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
     [rig, goTo],
   );
 
+  const craneStarted = useRef(false);
   useEffect(() => {
+    if (craneStarted.current) return;
     later(() => {
+      if (craneStarted.current) return;
+      craneStarted.current = true;
       beginLift(0);
       say(SAY.craneIntro);
       later(() => say(SAY.craneTip, { voice: false, ms: 6500 }), 9500);
@@ -198,13 +219,18 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
   }, []);
 
   const ride = useCallback(
-    (to: LevelId) => {
+    (to: LevelId | "bay") => {
       setActive(null);
       playSfx("lift");
-      setVisited((prev) => (prev.has(to) ? prev : new Set(prev).add(to)));
+      if (to !== "bay") setVisited((prev) => (prev.has(to) ? prev : new Set(prev).add(to)));
       goTo(to);
+      // The flange sits low in the gantry's resting view: turn toward it when work starts there.
+      if (phase === "tighten" && tool === "torque" && to === "level2") {
+        later(() => useSceneStore.getState().highlight("bolt-2", { lookAt: true }), 500);
+        later(() => useSceneStore.getState().highlight(null), 1400);
+      }
     },
-    [goTo],
+    [goTo, phase, tool, later],
   );
 
   const closePanel = useCallback(() => setActive(null), []);
@@ -242,9 +268,17 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [phase, toggleScan]);
 
-  const startChecklist = useCallback(() => {
+  const startTighten = useCallback(() => {
     setScanOn(false);
     setRevealAll(false);
+    resetBolts();
+    setPhase("tighten");
+    toFloor();
+    say(SAY.tightenIntro);
+  }, [toFloor, say]);
+
+  const startChecklist = useCallback(() => {
+    setTool(null);
     setPhase("checklist");
     toFloor();
     say(SAY.checklistIntro);
@@ -271,8 +305,8 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
     if (!huntOver) return;
     const timeout = revealAll ? 7500 : 5200;
     if (!revealAll) later(() => say(SAY.scanAllFound), 2200);
-    later(startChecklist, timeout);
-  }, [huntOver, revealAll, later, say, startChecklist]);
+    later(startTighten, timeout);
+  }, [huntOver, revealAll, later, say, startTighten]);
 
   const onFault = useCallback(
     (id: FaultId) => {
@@ -295,12 +329,80 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
     [say],
   );
 
-  /* ------------------------------------------------------------ phase 4: checklist */
+  /* ------------------------------------------------------------ phase 4: tools and flange bolts */
+
+  const pickTool = useCallback(
+    (id: ToolId) => {
+      if (id !== "torque") {
+        setWrongTool((w) => ({ id, n: (w?.n ?? 0) + 1 }));
+        playSfx("noGo");
+        say(SAY.wrongTool(TOOL_NAME[id]), { ms: 6000 });
+        return;
+      }
+      setTool("torque");
+      playSfx("unlatch");
+      say(SAY.toolPicked, { ms: 6500 });
+    },
+    [say],
+  );
+
+  const pressBolt = useCallback(
+    (i: number) => {
+      if (torqueBolt !== null || boltsDone.includes(i)) return;
+      const result = checkBolt(boltsDone, i);
+      if (!result.ok) {
+        setBoltMistakes((m) => m + 1);
+        playSfx("noGo");
+        addTrauma(0.15);
+        say(SAY.boltWrongOrder(BOLT_LABEL[result.expected]), { ms: 7000 });
+        return;
+      }
+      playSfx("switch");
+      setTorqueBolt(i);
+      useSceneStore.getState().highlight(`bolt-${i}`, { lookAt: true });
+    },
+    [torqueBolt, boltsDone, say],
+  );
+
+  const onBoltTight = useCallback(() => {
+    if (torqueBolt === null) return;
+    const next = [...boltsDone, torqueBolt];
+    setBoltsDone(next);
+    setTorqueBolt(null);
+    addTrauma(0.2);
+    const left = BOLT_COUNT - next.length;
+    if (left > 0) {
+      say(SAY.boltTight(BOLT_LABEL[torqueBolt], left), { ms: 3600 });
+    } else {
+      say(SAY.tightenDone);
+      later(startChecklist, 5600);
+    }
+  }, [torqueBolt, boltsDone, say, later, startChecklist]);
+
+  const onBoltStripped = useCallback(() => {
+    if (torqueBolt !== null) {
+      bolts.seat[torqueBolt] = 0;
+      bolts.angle[torqueBolt] = 0;
+    }
+    setBoltMistakes((m) => m + 1);
+    setTorqueBolt(null);
+    addTrauma(0.3);
+    say(SAY.boltStripped, { ms: 7000 });
+  }, [torqueBolt, say]);
+
+  /* ------------------------------------------------------------ phase 5: checklist */
+
+  const onEnterBay = useCallback(() => {
+    if (phase !== "checklist" || bayWarned.current || done.includes("fuel")) return;
+    bayWarned.current = true;
+    say(SAY.bayEnter, { ms: 8500 });
+  }, [phase, done, say]);
 
   const finishStation = useCallback(
     (id: StationId) => {
       setBusy(null);
       setPressureOpen(false);
+      setFuelOpen(false);
       setDone((prev) => {
         const next = prev.includes(id) ? prev : [...prev, id];
         if (next.length === 3) {
@@ -322,7 +424,7 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
 
   const pressStation = useCallback(
     (id: StationId) => {
-      if (busy || pressureOpen || done.includes(id)) return;
+      if (busy || pressureOpen || fuelOpen || done.includes(id)) return;
       const result = checkStation(done, id);
       if (!result.ok) {
         setMistakes((m) => m + 1);
@@ -336,14 +438,25 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
         setPressureOpen(true);
         return;
       }
+      if (id === "fuel") {
+        const spot = STATIONS.find((s) => s.id === "fuel");
+        if (spot && Math.hypot(player.x - spot.position[0], player.z - spot.position[2]) > BAY.reach) {
+          playSfx("caution");
+          say(SAY.fuelTooFar, { ms: 5200 });
+          return;
+        }
+        playSfx("switch");
+        setFuelOpen(true);
+        return;
+      }
       setBusy(id);
-      playSfx(id === "fuel" ? "lift" : "switch");
-      later(() => finishStation(id), id === "fuel" ? 1700 : 1400);
+      playSfx("switch");
+      later(() => finishStation(id), 1400);
     },
-    [busy, pressureOpen, done, say, later, finishStation],
+    [busy, pressureOpen, fuelOpen, done, say, later, finishStation],
   );
 
-  /* ------------------------------------------------------------ phase 5: loadout */
+  /* ------------------------------------------------------------ phase 6: loadout */
 
   const confirmLoadout = useCallback(() => {
     if (!assessLoadout(loadout).ok) {
@@ -371,18 +484,20 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
         setPhase(p);
         toFloor();
         if (p === "scan") setSecondsLeft(SCAN_SECONDS);
+        if (p === "tighten") resetBolts();
       },
       /** Runs the crane physics without waiting for animation frames (the hidden preview pane throttles them). */
       drive: (input: { moveX: number; moveZ: number; hoist: number }, seconds: number) => {
         for (let i = 0; i < seconds * 60; i++) advanceCrane(rig, input, 1 / 60, onCraneEvent);
       },
       goto: (id: string) => goTo(id),
+      player: () => ({ x: player.x, z: player.z }),
       seatAll: () => {
         setSeated(3);
         setCarrying(null);
         rig.active = false;
       },
-      state: () => ({ phase, seated, found: [...found], done, secondsLeft }),
+      state: () => ({ phase, seated, found: [...found], done, secondsLeft, tool, boltsDone, boltMistakes }),
     };
     return () => {
       delete w.__ws;
@@ -400,7 +515,8 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
   const quizRight = [...quiz.values()].filter(Boolean).length;
   const stackingNow = phase === "crane";
   const objective = (i: number) => localize(briefing.objectives[i]);
-  const afterScan = phase === "checklist" || phase === "loadout";
+  const afterScan = phase === "tighten" || phase === "checklist" || phase === "loadout";
+  const afterTighten = phase === "checklist" || phase === "loadout";
   const afterChecklist = phase === "loadout";
 
   return (
@@ -416,7 +532,8 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
           engine={loadout.engine}
           crane={{ rig, seated, carrying, onEvent: onCraneEvent }}
           scan={{ on: scanOn, found, revealAll, onFound: onFault }}
-          stations={{ done, busy, onPress: pressStation }}
+          stations={{ done, busy, hose: fuelOpen, onPress: pressStation }}
+          handwork={{ tool, wrongTool, boltsDone, onPickTool: pickTool, onBolt: pressBolt, onEnterBay }}
         />
       </WorldCanvas>
 
@@ -433,8 +550,9 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
             { id: "levels", label: objective(1), done: visited.size === LEVEL_COUNT, progress: `${visited.size}/${LEVEL_COUNT}` },
             { id: "parts", label: objective(2), done: inspected.size === ROCKET_PARTS.length, progress: `${inspected.size}/${ROCKET_PARTS.length}` },
             { id: "faults", label: objective(3), done: afterScan || found.size === FAULTS.length, progress: `${found.size}/${FAULTS.length}` },
-            { id: "checklist", label: objective(4), done: afterChecklist, progress: `${done.length}/3` },
-            { id: "loadout", label: objective(5), done: signedOff },
+            { id: "tighten", label: objective(4), done: afterTighten, progress: `${boltsDone.length}/${BOLT_COUNT}` },
+            { id: "checklist", label: objective(5), done: afterChecklist, progress: `${done.length}/3` },
+            { id: "loadout", label: objective(6), done: signedOff },
           ]}
         />
       </div>
@@ -460,7 +578,23 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
 
         {phase === "scan" && <ScanHud on={scanOn} onToggle={toggleScan} found={found} secondsLeft={secondsLeft} revealAll={revealAll} />}
 
-        {phase === "checklist" && !pressureOpen && <ChecklistPanel done={done} mistakes={mistakes} />}
+        {phase === "tighten" && torqueBolt === null && (
+          <TightenStatus held={tool === "torque"} onLevel2={level === "level2"} done={boltsDone} mistakes={boltMistakes} />
+        )}
+        {phase === "tighten" && torqueBolt !== null && (
+          <TorqueGame key={torqueBolt} index={torqueBolt} onTight={onBoltTight} onStripped={onBoltStripped} onCancel={() => setTorqueBolt(null)} />
+        )}
+
+        {phase === "checklist" && fuelOpen && (
+          <FuelGame
+            onHit={(line) => say(SAY.couplingHit(line), { ms: 2800 })}
+            onMiss={() => say(SAY.couplingMiss, { ms: 3600 })}
+            onFill={() => say(SAY.fillStarted, { ms: 6500 })}
+            onDone={() => finishStation("fuel")}
+            onCancel={() => setFuelOpen(false)}
+          />
+        )}
+        {phase === "checklist" && !pressureOpen && !fuelOpen && <ChecklistPanel done={done} mistakes={mistakes} />}
         {phase === "checklist" && pressureOpen && (
           <PressureGame onDone={() => finishStation("pressure")} onCancel={() => setPressureOpen(false)} />
         )}
@@ -489,6 +623,7 @@ export function WorkshopScene({ onComplete }: { onComplete: () => void }) {
             [UI.done.quiz, `${quizRight}/${ROCKET_PARTS.length}`],
             [UI.done.rough, String(rig.bumps)],
             [UI.done.order, String(mistakes)],
+            [UI.done.bolts, String(boltMistakes)],
           ].map(([label, value]) => (
             <div key={localize(label as LocalizedText)} className="contents">
               <dt className="text-foreground/80">{localize(label as LocalizedText)}</dt>

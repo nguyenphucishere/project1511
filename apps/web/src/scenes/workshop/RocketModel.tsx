@@ -2,7 +2,8 @@
 
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Color, DoubleSide, MathUtils, type Group } from "three";
+import { useTexture } from "@react-three/drei";
+import { Color, DoubleSide, MathUtils, SRGBColorSpace, type Group } from "three";
 import { PALETTE, SCENE_COLORS } from "@/lib/palette";
 import type { PartId } from "@/mocks/rocket-parts";
 import { STACK, facingTheta } from "./layout";
@@ -417,6 +418,9 @@ function Stage2({ hot }: { hot: boolean }) {
   const { y0, y1, r } = STACK.stage2;
   const skin = skins().stage2;
   const front = facingTheta("level2");
+  const flagMap = useTexture("/assets/murals/us_flag.png");
+  flagMap.colorSpace = SRGBColorSpace;
+  flagMap.anisotropy = 8;
   return (
     <group>
       <mesh position={[0, (y0 + y1) / 2, 0]}>
@@ -432,18 +436,8 @@ function Stage2({ hot }: { hot: boolean }) {
       {/* Flag */}
       <group rotation={[0, front + 0.18, 0]}>
         <mesh position={[0, y0 + 3.3, r + 0.03]}>
-          <planeGeometry args={[0.8, 0.5]} />
-          <meshStandardMaterial color="#ffffff" roughness={0.6} />
-        </mesh>
-        {[0, 1, 2, 3].map((i) => (
-          <mesh key={i} position={[0.1, y0 + 3.5 - i * 0.14, r + 0.034]}>
-            <planeGeometry args={[0.6, 0.065]} />
-            <meshStandardMaterial color={SCENE_COLORS.nasaRed} roughness={0.6} />
-          </mesh>
-        ))}
-        <mesh position={[-0.2, y0 + 3.44, r + 0.036]}>
-          <planeGeometry args={[0.32, 0.26]} />
-          <meshStandardMaterial color={SCENE_COLORS.nasaBlue} roughness={0.6} />
+          <planeGeometry args={[0.84, 0.84 * (650 / 1235)]} />
+          <meshStandardMaterial map={flagMap} roughness={0.6} />
         </mesh>
       </group>
       {/* Umbilical plate */}

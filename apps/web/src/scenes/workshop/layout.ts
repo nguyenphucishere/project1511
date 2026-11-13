@@ -44,7 +44,7 @@ function floorWalk(): WalkArea {
   };
   return {
     bounds: { minX: HALL.minX + 1, maxX: HALL.maxX - 1, minZ: HALL.minZ + 1, maxZ: HALL.maxZ - 1 },
-    blockers: [{ minX: -3.4, maxX: 3.4, minZ: -3.4, maxZ: 3.4 }, tower("level2"), tower("level3")],
+    blockers: [{ minX: -3.4, maxX: 3.4, minZ: -3.4, maxZ: 3.4 }, tower("level2"), tower("level3"), ...BAY.tanks],
     eyeHeight: () => EYE,
     speed: 3.2,
   };
@@ -117,7 +117,21 @@ export const CRANE_VIEWPOINTS: Viewpoint[] = CRANE_LIFTS.map((l) => ({
   pitchRange: 0.1,
 }));
 
-export const ALL_VIEWPOINTS: Viewpoint[] = [...VIEWPOINTS, ...CRANE_VIEWPOINTS];
+/** Standing just inside the fuel bay, facing the panel: the target of the "go to the fuel bay" hotspot. */
+const BAY_EYE: Vec3 = [12.4, EYE, -7.6];
+export const BAY_VIEWPOINT: Viewpoint = {
+  id: "bay",
+  label: { en: "the fuel bay", vi: "khu nhiên liệu" },
+  position: BAY_EYE,
+  ...aim(BAY_EYE, [16.5, 2.2, -7.6]),
+  yawRange: 0.75,
+  pitchRange: 0.5,
+  get walk() {
+    return VIEWPOINTS[0].walk;
+  },
+};
+
+export const ALL_VIEWPOINTS: Viewpoint[] = [...VIEWPOINTS, ...CRANE_VIEWPOINTS, BAY_VIEWPOINT];
 
 /* ------------------------------------------------------------------ checklist stations */
 
@@ -127,9 +141,28 @@ export interface StationSpot {
   rotationY: number;
 }
 
+/**
+ * The fuel bay: a fenced zone against the east wall with the cryogenic tanks and the fuel panel.
+ * `zone` is where the player counts as "inside"; `tanks` are footprints that block walking.
+ */
+export const BAY = {
+  centre: [15.8, -7.6] as [number, number],
+  zone: { minX: 11.8, maxX: 19, minZ: -13, maxZ: -2.2 },
+  tanks: [
+    { minX: 16.9, maxX: 19.1, minZ: -11.1, maxZ: -8.9 },
+    { minX: 16.9, maxX: 19.1, minZ: -6.3, maxZ: -4.1 },
+  ],
+  /** How close (m) the player must stand to the fuel panel to use it. */
+  reach: 7.5,
+};
+
+/** The torque bench and the interstage flange bolts of the tightening task. */
+export const BENCH = { x: 2.6, z: 9.2 };
+export const FLANGE = { y: 12.22, r: 1.74, count: 5, spread: 0.5 } as const;
+
 /** Three consoles around the pad. Each faces the rocket. */
 export const STATIONS: StationSpot[] = [
-  { id: "fuel", position: [6.2, 0, -0.6], rotationY: -Math.PI / 2 },
+  { id: "fuel", position: [14.6, 0, -7.4], rotationY: -Math.PI / 2 },
   { id: "electrical", position: [-6.4, 0, 0.8], rotationY: Math.PI / 2 },
   { id: "pressure", position: [-6.2, 0, -6.0], rotationY: Math.PI / 4 },
 ];

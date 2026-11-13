@@ -41,13 +41,13 @@ const MASTER_VOLUME = 0.5;
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let noiseBuffer: AudioBuffer | null = null;
-const liveLoops = new Set<() => void>();
+export const liveLoops = new Set<() => void>();
 
-function enabled() {
+export function enabled() {
   return useSettingsStore.getState().sound;
 }
 
-function audio(): { c: AudioContext; out: GainNode } | null {
+export function audio(): { c: AudioContext; out: GainNode } | null {
   if (typeof window === "undefined") return null;
   if (!ctx) {
     const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -62,7 +62,7 @@ function audio(): { c: AudioContext; out: GainNode } | null {
 }
 
 /** Two seconds of white noise, made once and shared by every noise-based sound. */
-function noise(c: AudioContext): AudioBuffer {
+export function noise(c: AudioContext): AudioBuffer {
   if (!noiseBuffer) {
     noiseBuffer = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
     const data = noiseBuffer.getChannelData(0);
@@ -81,7 +81,7 @@ interface ToneOptions {
   attack?: number;
 }
 
-function tone(c: AudioContext, out: AudioNode, at: number, o: ToneOptions) {
+export function tone(c: AudioContext, out: AudioNode, at: number, o: ToneOptions) {
   const osc = c.createOscillator();
   const g = c.createGain();
   osc.type = o.type ?? "sine";
@@ -106,7 +106,7 @@ interface NoiseOptions {
   attack?: number;
 }
 
-function burst(c: AudioContext, out: AudioNode, at: number, o: NoiseOptions) {
+export function burst(c: AudioContext, out: AudioNode, at: number, o: NoiseOptions) {
   const src = c.createBufferSource();
   src.buffer = noise(c);
   src.loop = true;

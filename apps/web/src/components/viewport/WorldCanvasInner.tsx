@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Environment } from "@react-three/drei";
+import { Environment, PerformanceMonitor } from "@react-three/drei";
 import { NoToneMapping, PCFSoftShadowMap } from "three";
 import { useSettingsStore } from "@/game/settingsStore";
 import { FirstPersonCamera } from "./FirstPersonCamera";
@@ -22,6 +22,8 @@ export interface WorldCanvasInnerProps {
 /** The R3F canvas. Browser-only: always load it through WorldCanvas (dynamic, ssr: false). */
 export default function WorldCanvasInner({ children, label }: WorldCanvasInnerProps) {
   const pixelFX = useSettingsStore((s) => s.pixelFX);
+  // Starts sharp and steps the resolution down if the frame rate stays low (and back up if it recovers).
+  const [dpr, setDpr] = useState(1.25);
 
   return (
     <Canvas
@@ -30,7 +32,7 @@ export default function WorldCanvasInner({ children, label }: WorldCanvasInnerPr
       className="touch-none"
       // Up to 2x device pixels for sharp edges on retina/4K screens. The pixel pass renders at
       // ~270 lines regardless, so it never pays for the extra resolution.
-      dpr={pixelFX ? [1, 1] : [1, 2]}
+      dpr={pixelFX ? 1 : dpr}
       shadows={{ type: PCFSoftShadowMap }}
       // Tone mapping is done by PostFX (ACES) or left off for the pixel pass; the composer
       // brings its own MSAA, so the default framebuffer only needs AA in the plain path.
@@ -38,6 +40,12 @@ export default function WorldCanvasInner({ children, label }: WorldCanvasInnerPr
       camera={{ fov: 70, near: 0.05, far: 900, position: [0, 1.6, 0] }}
     >
       <color attach="background" args={[PALETTE.deep]} />
+      <PerformanceMonitor
+        flipflops={3}
+        onDecline={() => setDpr((d) => Math.max(0.75, d - 0.25))}
+        onIncline={() => setDpr((d) => Math.min(1.25, d + 0.25))}
+        onFallback={() => setDpr(0.75)}
+      />
       <ResponsiveFov />
       <FirstPersonCamera />
       <Suspense fallback={null}>

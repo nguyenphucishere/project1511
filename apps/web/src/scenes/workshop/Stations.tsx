@@ -27,10 +27,12 @@ interface StationsProps {
   interactive: boolean;
   done: readonly StationId[];
   busy: StationId | null;
+  /** The hose is laid while the fuel lines are being connected, and stays once fuelling is done. */
+  hose?: boolean;
   onPress: (id: StationId) => void;
 }
 
-export function Stations({ interactive, done, busy, onPress }: StationsProps) {
+export function Stations({ interactive, done, busy, hose = false, onPress }: StationsProps) {
   return (
     <group>
       {STATIONS.map((s) => {
@@ -54,7 +56,7 @@ export function Stations({ interactive, done, busy, onPress }: StationsProps) {
           </group>
         );
       })}
-      <Umbilical show={done.includes("fuel") || busy === "fuel"} />
+      <Umbilical show={hose || done.includes("fuel") || busy === "fuel"} />
     </group>
   );
 }
@@ -181,9 +183,11 @@ function Umbilical({ show }: { show: boolean }) {
   const curve = useMemo(
     () =>
       new CatmullRomCurve3([
-        new Vector3(8.2, 0.35, -4.2),
-        new Vector3(7.4, 0.12, -2.8),
-        new Vector3(6.1, 0.1, -1.2),
+        new Vector3(16.9, 0.55, -7.2),
+        new Vector3(14.2, 0.12, -6.0),
+        new Vector3(11.4, 0.1, -3.4),
+        new Vector3(8.0, 0.08, -1.4),
+        new Vector3(5.6, 0.08, -0.5),
         new Vector3(4.5, 0.08, -0.2),
         new Vector3(3.0, 0.5, 0.2),
         new Vector3(1.9, 1.5, 0.15),

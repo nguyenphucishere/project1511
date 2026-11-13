@@ -2,8 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { MeshReflectorMaterial } from "@react-three/drei";
-import { AdditiveBlending, CanvasTexture, Color, DoubleSide, type BufferAttribute, type BufferGeometry, type Points } from "three";
+import { MeshReflectorMaterial, useTexture } from "@react-three/drei";
+import { AdditiveBlending, CanvasTexture, Color, DoubleSide, SRGBColorSpace, type BufferAttribute, type BufferGeometry, type Points } from "three";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { SCENE_COLORS } from "@/lib/palette";
 import { HALL } from "./layout";
@@ -19,7 +19,9 @@ const SKYLIGHT = new Color(1.6, 2.1, 3.0);
  * Watch the frame rate once the scene has settled and fall back to a plain glossy floor if it is low.
  */
 function useMirrorFloor() {
-  const [mirror, setMirror] = useState(true);
+  // The mirror floor renders the whole hall twice and blurs it: far too costly for the look it gives.
+  // Kept behind this switch, off by default; the glossy floor with image-based reflections replaces it.
+  const [mirror, setMirror] = useState(false);
   const samples = useRef<number[]>([]);
   const settled = useRef(0);
   useFrame((_, dt) => {
@@ -314,47 +316,23 @@ export function Dust({ count = 520 }: { count?: number }) {
 
 /** Giant American Flag & NASA Insignia Murals on the VAB interior walls */
 export function VABHeritageMurals() {
+  const [flag, insignia] = useTexture(["/assets/murals/us_flag.png", "/assets/murals/nasa_insignia.png"]).map((t) => {
+    t.colorSpace = SRGBColorSpace;
+    t.anisotropy = 8;
+    return t;
+  });
   return (
     <group>
-      {/* Giant 50-Star American Flag on Left Wall */}
-      <group position={[HALL.minX + 0.1, 22, -1]} rotation={[0, Math.PI / 2, 0]}>
-        {/* White base */}
-        <mesh>
-          <planeGeometry args={[14, 7.8]} />
-          <meshBasicMaterial color="#FFFFFF" />
-        </mesh>
-        {/* Red stripes (7 red, 6 white) */}
-        {[0, 2, 4, 6].map((i) => (
-          <mesh key={i} position={[0, 3.3 - i * 1.2, 0.01]}>
-            <planeGeometry args={[14, 0.6]} />
-            <meshBasicMaterial color={SCENE_COLORS.nasaRed} />
-          </mesh>
-        ))}
-        {/* Blue Union Canton */}
-        <mesh position={[-3.6, 1.65, 0.02]}>
-          <planeGeometry args={[6.8, 4.5]} />
-          <meshBasicMaterial color={SCENE_COLORS.nasaBlue} />
-        </mesh>
-      </group>
-
-      {/* Giant NASA Insignia Mural on Right Wall */}
-      <group position={[HALL.maxX - 0.1, 22, -1]} rotation={[0, -Math.PI / 2, 0]}>
-        {/* Outer sphere */}
-        <mesh>
-          <circleGeometry args={[4.2, 36]} />
-          <meshBasicMaterial color={SCENE_COLORS.nasaBlue} />
-        </mesh>
-        {/* Orbit track ring */}
-        <mesh position={[0, 0, 0.01]} rotation={[0, 0, 0.4]}>
-          <ringGeometry args={[3.8, 4.1, 36]} />
-          <meshBasicMaterial color="#FFFFFF" />
-        </mesh>
-        {/* Red vector / chevron */}
-        <mesh position={[0.4, 0.2, 0.02]} rotation={[0, 0, -0.6]}>
-          <planeGeometry args={[6.4, 0.7]} />
-          <meshBasicMaterial color={SCENE_COLORS.nasaRed} />
-        </mesh>
-      </group>
+      {/* The Stars and Stripes, painted across the west wall */}
+      <mesh position={[HALL.minX + 0.1, 22, -1]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[14, 14 * (650 / 1235)]} />
+        <meshBasicMaterial map={flag} toneMapped={false} />
+      </mesh>
+      {/* The NASA insignia on the east wall */}
+      <mesh position={[HALL.maxX - 0.1, 22, -1]} rotation={[0, -Math.PI / 2, 0]}>
+        <planeGeometry args={[10, 10 * (92 / 110)]} />
+        <meshBasicMaterial map={insignia} transparent toneMapped={false} />
+      </mesh>
     </group>
   );
 }

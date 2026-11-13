@@ -1,6 +1,7 @@
 import type { LocalizedText } from "@/i18n";
 import type { CharacterId } from "@/game/characters";
 import type { StationId } from "./checks";
+import type { FuelLine } from "./handworkRules";
 
 /**
  * Everything Kai, Chief Bao and the hall's loudspeaker say, plus the labels of the new HUD pieces.
@@ -66,15 +67,67 @@ export const SAY = {
     "Hết giờ. Tôi đã báo phần còn lại cho đội bảo trì, những lỗi cậu bỏ sót được đánh dấu cho kíp sau.",
   ),
   checklistIntro: kai(
-    "Pre-flight checklist. One: fuel feed lines. Two: electrical bus. Three: tank pressure. In that order, please.",
-    "Checklist trước chuyến bay. Một: đường cấp nhiên liệu. Hai: hệ thống điện. Ba: áp suất bồn. Đúng thứ tự này nhé.",
+    "Pre-flight checklist. One: fuel feed lines. Two: electrical bus. Three: tank pressure. In that order, please. The fuel panel is in the fuel bay by the east wall: walk over there.",
+    "Checklist trước chuyến bay. Một: đường cấp nhiên liệu. Hai: hệ thống điện. Ba: áp suất bồn. Đúng thứ tự này nhé. Bảng nhiên liệu nằm trong khu nhiên liệu sát tường phía đông: đi bộ sang đó.",
+  ),
+  tightenIntro: bao(
+    "Before we fuel: the flange between stage one and stage two. Take the torque wrench from the bench, ride up to level 2 and tighten all five bolts in a star pattern: A, C, E, B, D. Stop when the wrench clicks, not after.",
+    "Trước khi nạp nhiên liệu: mặt bích giữa tầng một và tầng hai. Lấy cờ lê lực trên bàn dụng cụ, đi thang lên tầng giàn 2 và siết cả năm bu-lông theo hình sao: A, C, E, B, D. Dừng khi cờ lê kêu tách, đừng siết quá.",
+  ),
+  toolPicked: kai(
+    "Torque wrench in hand. Level 2, the interstage flange. Hold to turn, let go at the click.",
+    "Đã cầm cờ lê lực. Tầng giàn 2, mặt bích giữa hai tầng. Giữ để vặn, nhả tay khi nghe tiếng tách.",
+  ),
+  wrongTool: (name: LocalizedText): Line =>
+    bao(
+      `A ${name.en.toLowerCase()} on a flange bolt? Put it back. A torque wrench is the only tool that tells you when to stop.`,
+      `${name.vi} mà đòi siết bu-lông mặt bích à? Đặt lại đi. Chỉ cờ lê lực mới báo cho cậu biết khi nào phải dừng.`,
+    ),
+  boltWrongOrder: (label: string): Line =>
+    bao(
+      `Not that one. A star pattern, never round the ring: the next bolt is ${label}. Go in a circle and the flange warps.`,
+      `Không phải bu-lông đó. Phải siết hình sao, không đi vòng tròn: bu-lông tiếp theo là ${label}. Siết vòng tròn là mặt bích bị vênh.`,
+    ),
+  boltStripped: bao(
+    "It clicked and you kept turning. Thread's stripped. I'll fit a fresh bolt: this time stop at the click.",
+    "Nó đã kêu tách mà cậu vẫn vặn tiếp. Hỏng ren rồi. Tôi thay bu-lông mới: lần này dừng ngay khi nghe tách.",
+  ),
+  boltTight: (label: string, left: number): Line =>
+    kai(
+      left > 0 ? `Bolt ${label} at torque. ${left} to go.` : `Bolt ${label} at torque.`,
+      left > 0 ? `Bu-lông ${label} đạt lực siết. Còn ${left} cái.` : `Bu-lông ${label} đạt lực siết.`,
+    ),
+  tightenDone: bao(
+    "All five at torque, paint stripes on. That flange isn't going anywhere. Now the fuel checklist.",
+    "Cả năm bu-lông đạt lực siết, đã sơn vạch kiểm tra. Mặt bích này sẽ không xê dịch nữa. Giờ đến checklist nhiên liệu.",
+  ),
+  bayEnter: bao(
+    "Fuel bay. Cryogenic liquids: oxygen at minus 183, and anything wet that touches it freezes. Gloves on, nothing loose, and no running.",
+    "Khu nhiên liệu. Chất lỏng đông lạnh: oxy ở âm 183 độ, thứ gì ướt chạm vào là đóng băng. Đeo găng, không để đồ lỏng lẻo, và không chạy.",
+  ),
+  fuelTooFar: kai(
+    "The fuel panel is in the fuel bay by the east wall. Walk over there first.",
+    "Bảng nhiên liệu nằm trong khu nhiên liệu sát tường phía đông. Đi bộ sang đó trước đã.",
+  ),
+  couplingMiss: kai(
+    "Cross-threaded. Back it off and line the coupling up again.",
+    "Khớp nối bị lệch ren. Rút ra và căn lại khớp nối.",
+  ),
+  couplingHit: (line: FuelLine): Line =>
+    kai(
+      line === "oxidizer" ? "Oxidizer line locked." : "Fuel line locked.",
+      line === "oxidizer" ? "Đã khoá đường oxy hoá." : "Đã khoá đường nhiên liệu.",
+    ),
+  fillStarted: bao(
+    "Both lines on. Opening the valves. Frost on the fittings is the cold working, not a leak.",
+    "Cả hai đường đã nối. Mở van. Sương giá trên khớp nối là do lạnh, không phải rò rỉ.",
   ),
   checklistDone: bao(
     "Checklist complete, in the right order. Now: what are we flying with?",
     "Checklist hoàn tất, đúng thứ tự. Giờ chọn xem mình sẽ bay bằng gì nhé?",
   ),
   stationDone: {
-    fuel: kai("Umbilical connected. No leaks on the feed lines.", "Ống cấp đã nối. Đường nhiên liệu không rò rỉ."),
+    fuel: kai("Tanks fed, umbilical connected. No leaks on the feed lines.", "Bồn đã nạp, ống cấp đã nối. Đường nhiên liệu không rò rỉ."),
     electrical: kai("Bus A and bus B nominal. Power is clean.", "Nguồn A và B bình thường. Điện sạch."),
     pressure: kai("Tank pressure holding steady in the window.", "Áp suất bồn giữ ổn định trong khoảng cho phép."),
   } satisfies Record<StationId, Line>,
@@ -89,6 +142,15 @@ export const SAY = {
       `Khoan đã, Kai. Mình làm ${STATION_NAME[expected].vi.toLowerCase()} trước. Thứ tự rất quan trọng: bồn có áp suất mà điện chết là rắc rối to đấy.`,
     ),
 } as const;
+
+export type ToolId = "torque" | "hammer" | "pipe" | "driver";
+
+export const TOOL_NAME: Record<ToolId, LocalizedText> = {
+  torque: { en: "Torque wrench", vi: "Cờ lê lực" },
+  hammer: { en: "Claw hammer", vi: "Búa nhổ đinh" },
+  pipe: { en: "Pipe wrench", vi: "Mỏ lết ống" },
+  driver: { en: "Screwdriver", vi: "Tua vít" },
+};
 
 export const STATION_NAME: Record<StationId, LocalizedText> = {
   fuel: { en: "Fuel feed panel", vi: "Bảng cấp nhiên liệu" },
@@ -128,6 +190,7 @@ export const UI = {
     levels: { en: "Move around the assembly hall", vi: "Di chuyển quanh xưởng lắp ráp" },
     parts: { en: "Inspect every rocket part", vi: "Kiểm tra mọi bộ phận tên lửa" },
     faults: { en: "Find the hidden faults with the scanner", vi: "Tìm các lỗi ẩn bằng máy quét" },
+    tighten: { en: "Torque the flange bolts in a star pattern", vi: "Siết các bu-lông mặt bích theo hình sao" },
     checklist: { en: "Run the pre-flight checklist in order", vi: "Chạy checklist trước chuyến bay đúng thứ tự" },
     loadout: { en: "Choose the engines and tanks", vi: "Chọn động cơ và bồn nhiên liệu" },
   },
@@ -181,6 +244,33 @@ export const UI = {
     checklist: { en: "Pre-flight checklist", vi: "Checklist trước chuyến bay" },
     mistakes: { en: "Order mistakes: {n}", vi: "Sai thứ tự: {n}" },
   },
+  fuelGame: {
+    title: { en: "Fuel bay: connect the lines", vi: "Khu nhiên liệu: nối các đường ống" },
+    hint: { en: "Press Space or Connect when the marker is in the green.", vi: "Nhấn Space hoặc Nối khi vạch chạy vào vùng xanh." },
+    connect: { en: "Connect", vi: "Nối" },
+    line: {
+      oxidizer: { en: "Oxidizer line (liquid oxygen)", vi: "Đường oxy hoá (oxy lỏng)" },
+      fuel: { en: "Fuel line (kerosene)", vi: "Đường nhiên liệu (dầu hoả)" },
+    } satisfies Record<FuelLine, LocalizedText>,
+    linked: { en: "Connected", vi: "Đã nối" },
+    slips: { en: "Cross-threaded: {n}", vi: "Lệch ren: {n}" },
+    filling: { en: "Transferring propellant", vi: "Đang chuyển nhiên liệu" },
+    flow: { en: "{value}% loaded", vi: "Đã nạp {value}%" },
+  },
+  tighten: {
+    title: { en: "Flange bolts", vi: "Bu-lông mặt bích" },
+    needTool: { en: "Take the torque wrench from the bench.", vi: "Lấy cờ lê lực trên bàn dụng cụ." },
+    needLevel: { en: "Ride the lift to gantry level 2.", vi: "Đi thang giàn lên tầng giàn 2." },
+    next: { en: "Next in the star pattern: bolt {label}", vi: "Tiếp theo theo hình sao: bu-lông {label}" },
+    held: { en: "In hand: torque wrench", vi: "Đang cầm: cờ lê lực" },
+    hold: { en: "Hold to turn", vi: "Giữ để vặn" },
+    holdKeys: { en: "Hold Space or the button. Let go right after the click.", vi: "Giữ phím Space hoặc nút. Nhả ngay sau tiếng tách." },
+    torque: { en: "Torque", vi: "Lực siết" },
+    click: { en: "Click", vi: "Tách" },
+    strip: { en: "Stripped", vi: "Hỏng ren" },
+    bolt: { en: "Bolt {label}", vi: "Bu-lông {label}" },
+    done: { en: "At torque", vi: "Đạt lực siết" },
+  },
   loadout: {
     title: { en: "Build the first stage", vi: "Dựng tầng một" },
     engines: { en: "Engines", vi: "Động cơ" },
@@ -212,6 +302,7 @@ export const UI = {
     quiz: { en: "Inside-view questions right", vi: "Câu hỏi bên trong trả lời đúng" },
     rough: { en: "Rough crane landings", vi: "Lần cẩu hạ mạnh" },
     order: { en: "Checklist order mistakes", vi: "Lần sai thứ tự checklist" },
+    bolts: { en: "Bolt mistakes (order or stripped)", vi: "Lỗi bu-lông (sai thứ tự hoặc hỏng ren)" },
     build: { en: "Build", vi: "Cấu hình" },
   },
   skip: { en: "Skip this step", vi: "Bỏ qua bước này" },
