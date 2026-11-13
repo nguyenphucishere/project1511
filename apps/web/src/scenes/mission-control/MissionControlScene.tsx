@@ -36,6 +36,8 @@ import { CountdownPanel, FlightPanel, PollPanel } from "./LaunchPanels";
 import { formatMissionTime } from "@/lib/format";
 import { VIEWPOINTS } from "./layout";
 import { realSecondsAt } from "./flight";
+import { SEPARATION_T, STAGE2_T } from "./ascent";
+import { startRockScore, type RockScore } from "@/game/rockScore";
 import { consoleSeed, engineOption, tankOption } from "@/scenes/workshop/loadout";
 
 /** How long the liftoff roar lasts, in real time (the climb out of sight). */
@@ -179,6 +181,43 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
     setAttempt((a) => a + 1);
     setPhase("config");
   }, []);
+
+  // The launch score: a held organ at the countdown, building to full band and orchestra at
+  // staging, then fading as the capsule reaches orbit. Cut off quickly if the flight fails.
+  const score = useRef<RockScore | null>(null);
+  useEffect(() => {
+    if (phase === "countdown") {
+      if (!score.current) score.current = startRockScore(0.15);
+      return;
+    }
+    if (phase === "flight" && ignitionAt !== null) {
+      score.current ??= startRockScore(0.3);
+      score.current.hit();
+      const id = window.setInterval(() => {
+        const t = (performance.now() - ignitionAt) / 1000;
+        // Rises through the climb, peaks at staging and stage 2 ignition, eases a little after.
+        const climb = Math.min(1, t / SEPARATION_T);
+        const settle = t > STAGE2_T + 3 ? 0.12 : 0;
+        score.current?.setIntensity(0.45 + 0.55 * climb - settle);
+      }, 250);
+      return () => window.clearInterval(id);
+    }
+    if (phase === "orbit") {
+      score.current?.setIntensity(0.35);
+      score.current?.stop(5);
+      score.current = null;
+      return;
+    }
+    score.current?.stop(phase === "failure-pov" ? 0.6 : 1.2);
+    score.current = null;
+  }, [phase, ignitionAt]);
+  useEffect(
+    () => () => {
+      score.current?.stop(0.3);
+      score.current = null;
+    },
+    [],
+  );
 
   const briefing = BRIEFINGS["mission-control"];
   const titles: Record<Phase, string> = {

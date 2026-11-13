@@ -9,6 +9,7 @@ import { SCENE_COLORS } from "@/lib/palette";
 import { HOLD_DOWN, SEPARATION_T, STAGE2_T, rocketRise, spentStagePose } from "./ascent";
 import { LaunchSmoke } from "./LaunchSmoke";
 import { ROCKET_HEIGHT } from "./layout";
+import { Interstage, NozzleExtension } from "./Mechanics";
 
 /** How long the spent stage stays drawn after separation (it is far below by then). */
 const SPENT_VISIBLE = 7;
@@ -87,6 +88,7 @@ export function LaunchVehicle({ ignitionAt, burnEndT }: { ignitionAt: number | n
 
       <group ref={stage1}>
         <FirstStage />
+        <Interstage ignitionAt={ignitionAt} />
         <group ref={flame1} visible={false} position={[0, 1.5, 0]}>
           <Flame radius={1.7} length={7} />
         </group>
@@ -94,6 +96,7 @@ export function LaunchVehicle({ ignitionAt, burnEndT }: { ignitionAt: number | n
 
       <group ref={upper}>
         <UpperStack />
+        <NozzleExtension ignitionAt={ignitionAt} />
         <group ref={flame2} visible={false} position={[0, 12.55, 0]}>
           <Flame radius={0.75} length={4.5} />
         </group>
@@ -157,8 +160,6 @@ function FirstStage() {
           [3.3, 4.2, 1.62, 1.62, SCENE_COLORS.steelDark],
           [7.5, 7.9, 1.62, 1.62, SCENE_COLORS.nasaRed],
           [11.4, 12, 1.62, 1.62, SCENE_COLORS.steelDark],
-          // Interstage: travels with stage 1 and hides the stage 2 engine until separation.
-          [12, 13.6, 1.6, 1.3, SCENE_COLORS.nasaBlue],
         ]}
       />
       {/* Five engine bells under the skirt */}

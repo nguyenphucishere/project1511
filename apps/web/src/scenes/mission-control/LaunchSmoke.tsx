@@ -19,6 +19,7 @@ import { seeded } from "@/lib/random";
 import { SCENE_COLORS } from "@/lib/palette";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { HOLD_DOWN, SEPARATION_T, STAGE2_T, rocketRise, rocketSpeed } from "./ascent";
+import { STRETCH } from "./flight";
 import { PAD } from "./layout";
 
 /**
@@ -99,7 +100,8 @@ function emit(
   const rise = rocketRise(t);
 
   // Ground cloud: heaviest at ignition and while the stack clears the tower, then thinning.
-  const groundRate = t < HOLD_DOWN + 2.5 ? 85 : t < HOLD_DOWN + 7 ? 85 * (1 - (t - HOLD_DOWN - 2.5) / 4.5) : 0;
+  const groundRate =
+    t < HOLD_DOWN + 2.5 * STRETCH ? 85 : t < HOLD_DOWN + 7 * STRETCH ? 85 * (1 - (t - HOLD_DOWN - 2.5 * STRETCH) / (4.5 * STRETCH)) : 0;
   carry.ground += groundRate * (reduced ? 0.5 : 1) * dt;
   while (carry.ground >= 1) {
     carry.ground -= 1;
@@ -191,7 +193,7 @@ class SmokeSim {
     this.size0[i] = 2.5 + r() * 2;
     this.size1[i] = 13 + r() * 12;
     this.alpha[i] = 0.75 + r() * 0.2;
-    this.heat[i] = t < HOLD_DOWN + 3 ? 1 : 0.6;
+    this.heat[i] = t < HOLD_DOWN + 3 * STRETCH ? 1 : 0.6;
     this.drag[i] = 0.55 + r() * 0.3;
     this.lift[i] = 0.35 + r() * 0.5;
   }

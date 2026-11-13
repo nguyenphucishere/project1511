@@ -11,6 +11,8 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { SCENE_COLORS } from "@/lib/palette";
 import { rocketRise, rocketSpeed } from "./ascent";
 import { LaunchVehicle } from "./LaunchVehicle";
+import { shotAt } from "./launchShots";
+import { HoldDownClamps, SwingArm } from "./Mechanics";
 import { GROUND_Y, LAUNCH_VANTAGE, PAD, ROCKET_HEIGHT, ROOM, TIER, WINDOW } from "./layout";
 import { mood } from "./mood";
 import { SkyExplosion } from "./SkyExplosion";
@@ -89,6 +91,7 @@ function LaunchCamera({ active, ignitionAt }: { active: boolean; ignitionAt: num
     let started = false;
     let elapsed = 0;
     let lens: Camera | null = null;
+    let lastShot = "";
 
     const rig: CameraRig = (camera, dt) => {
       if (!started) {
@@ -111,6 +114,32 @@ function LaunchCamera({ active, ignitionAt }: { active: boolean; ignitionAt: num
 
       const t = ignition.current === null ? -1 : (performance.now() - ignition.current) / 1000;
       const rise = t < 0 ? 0 : rocketRise(t);
+
+      // From ignition the launch is cut like a film: a new angle every few seconds.
+      if (t >= 0 && !reduced) {
+        const shot = shotAt(t);
+        const cut = shot.id !== lastShot;
+        lastShot = shot.id;
+        const f = shot.frame({ t, rise, speed: rocketSpeed(t), pad: [pad.x, pad.y, pad.z] });
+        // Engine rumble shakes the lens, fading as the shot calms down.
+        const shake = f.shake;
+        camera.position.set(
+          f.pos[0] + Math.sin(t * 57) * shake,
+          f.pos[1] + Math.sin(t * 71 + 1) * shake,
+          f.pos[2] + Math.sin(t * 43 + 2) * shake,
+        );
+        goal.set(f.aim[0], f.aim[1], f.aim[2]);
+        if (cut) aim.copy(goal);
+        else aim.lerp(goal, 1 - Math.exp(-f.rate * dt));
+        camera.lookAt(aim);
+        if (camera instanceof PerspectiveCamera) {
+          lens = camera;
+          const want = Math.min(MAX_ZOOM, Math.max(f.zoom, camera.position.distanceTo(goal) / ZOOM_REF_DIST));
+          camera.zoom = cut ? want : camera.zoom + (want - camera.zoom) * (1 - Math.exp(-ZOOM_RATE * dt));
+          camera.updateProjectionMatrix();
+        }
+        return;
+      }
       pos.addScaledVector(away, rise * PULL_BACK);
       pos.y += rise * CRANE;
       camera.position.copy(pos);
@@ -1060,6 +1089,7 @@ function FireTruck({
 function LaunchPad({ ignitionAt, burnEndT }: { ignitionAt: number | null; burnEndT: number }) {
   return (
     <group position={PAD}>
+      <HoldDownClamps ignitionAt={ignitionAt} />
       {/* Concrete flame trench & steel launch pedestal with angled ramps */}
       <mesh position={[0, 1, 0]}>
         <boxGeometry args={[12, 2, 12]} />
@@ -1105,10 +1135,9 @@ function LaunchPad({ ignitionAt, burnEndT }: { ignitionAt: number | null; burnEn
             </mesh>
             {/* Umbilical swing arms */}
             {(y === 12 || y === 16 || y === 20) && (
-              <mesh position={[2.2, y, 0]}>
-                <boxGeometry args={[2.7, 0.22, 0.38]} />
-                <meshStandardMaterial color={SCENE_COLORS.steelLight} metalness={0.5} />
-              </mesh>
+              <group position={[0.5, y, 0]}>
+                <SwingArm ignitionAt={ignitionAt} delay={(y - 12) / 8 * 0.35} />
+              </group>
             )}
           </group>
         ))}

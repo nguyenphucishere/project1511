@@ -10,13 +10,22 @@ import type { Dictionary } from "@/i18n";
  * sped up 75×, then time slows around staging (T+02:42 separation, T+02:46 stage 2 ignition)
  * so the stage falling away and the second engine lighting are visible, then 75× to orbit.
  */
-const TIME_WARP: [real: number, mission: number][] = [
+const BASE_WARP: [real: number, mission: number][] = [
   [0, 0],
   [6, 6],
   [8, 156],
-  [10.4, 172],
+  [12, 172],
   [15.36, 544],
 ];
+
+/**
+ * How much longer the launch plays than the original cut. Time stretches, distances do not
+ * (see ascent.ts), so the rocket climbs the same height more slowly and the camera has time for
+ * several angles.
+ */
+export const STRETCH = 1.6;
+
+const TIME_WARP: [real: number, mission: number][] = BASE_WARP.map(([r, m]) => [r * STRETCH, m]);
 
 function interpolate(table: [number, number][], x: number, from: 0 | 1): number {
   const to = from === 0 ? 1 : 0;

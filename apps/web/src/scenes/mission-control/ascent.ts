@@ -1,4 +1,4 @@
-import { STAGE2_IGNITION_SEC, STAGING_SEC, realSecondsAt } from "./flight";
+import { STAGE2_IGNITION_SEC, STAGING_SEC, STRETCH, realSecondsAt } from "./flight";
 
 /**
  * Visual ascent of the 3D rocket, in real seconds after ignition and metres above the pad.
@@ -7,11 +7,12 @@ import { STAGE2_IGNITION_SEC, STAGING_SEC, realSecondsAt } from "./flight";
  */
 
 /** Engines build up on the clamps before release. */
-export const HOLD_DOWN = 1.2;
+export const HOLD_DOWN = 1.2 * STRETCH;
 /** Stage 1 climb acceleration (m/s²). */
-const CLIMB = 3.5;
+// Accelerations scale with 1/STRETCH² so the heights reached stay the same over the longer time.
+const CLIMB = 3.5 / (STRETCH * STRETCH);
 /** Upper stage acceleration once its engine lights (m/s²): lighter, but a smaller engine. */
-const STAGE2_ACCEL = 2.2;
+const STAGE2_ACCEL = 2.2 / (STRETCH * STRETCH);
 
 /** Real seconds after ignition when stage 1 drops away and when stage 2 lights. */
 export const SEPARATION_T = realSecondsAt(STAGING_SEC);
@@ -43,7 +44,7 @@ export function rocketSpeed(t: number): number {
 }
 
 /** Pull of "gravity plus drag" on the spent stage once it's free (m/s²). */
-const SPENT_FALL = 11;
+const SPENT_FALL = 11 / (STRETCH * STRETCH);
 
 /**
  * The spent first stage after separation: keeps its upward speed, slows, and falls back,
@@ -52,7 +53,7 @@ const SPENT_FALL = 11;
 export function spentStagePose(tau: number): { rise: number; drift: number; tumble: number } {
   return {
     rise: SEP_RISE + SEP_SPEED * tau - 0.5 * SPENT_FALL * tau * tau,
-    drift: 0.9 * tau * tau,
-    tumble: 0.22 * tau * tau,
+    drift: (0.9 * tau * tau) / (STRETCH * STRETCH),
+    tumble: (0.22 * tau * tau) / (STRETCH * STRETCH),
   };
 }
