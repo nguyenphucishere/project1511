@@ -5,6 +5,9 @@ import { useFrame } from "@react-three/fiber";
 import type { Group, Mesh, MeshBasicMaterial, MeshStandardMaterial } from "three";
 import { LightingRig } from "@/components/viewport/LightingRig";
 import { Starfield } from "@/components/viewport/Starfield";
+import { Earth } from "@/components/viewport/Earth";
+import { useTexture } from "@react-three/drei";
+import { BackSide, Color, MirroredRepeatWrapping, SRGBColorSpace } from "three";
 import { seeded } from "@/lib/random";
 import { Hotspot } from "@/components/viewport/Hotspot";
 import { shake } from "@/game/shake";
@@ -632,27 +635,10 @@ function Outside({ clock, touchdownAt }: { clock: DescentClock; touchdownAt: num
     <group ref={root} position={EYE}>
       <Starfield positions={stars} />
 
-      {/* Earthrise: Vibrant Blue Earth with swirling storm clouds and atmospheric blue halo */}
-      <group position={[38, 30, -165]}>
-        {/* Atmospheric Blue Glow Rim */}
-        <mesh>
-          <sphereGeometry args={[7.4, 24, 20]} />
-          <meshBasicMaterial color="#60A5FA" transparent opacity={0.3} />
-        </mesh>
-        {/* Ocean Planet */}
-        <mesh>
-          <sphereGeometry args={[7, 28, 20]} />
-          <meshStandardMaterial color={SCENE_COLORS.earthBlue} emissive="#0B3D91" emissiveIntensity={0.35} />
-        </mesh>
-        {/* Cloud spirals */}
-        <mesh position={[-1.8, 1.6, 6.2]}>
-          <sphereGeometry args={[2.4, 14, 10]} />
-          <meshBasicMaterial color={SCENE_COLORS.earthCloud} />
-        </mesh>
-        <mesh position={[1.6, -1.2, 6.3]}>
-          <sphereGeometry args={[2.0, 14, 10]} />
-          <meshBasicMaterial color={SCENE_COLORS.earthCloud} />
-        </mesh>
+      {/* Milky Way panorama behind everything, plus the real Earth rising over the horizon */}
+      <MilkyWay />
+      <group position={[46, 34, -165]}>
+        <Earth radius={12} />
       </group>
 
       {/* External RCS Quad Thruster visible just outside the forward-left window */}
@@ -684,7 +670,7 @@ function Outside({ clock, touchdownAt }: { clock: DescentClock; touchdownAt: num
         {/* Silver-grey lunar regolith basalt plain */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -110]}>
           <planeGeometry args={[560, 560]} />
-          <meshStandardMaterial color={SCENE_COLORS.lunarMid} roughness={0.95} />
+          <RegolithMaterial />
         </mesh>
 
         {/* Distant Lunar Mountain Ranges on the horizon */}
@@ -758,4 +744,30 @@ function Outside({ clock, touchdownAt }: { clock: DescentClock; touchdownAt: num
       </group>
     </group>
   );
+}
+
+const MILKY_TINT = new Color(2.4, 2.5, 2.9);
+
+/** NASA/ESA Milky Way panorama on a huge inverted sphere; never occludes or gets fogged. */
+function MilkyWay() {
+  const tex = useTexture("/assets/textures/milky_way_4k.jpg", (t) => {
+    t.colorSpace = SRGBColorSpace;
+  });
+  return (
+    <mesh rotation={[0.5, 0.4, 0]} renderOrder={-1}>
+      <sphereGeometry args={[420, 48, 32]} />
+      <meshBasicMaterial map={tex} side={BackSide} depthWrite={false} toneMapped={false} color={MILKY_TINT} />
+    </mesh>
+  );
+}
+
+/** Lunar regolith: the LRO-derived Moon map mirror-tiled over the plain so no seams show. */
+function RegolithMaterial() {
+  const tex = useTexture("/assets/textures/moon_4k.jpg", (t) => {
+    t.colorSpace = SRGBColorSpace;
+    t.wrapS = t.wrapT = MirroredRepeatWrapping;
+    t.repeat.set(10, 10);
+    t.anisotropy = 16;
+  });
+  return <meshStandardMaterial map={tex} color="#D4D4DA" roughness={0.97} metalness={0} bumpMap={tex} bumpScale={1.2} />;
 }

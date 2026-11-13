@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { safeLocalStorage } from "@/lib/safeStorage";
 import type { LaunchConfig } from "@/lib/simulation/launch.types";
 import { ORBITS, PAYLOADS, VEHICLES, WINDOWS } from "@/mocks/launch-options";
+import { isLoadout, type Loadout } from "@/scenes/workshop/loadout";
 import { FIRST_STEP_ID, FLOW, chapterStartId, getStep, stepIndex, type ChapterId } from "./flow";
 
 /** What the END screen summarises. Kept with the checkpoint so a reload doesn't lose it. */
@@ -13,6 +14,8 @@ export interface MissionLog {
   launchConfig: LaunchConfig | null;
   /** Rocket parts inspected in Scene 2 (0 if that chapter was skipped). */
   partsInspected: number;
+  /** Engines and tanks chosen in Scene 2; the launch console starts from them. Null if skipped. */
+  loadout: Loadout | null;
   /** Scene 4 touchdown readings, null until the lander is down. */
   landing: LandingRecord | null;
 }
@@ -23,7 +26,7 @@ export interface LandingRecord {
   fuelLeftPct: number;
 }
 
-const EMPTY_LOG: MissionLog = { launchAttempts: 0, launchConfig: null, partsInspected: 0, landing: null };
+const EMPTY_LOG: MissionLog = { launchAttempts: 0, launchConfig: null, partsInspected: 0, loadout: null, landing: null };
 
 /** Every run starts with an empty mission log, wherever it starts. */
 const startRun = (stepId: string) => ({ stepId, log: EMPTY_LOG });
@@ -43,6 +46,7 @@ export interface GameState {
   log: MissionLog;
   recordLaunch: (config: LaunchConfig, success: boolean) => void;
   recordParts: (count: number) => void;
+  recordLoadout: (loadout: Loadout) => void;
   recordLanding: (landing: LandingRecord) => void;
 }
 
@@ -70,6 +74,7 @@ export const useGameStore = create<GameState>()(
           },
         })),
       recordParts: (count) => set((s) => ({ log: { ...s.log, partsInspected: count } })),
+      recordLoadout: (loadout) => set((s) => ({ log: { ...s.log, loadout } })),
       recordLanding: (landing) => set((s) => ({ log: { ...s.log, landing } })),
     }),
     {
@@ -92,6 +97,7 @@ export const useGameStore = create<GameState>()(
             launchAttempts: typeof attempts === "number" ? attempts : 0,
             launchConfig: isLaunchConfig(saved?.log?.launchConfig) ? saved.log.launchConfig : null,
             partsInspected: typeof parts === "number" ? parts : 0,
+            loadout: isLoadout(saved?.log?.loadout) ? saved.log.loadout : null,
             landing:
               landing && typeof landing.touchdownMs === "number" && typeof landing.fuelLeftPct === "number" ? landing : null,
           },

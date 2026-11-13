@@ -5,6 +5,27 @@ import type { LocalizedText } from "@/i18n";
 
 export type Vec3 = [number, number, number];
 
+/** Axis-aligned box on the floor plane (x, z), in metres. */
+export interface FloorRect {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
+/**
+ * Where WASD may take the player from a viewpoint. Without `walk`, WASD turns the head like the
+ * arrow keys do (seated viewpoints). `bounds` is the walkable floor, `blockers` are furniture the
+ * player cannot enter, and `eyeHeight(x, z)` lets the floor rise (steps, platforms).
+ */
+export interface WalkArea {
+  bounds: FloorRect;
+  blockers?: FloorRect[];
+  eyeHeight?: (x: number, z: number) => number;
+  /** Metres per second; defaults to a relaxed walking pace. */
+  speed?: number;
+}
+
 /** A fixed place the first-person camera can stand. Angles in radians. */
 export interface Viewpoint {
   id: string;
@@ -16,6 +37,8 @@ export interface Viewpoint {
   /** How far the player may look away from the resting yaw/pitch. */
   yawRange: number;
   pitchRange: number;
+  /** When set, WASD walks around inside this area and the yaw limit is lifted. */
+  walk?: WalkArea;
 }
 
 /**
@@ -46,9 +69,12 @@ interface SceneState {
   /** Bumped when the camera should turn toward highlightedId (keyboard focus). */
   lookAtRequest: number;
   cameraRig: CameraRig | null;
+  /** Bumped to send the camera back to the current viewpoint's resting position and view. */
+  viewEpoch: number;
 
   setViewpoints: (list: Viewpoint[], startId: string) => void;
   goTo: (viewpointId: string) => void;
+  recenter: () => void;
   register: (info: HotspotInfo) => void;
   unregister: (id: string) => void;
   highlight: (id: string | null, opts?: { lookAt?: boolean }) => void;
@@ -64,10 +90,12 @@ export const useSceneStore = create<SceneState>((set) => ({
   highlightedId: null,
   lookAtRequest: 0,
   cameraRig: null,
+  viewEpoch: 0,
 
   setViewpoints: (list, startId) =>
     set({ viewpoints: Object.fromEntries(list.map((v) => [v.id, v])), viewpointId: startId }),
   goTo: (viewpointId) => set({ viewpointId, highlightedId: null }),
+  recenter: () => set((s) => ({ viewEpoch: s.viewEpoch + 1, highlightedId: null })),
   register: (info) => set((s) => ({ hotspots: { ...s.hotspots, [info.id]: info } })),
   unregister: (id) =>
     set((s) => {
@@ -81,7 +109,15 @@ export const useSceneStore = create<SceneState>((set) => ({
     })),
   setCameraRig: (cameraRig) => set({ cameraRig }),
   reset: () =>
-    set({ viewpoints: {}, viewpointId: null, hotspots: {}, highlightedId: null, lookAtRequest: 0, cameraRig: null }),
+    set({
+      viewpoints: {},
+      viewpointId: null,
+      hotspots: {},
+      highlightedId: null,
+      lookAtRequest: 0,
+      cameraRig: null,
+      viewEpoch: 0,
+    }),
 }));
 
 /** Installs a scene's viewpoints on mount and clears the scene state on unmount. */

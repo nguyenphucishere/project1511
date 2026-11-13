@@ -3,19 +3,26 @@
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { MathUtils, Vector3 } from "three";
-import { actionFor, isTypingTarget, type Action } from "@/game/input";
-import { useSceneStore } from "@/game/sceneStore";
+import { BINDINGS, MOVE_KEYS, actionFor, inputLock, isTypingTarget, type Action } from "@/game/input";
+import { useSceneStore, type FloorRect, type Viewpoint, type WalkArea } from "@/game/sceneStore";
 import { clearTrauma, stepShake } from "@/game/shake";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const DRAG_SENSITIVITY = 0.0042; // radians per CSS pixel
 const KEY_TURN_RATE = 1.6; // radians per second while a look key is held
 const LOOK_SMOOTHING = 14; // higher = snappier
-const MOVE_SMOOTHING = 3.2;
+const MOVE_SMOOTHING = 3.2; // gliding between viewpoints
+const WALK_SMOOTHING = 14; // following the walker while WASD is held
+const WALK_SPEED = 2.4; // metres per second
+const SPRINT = 1.7;
+const PLAYER_RADIUS = 0.28;
+const WALK_PITCH = 1.2; // looking further up/down is allowed when walking
 
 /**
- * Seated/standing first-person view: the player looks around from the current viewpoint
- * (drag, or look keys) within that viewpoint's limits, and glides between viewpoints.
+ * First-person view. Two ways to be somewhere:
+ * - Seated/fixed viewpoints: look around within the viewpoint's limits and glide between them.
+ * - Viewpoints with a `walk` area: WASD walks freely (arrow keys and drag still look), with
+ *   collision against the room bounds and furniture.
  * Smoothing is exponential (1 - e^(-rate·dt)), so it feels the same at any frame rate.
  */
 export function FirstPersonCamera() {
@@ -25,10 +32,11 @@ export function FirstPersonCamera() {
 
   const viewpoint = useSceneStore((s) => (s.viewpointId ? s.viewpoints[s.viewpointId] : undefined));
   const lookAtRequest = useSceneStore((s) => s.lookAtRequest);
+  const viewEpoch = useSceneStore((s) => s.viewEpoch);
 
   const target = useRef({ yaw: 0, pitch: 0 });
   const current = useRef({ yaw: 0, pitch: 0 });
-  const held = useRef(new Set<Action>());
+  const heldCodes = useRef(new Set<string>());
   const placed = useRef(false);
   const goal = useRef(new Vector3());
   const rigActive = useRef(false);
@@ -43,7 +51,7 @@ export function FirstPersonCamera() {
       current.current = { ...target.current };
       placed.current = true;
     }
-  }, [viewpoint, camera, reduced]);
+  }, [viewpoint, viewEpoch, camera, reduced]);
 
   // Keyboard focus on a hotspot turns the head toward it.
   useEffect(() => {
@@ -52,7 +60,7 @@ export function FirstPersonCamera() {
     const spot = highlightedId ? hotspots[highlightedId] : undefined;
     if (!spot) return;
     const [x, y, z] = spot.position;
-    const [cx, cy, cz] = viewpoint.position;
+    const [cx, cy, cz] = [goal.current.x, goal.current.y, goal.current.z];
     const dx = x - cx;
     const dz = z - cz;
     target.current = clampLook(viewpoint, {
@@ -102,18 +110,17 @@ export function FirstPersonCamera() {
     };
   }, [gl]);
 
-  // Held look actions (level-triggered). Cleared on blur so a key can't get stuck.
+  // Held keys (level-triggered, by physical key code). Cleared on blur so a key can't get stuck.
   useEffect(() => {
-    const keys = held.current;
+    const keys = heldCodes.current;
+    const handled = (code: string) => !!actionFor(code) || code === MOVE_KEYS.sprint;
     const onDown = (e: KeyboardEvent) => {
-      const action = actionFor(e.code);
-      if (!action || isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (inputLock.keys || !handled(e.code) || isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
       e.preventDefault();
-      keys.add(action);
+      keys.add(e.code);
     };
     const onUp = (e: KeyboardEvent) => {
-      const action = actionFor(e.code);
-      if (action) keys.delete(action);
+      keys.delete(e.code);
     };
     const clear = () => keys.clear();
     window.addEventListener("keydown", onDown);
@@ -153,12 +160,18 @@ export function FirstPersonCamera() {
       rigActive.current = false;
     }
 
-    const keys = held.current;
-    if (keys.size) {
-      const turn = KEY_TURN_RATE * dt;
+    const keys = heldCodes.current;
+    const walk = viewpoint.walk;
+
+    // A look action is held if one of its keys is down. While walking, WASD means move, not look.
+    const lookHeld = (a: Action) => BINDINGS[a].some((c) => keys.has(c) && !(walk && c.startsWith("Key")));
+    const turn = KEY_TURN_RATE * dt;
+    const dYaw = (lookHeld("lookLeft") ? turn : 0) - (lookHeld("lookRight") ? turn : 0);
+    const dPitch = (lookHeld("lookUp") ? turn : 0) - (lookHeld("lookDown") ? turn : 0);
+    if (dYaw || dPitch) {
       target.current = clampLook(viewpoint, {
-        yaw: target.current.yaw + (keys.has("lookLeft") ? turn : 0) - (keys.has("lookRight") ? turn : 0),
-        pitch: target.current.pitch + (keys.has("lookUp") ? turn : 0) - (keys.has("lookDown") ? turn : 0),
+        yaw: target.current.yaw + dYaw,
+        pitch: target.current.pitch + dPitch,
       });
     }
 
@@ -168,24 +181,54 @@ export function FirstPersonCamera() {
     const shake = stepShake(dt, state.clock.elapsedTime, reduced);
     camera.rotation.set(current.current.pitch + shake.pitch, current.current.yaw + shake.yaw, shake.roll, "YXZ");
 
-    const glide = reduced ? 1 : 1 - Math.exp(-MOVE_SMOOTHING * dt);
+    let walking = false;
+    if (walk) {
+      const fwd = (keys.has(MOVE_KEYS.forward) ? 1 : 0) - (keys.has(MOVE_KEYS.back) ? 1 : 0);
+      const side = (keys.has(MOVE_KEYS.right) ? 1 : 0) - (keys.has(MOVE_KEYS.left) ? 1 : 0);
+      if (fwd || side) {
+        walking = true;
+        const yaw = current.current.yaw;
+        // yaw 0 looks down -Z and positive yaw turns left: forward = (-sin, -cos), right = (cos, -sin).
+        let mx = -Math.sin(yaw) * fwd + Math.cos(yaw) * side;
+        let mz = -Math.cos(yaw) * fwd - Math.sin(yaw) * side;
+        const len = Math.hypot(mx, mz) || 1;
+        const step = (walk.speed ?? WALK_SPEED) * (keys.has(MOVE_KEYS.sprint) ? SPRINT : 1) * dt;
+        mx = (mx / len) * step;
+        mz = (mz / len) * step;
+        const g = goal.current;
+        // Axis-separated so the player slides along walls and furniture instead of sticking.
+        if (!blocked(walk, g.x + mx, g.z)) g.x += mx;
+        if (!blocked(walk, g.x, g.z + mz)) g.z += mz;
+      }
+      goal.current.y = walk.eyeHeight ? walk.eyeHeight(goal.current.x, goal.current.z) : viewpoint.position[1];
+    }
+
+    const rate = walking ? WALK_SMOOTHING : walk ? WALK_SMOOTHING * 0.5 : MOVE_SMOOTHING;
+    const glide = reduced ? 1 : 1 - Math.exp(-rate * dt);
     camera.position.lerp(goal.current, glide);
   });
 
   return null;
 }
 
-function clampLook(
-  v: { yaw: number; pitch: number; yawRange: number; pitchRange: number },
-  look: { yaw: number; pitch: number },
-) {
-  return {
-    yaw: MathUtils.clamp(look.yaw, v.yaw - v.yawRange, v.yaw + v.yawRange),
-    // Never past ±80° even if a viewpoint allows more: looking straight up/down disorients.
-    pitch: MathUtils.clamp(
-      look.pitch,
-      Math.max(v.pitch - v.pitchRange, -1.4),
-      Math.min(v.pitch + v.pitchRange, 1.4),
-    ),
-  };
+function inside(r: FloorRect, x: number, z: number, pad: number) {
+  return x > r.minX - pad && x < r.maxX + pad && z > r.minZ - pad && z < r.maxZ + pad;
+}
+
+/** True when standing at (x, z) would put the player outside the floor or inside furniture. */
+function blocked(walk: WalkArea, x: number, z: number) {
+  const b = walk.bounds;
+  if (x < b.minX + PLAYER_RADIUS || x > b.maxX - PLAYER_RADIUS || z < b.minZ + PLAYER_RADIUS || z > b.maxZ - PLAYER_RADIUS)
+    return true;
+  return !!walk.blockers?.some((r) => inside(r, x, z, PLAYER_RADIUS));
+}
+
+function clampLook(v: Viewpoint, look: { yaw: number; pitch: number }) {
+  // Walking viewpoints turn freely; seated ones stay within their range.
+  const yaw = v.walk ? look.yaw : MathUtils.clamp(look.yaw, v.yaw - v.yawRange, v.yaw + v.yawRange);
+  // Never past ±80° even if a viewpoint allows more: looking straight up/down disorients.
+  const pitch = v.walk
+    ? MathUtils.clamp(look.pitch, -WALK_PITCH, WALK_PITCH)
+    : MathUtils.clamp(look.pitch, Math.max(v.pitch - v.pitchRange, -1.4), Math.min(v.pitch + v.pitchRange, 1.4));
+  return { yaw, pitch };
 }

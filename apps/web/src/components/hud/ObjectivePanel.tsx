@@ -13,13 +13,20 @@ export interface Objective {
 }
 
 /** The scene's task list. Order is the intended sequence, so it is a numbered (ordered) list. */
-export function ObjectivePanel({ items, className }: { items: Objective[]; className?: string }) {
+export function ObjectivePanel({ items, className, compact = false }: { items: Objective[]; className?: string; compact?: boolean }) {
   const t = useT();
+  // Compact mode (long task lists): just the current objective and how far along the player is.
+  const current = items.findIndex((o) => !o.done);
+  const shown = compact ? items.filter((_, i) => i === current) : items;
+  const finished = items.filter((o) => o.done).length;
   return (
     <section aria-label={t.objectives.title} className={cn("bezel w-full max-w-xs bg-space-deep/85 backdrop-blur-md p-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.45)]", className)}>
-      <h2 className="px-1 pb-2 text-xs font-semibold uppercase tracking-wider text-space-cyan">{t.objectives.title}</h2>
+      <h2 className="flex items-baseline justify-between px-1 pb-2 text-xs font-semibold uppercase tracking-wider text-space-cyan">
+        {t.objectives.title}
+        {compact && <span className="font-mono normal-case tracking-normal text-space-gold">{finished}/{items.length}</span>}
+      </h2>
       <ol className="flex flex-col gap-1.5">
-        {items.map((o) => (
+        {shown.map((o) => (
           <li key={o.id} className="flex items-start gap-2.5 px-1 text-sm">
             <span
               aria-hidden

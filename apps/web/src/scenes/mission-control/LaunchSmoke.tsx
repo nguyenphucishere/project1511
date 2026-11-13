@@ -65,6 +65,8 @@ export function LaunchSmoke({ ignitionAt, burnEndT }: LaunchSmokeProps) {
   useFrame(({ camera }, rawDelta) => {
     const dt = Math.min(Math.max(rawDelta, 0), 0.05);
     const t = ignitionAt === null ? -1 : (performance.now() - ignitionAt) / 1000;
+    // Mounted long after ignition (e.g. the failure cutscene restages the pad): nothing to replay.
+    if (prev.current.t < 0 && t > 1) prev.current = { t, rise: rocketRise(t) };
     if (t >= 0) {
       emit(sim, carry.current, t, Math.max(prev.current.t, 0), prev.current.rise, dt, burnEndT, reduced);
       prev.current = { t, rise: rocketRise(t) };

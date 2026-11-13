@@ -18,7 +18,7 @@ export interface Briefing {
   objectives: LocalizedText[];
 }
 
-export type BriefingId = "medical" | "workshop" | "mission-control" | "lunar-descent" | "epilogue";
+export type BriefingId = "medical" | "workshop" | "mission-control" | "ascent" | "lunar-descent" | "epilogue";
 
 export const BRIEFINGS: Record<BriefingId, Briefing> = {
   medical: {
@@ -57,14 +57,19 @@ export const BRIEFINGS: Record<BriefingId, Briefing> = {
       {
         speaker: "engineer",
         text: {
-          en: "Chief Bao will walk us through every part. Inspect each one before we roll it out.",
-          vi: "Trưởng xưởng Bảo sẽ giới thiệu từng bộ phận. Hãy kiểm tra hết trước khi đưa ra bệ phóng.",
+          en: "Chief Bao and I will stack the rocket, check every part, hunt for hidden faults and run the checklist before we roll it out.",
+          vi: "Trưởng xưởng Bảo và tôi sẽ dựng tên lửa, kiểm tra từng bộ phận, tìm lỗi ẩn và chạy checklist trước khi đưa ra bệ phóng.",
         },
       },
     ],
     objectives: [
+      { en: "Stack the rocket with the gantry crane", vi: "Dựng tên lửa bằng cầu trục giàn" },
       { en: "Move around the assembly hall", vi: "Di chuyển quanh xưởng lắp ráp" },
       { en: "Inspect every rocket part", vi: "Kiểm tra mọi bộ phận tên lửa" },
+      { en: "Find the hidden faults with the scanner", vi: "Tìm các lỗi ẩn bằng máy quét" },
+      { en: "Torque the flange bolts in a star pattern", vi: "Siết các bu-lông mặt bích theo hình sao" },
+      { en: "Run the pre-flight checklist in order", vi: "Chạy checklist trước chuyến bay đúng thứ tự" },
+      { en: "Choose the engines and tanks", vi: "Chọn động cơ và bồn nhiên liệu" },
     ],
   },
   "mission-control": {
@@ -88,6 +93,30 @@ export const BRIEFINGS: Record<BriefingId, Briefing> = {
     objectives: [
       { en: "Configure the launch", vi: "Thiết lập thông số phóng" },
       { en: "Run the countdown and launch", vi: "Đếm ngược và phóng" },
+    ],
+  },
+  ascent: {
+    pov: "astronaut",
+    lines: [
+      {
+        speaker: "astronaut",
+        text: {
+          en: "Strapped in, helmet sealed. The countdown ended and the whole rocket is alive under my back.",
+          vi: "Đã thắt dây, đã đóng mũ. Đếm ngược xong rồi, cả con tên lửa đang rung lên ngay dưới lưng tôi.",
+        },
+      },
+      {
+        speaker: "astronaut",
+        text: {
+          en: "Nine minutes to orbit. Hold on through Max Q, then unbuckle and take a look at home.",
+          vi: "Chín phút nữa là tới quỹ đạo. Giữ chắc qua Max Q, rồi tháo dây và ngắm nhìn quê nhà.",
+        },
+      },
+    ],
+    objectives: [
+      { en: "Ride the rocket to orbit", vi: "Cưỡi tên lửa lên quỹ đạo" },
+      { en: "Release your harness", vi: "Tháo dây an toàn" },
+      { en: "Float to the window and look at Earth", vi: "Bơi tới cửa sổ và ngắm Trái Đất" },
     ],
   },
   "lunar-descent": {
