@@ -6,26 +6,26 @@ import type { Dictionary } from "@/i18n";
  */
 
 /**
- * Real seconds → mission seconds. The liftoff plays at 1× so it can be watched, the climb is
- * sped up 75×, then time slows around staging (T+02:42 separation, T+02:46 stage 2 ignition)
- * so the stage falling away and the second engine lighting are visible, then 75× to orbit.
+ * Real seconds -> mission seconds, written as a film timeline. The climb off the pad plays close to
+ * real time, then each stage event gets its own slow stretch so it can be filmed from several
+ * angles: stage 1 drops away (T+02:42), stage 2 lights (T+02:46), the escape tower is jettisoned
+ * (T+03:20), stage 2 drops away (T+06:40), stage 3 lights (T+06:48), the spacecraft adapter opens
+ * (T+07:20) and orbit follows at T+09:00. Between events time runs fast.
  */
-const BASE_WARP: [real: number, mission: number][] = [
+const TIME_WARP: [real: number, mission: number][] = [
   [0, 0],
-  [6, 6],
-  [8, 156],
-  [12, 172],
-  [15.36, 544],
+  [8, 6],
+  [17, 162],
+  [19, 166],
+  [28, 200],
+  [35, 400],
+  [38.5, 408],
+  [41, 440],
+  [48.5, 540],
 ];
 
-/**
- * How much longer the launch plays than the original cut. Time stretches, distances do not
- * (see ascent.ts), so the rocket climbs the same height more slowly and the camera has time for
- * several angles.
- */
-export const STRETCH = 1.6;
-
-const TIME_WARP: [real: number, mission: number][] = BASE_WARP.map(([r, m]) => [r * STRETCH, m]);
+/** Scale of the early launch beats (hold-down, smoke); the whole launch runs about 48 s. */
+export const STRETCH = 2.7;
 
 function interpolate(table: [number, number][], x: number, from: 0 | 1): number {
   const to = from === 0 ? 1 : 0;
@@ -52,6 +52,10 @@ export function realSecondsAt(missionSec: number): number {
 /** Mission times the 3D rocket acts on. */
 export const STAGING_SEC = 162;
 export const STAGE2_IGNITION_SEC = 166;
+export const LES_SEC = 200;
+export const STAGE2_SEP_SEC = 400;
+export const STAGE3_IGNITION_SEC = 408;
+export const ADAPTER_SEC = 440;
 
 export interface FlightEvent {
   t: number;

@@ -18,7 +18,7 @@ import {
 import { seeded } from "@/lib/random";
 import { SCENE_COLORS } from "@/lib/palette";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { HOLD_DOWN, SEPARATION_T, STAGE2_T, rocketRise, rocketSpeed } from "./ascent";
+import { ADAPTER_T, HOLD_DOWN, SEP2_T, SEPARATION_T, STAGE2_T, STAGE3_T, rocketRise, rocketSpeed } from "./ascent";
 import { STRETCH } from "./flight";
 import { PAD } from "./layout";
 
@@ -35,8 +35,11 @@ const MAX = 1600;
 
 /** Heights on the stack (pad-local, above the stack base) where exhaust leaves the engines. */
 const STAGE1_NOZZLE_Y = 1.4;
-const STAGE2_NOZZLE_Y = 12.5;
-const INTERSTAGE_Y = 13.4;
+const STAGE2_NOZZLE_Y = 12.6;
+const STAGE3_NOZZLE_Y = 18.8;
+const INTERSTAGE_Y = 12.5;
+const INTERSTAGE2_Y = 19.8;
+const ADAPTER_Y = 25.5;
 
 interface LaunchSmokeProps {
   ignitionAt: number | null;
@@ -110,10 +113,11 @@ function emit(
 
   // Exhaust trail from whichever engine is burning.
   const stage1 = t < SEPARATION_T;
-  const burning = stage1 || (t >= STAGE2_T && t < burnEndT);
-  if (burning && rise > 0.5) {
-    const nozzle = stage1 ? STAGE1_NOZZLE_Y : STAGE2_NOZZLE_Y;
-    const rate = stage1 ? 60 : 38;
+  const stage2 = t >= STAGE2_T && t < Math.min(SEP2_T, burnEndT);
+  const stage3 = t >= STAGE3_T && t < burnEndT;
+  if ((stage1 || stage2 || stage3) && rise > 0.5) {
+    const nozzle = stage1 ? STAGE1_NOZZLE_Y : stage2 ? STAGE2_NOZZLE_Y : STAGE3_NOZZLE_Y;
+    const rate = stage1 ? 60 : stage2 ? 46 : 30;
     carry.trail += rate * dt;
     const count = Math.floor(carry.trail);
     carry.trail -= count;
@@ -125,10 +129,13 @@ function emit(
     }
   }
 
-  // Separation motors: one ring puff at the interstage.
-  if (prevT < SEPARATION_T && t >= SEPARATION_T) {
-    for (let i = 0; i < 40; i++) sim.spawnRing(rocketRise(SEPARATION_T) + INTERSTAGE_Y);
-  }
+  // Separation bolts and retro motors: a ring puff at each interstage, and where the adapter opens.
+  const puff = (at: number, y: number, n: number) => {
+    if (prevT < at && t >= at) for (let i = 0; i < n; i++) sim.spawnRing(rocketRise(at) + y);
+  };
+  puff(SEPARATION_T, INTERSTAGE_Y, 48);
+  puff(SEP2_T, INTERSTAGE2_Y, 36);
+  puff(ADAPTER_T, ADAPTER_Y, 24);
 }
 
 /* ---------------------------------------------------------------- simulation */

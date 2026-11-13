@@ -36,7 +36,7 @@ import { CountdownPanel, FlightPanel, PollPanel } from "./LaunchPanels";
 import { formatMissionTime } from "@/lib/format";
 import { VIEWPOINTS } from "./layout";
 import { realSecondsAt } from "./flight";
-import { SEPARATION_T, STAGE2_T } from "./ascent";
+import { ADAPTER_T, LES_T, SEP2_T, SEPARATION_T, STAGE2_T, STAGE3_T } from "./ascent";
 import { startRockScore, type RockScore } from "@/game/rockScore";
 import { consoleSeed, engineOption, tankOption } from "@/scenes/workshop/loadout";
 
@@ -158,7 +158,11 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
 
   if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
     // Dev-only: window.__mc.explode() plays the failure cutscene from anywhere.
-    (window as unknown as { __mc?: unknown }).__mc = { explode: () => startExplosion() };
+    (window as unknown as { __mc?: unknown }).__mc = {
+      explode: () => startExplosion(),
+      // Jumps the launch film to `t` seconds after ignition (use with a frozen performance.now).
+      seek: (t: number) => setIgnitionAt(performance.now() - t * 1000),
+    };
   }
 
   const finishExplosion = useCallback(() => {
@@ -193,13 +197,25 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
     if (phase === "flight" && ignitionAt !== null) {
       score.current ??= startRockScore(0.3);
       score.current.hit();
+      // The score follows the film: it builds with the climb, drops to a held organ for half a beat
+      // before every separation, then hits hard as the bolts fire.
+      const beats = [SEPARATION_T, STAGE2_T, LES_T, SEP2_T, STAGE3_T, ADAPTER_T];
+      const hits = new Set<number>();
       const id = window.setInterval(() => {
         const t = (performance.now() - ignitionAt) / 1000;
-        // Rises through the climb, peaks at staging and stage 2 ignition, eases a little after.
         const climb = Math.min(1, t / SEPARATION_T);
-        const settle = t > STAGE2_T + 3 ? 0.12 : 0;
-        score.current?.setIntensity(0.45 + 0.55 * climb - settle);
-      }, 250);
+        const late = Math.min(1, Math.max(0, (t - SEPARATION_T) / (ADAPTER_T - SEPARATION_T)));
+        let level = 0.45 + 0.4 * climb + 0.15 * late;
+        for (const b of beats) {
+          if (t >= b - 0.7 && t < b - 0.1) level = 0.12; // the breath before the bolts
+          if (t >= b - 0.1 && !hits.has(b) && t < b + 1) {
+            hits.add(b);
+            score.current?.hit();
+          }
+        }
+        if (t > ADAPTER_T + 3) level -= 0.1;
+        score.current?.setIntensity(level);
+      }, 100);
       return () => window.clearInterval(id);
     }
     if (phase === "orbit") {
@@ -283,6 +299,18 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
             </Button>
           </div>
         </>
+      )}
+
+      {phase === "flight" && result && ignitionAt !== null && (
+        <div className="absolute bottom-6 left-1/2 z-20 -translate-x-1/2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIgnitionAt(performance.now() - (realSecondsAt(result.endSec) + 0.3) * 1000)}
+          >
+            {m.skipCinematic}
+          </Button>
+        </div>
       )}
 
       {alarm > 0 && (

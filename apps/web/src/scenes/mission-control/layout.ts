@@ -13,7 +13,7 @@ export const WINDOW = { minX: -5.5, maxX: 5.5, bottom: 0.6, top: 4.3 } as const;
 /** Outside: ground level relative to the room floor, and the pad position. */
 export const GROUND_Y = -14;
 export const PAD: Vec3 = [5, GROUND_Y, -85];
-export const ROCKET_HEIGHT = 30;
+export const ROCKET_HEIGHT = 38;
 
 /**
  * Launch view: outside on the grass, ~50 m from the pad and a few metres up, so the whole stack

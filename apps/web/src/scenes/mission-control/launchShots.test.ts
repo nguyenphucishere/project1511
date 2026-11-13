@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { realSecondsAt } from "./flight";
-import { SEPARATION_T, STAGE2_T, rocketRise, rocketSpeed } from "./ascent";
+import { ADAPTER_T, LES_T, SEP2_T, SEPARATION_T, STAGE2_T, STAGE3_T, rocketRise, rocketSpeed } from "./ascent";
 import { SHOTS, shotAt } from "./launchShots";
 
 describe("launch shots", () => {
@@ -17,10 +17,18 @@ describe("launch shots", () => {
     }
   });
 
-  it("go macro on the bolts at separation and on the engine at stage 2 lighting", () => {
+  it("go macro on the bolts at every separation and on the engine at each lighting", () => {
     expect(shotAt(SEPARATION_T).id).toBe("staging");
     expect(shotAt(STAGE2_T).id).toBe("ignite");
-    expect(shotAt(STAGE2_T + 1).id).toBe("second-stage");
+    expect(shotAt(SEP2_T).id).toBe("staging-2");
+    expect(shotAt(STAGE3_T).id).toBe("ignite-3");
+    expect(shotAt(ADAPTER_T).id).toBe("adapter-bolts");
+    expect(shotAt(LES_T).id).toBe("tower-bolts");
+  });
+
+  it("run for about forty-five seconds or more", () => {
+    expect(realSecondsAt(540)).toBeGreaterThan(45);
+    expect(SHOTS.length).toBeGreaterThan(25);
   });
 
   it("give every shot a finite frame for the whole flight", () => {
