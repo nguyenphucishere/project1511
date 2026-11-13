@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useT } from "@/i18n/useT";
 import { getVideo, type VideoId } from "@/lib/assets";
+import { useSettingsStore } from "@/game/settingsStore";
 import { ParallaxCanvas, type StarfieldMode } from "./ParallaxCanvas";
 
 export interface CutscenePlayerProps {
@@ -17,7 +18,7 @@ export interface CutscenePlayerProps {
 /**
  * Plays a cutscene from the asset manifest. Until the video editor delivers the file
  * (status "placeholder"), or if playback fails, a labelled placeholder runs instead.
- * Video starts muted (browsers block audible autoplay); the player can turn sound on.
+ * Video plays with sound when sound effects are on (muted if the browser refuses); the player can toggle it.
  */
 export function CutscenePlayer({ video, onComplete }: CutscenePlayerProps) {
   const asset = getVideo(video);
@@ -54,11 +55,19 @@ function VideoCutscene({
   const t = useT();
   const asset = getVideo(video);
   const ref = useRef<HTMLVideoElement>(null);
-  const [muted, setMuted] = useState(true);
+  // With sound effects on, try the video with its soundtrack. Browsers may refuse audible
+  // autoplay; then it plays muted and the player can turn the sound on.
+  const [muted, setMuted] = useState(() => !useSettingsStore.getState().sound);
 
   useEffect(() => {
-    // Autoplay can be refused even when muted; fall back to the failure message with Skip.
-    ref.current?.play().catch(onFailed);
+    const el = ref.current;
+    if (!el) return;
+    el.play().catch(() => {
+      if (el.muted) return onFailed(); // refused even muted: show the failure message with Skip
+      el.muted = true;
+      setMuted(true);
+      el.play().catch(onFailed);
+    });
   }, [onFailed]);
 
   return (

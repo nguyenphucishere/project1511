@@ -10,11 +10,18 @@ const config: Config = {
     colors: {
       transparent: "transparent",
       current: "currentColor",
+      white: "#FFFFFF",
       "space-deep": token("space-deep"),
       "space-blue": token("space-blue"),
       "space-mist": token("space-mist"),
       "space-gold": token("space-gold"),
       "space-orange": token("space-orange"),
+      "nasa-blue": token("nasa-blue"),
+      "nasa-blue-light": token("nasa-blue-light"),
+      "nasa-red": token("nasa-red"),
+      "space-white": token("space-white"),
+      "space-cyan": token("space-cyan"),
+      "space-emerald": token("space-emerald"),
       background: token("background"),
       surface: token("surface"),
       foreground: token("foreground"),
@@ -48,9 +55,15 @@ const config: Config = {
       },
       keyframes: {
         "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },
+        // Countdown digit: arrives slightly large and settles (ease-out), once per second.
+        "count-pop": { from: { transform: "scale(1.18)", opacity: "0.55" }, to: { transform: "scale(1)", opacity: "1" } },
+        // Anomaly alarm: a single orange flash that fades back to nothing.
+        "alarm-flash": { "0%": { opacity: "0" }, "15%": { opacity: "1" }, "100%": { opacity: "0" } },
       },
       animation: {
         "fade-in": "fade-in 200ms ease-out",
+        "count-pop": "count-pop 320ms cubic-bezier(0.22, 1, 0.36, 1)",
+        "alarm-flash": "alarm-flash 1100ms ease-out forwards",
       },
     },
   },

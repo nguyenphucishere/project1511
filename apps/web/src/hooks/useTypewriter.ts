@@ -23,19 +23,23 @@ interface TypewriterOptions {
  */
 export function useTypewriter(text: string, { charsPerSecond = 45, instant = false }: TypewriterOptions = {}) {
   const chars = useMemo(() => graphemes(text), [text]);
-  const [count, setCount] = useState(instant ? chars.length : 0);
+  const [typed, setTyped] = useState(0);
+  // Reset while rendering when the line changes. Resetting in the effect (after paint) would
+  // show the new line at the old length for a frame, with `done` briefly true.
+  const [lineChars, setLineChars] = useState(chars);
+  if (lineChars !== chars) {
+    setLineChars(chars);
+    setTyped(0);
+  }
+  const count = instant ? chars.length : typed;
 
   useEffect(() => {
-    if (instant) {
-      setCount(chars.length);
-      return;
-    }
-    setCount(0);
+    if (instant) return;
     const start = performance.now();
     let raf = 0;
     const tick = (now: number) => {
       const n = Math.min(chars.length, Math.floor(((now - start) / 1000) * charsPerSecond));
-      setCount((prev) => (prev >= chars.length ? prev : n));
+      setTyped((prev) => (prev >= chars.length ? prev : n));
       if (n < chars.length) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -43,7 +47,7 @@ export function useTypewriter(text: string, { charsPerSecond = 45, instant = fal
   }, [chars, charsPerSecond, instant]);
 
   const done = count >= chars.length;
-  const complete = useCallback(() => setCount(chars.length), [chars.length]);
+  const complete = useCallback(() => setTyped(chars.length), [chars.length]);
 
   return {
     shown: chars.slice(0, count).join(""),

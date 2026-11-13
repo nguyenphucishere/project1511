@@ -2,21 +2,24 @@ import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+import { playSfx } from "@/game/sfx";
 
+// aria-disabled is for buttons that must keep keyboard focus while briefly unavailable: it looks
+// like disabled (minus the shadow, so the focus ring still shows) and Button ignores its clicks.
 // Buttons are chamfered (.bezel), so focus is drawn with an inset shadow: an outline would be clipped.
 const buttonVariants = cva(
-  "bezel bezel-sm inline-flex items-center justify-center gap-2 font-medium transition-[background-color,color,box-shadow] duration-150 focus-visible:outline-none disabled:pointer-events-none disabled:bg-surface/25 disabled:text-foreground/45 disabled:shadow-[inset_0_0_0_1px_rgb(var(--border)/0.15)]",
+  "bezel bezel-sm inline-flex items-center justify-center gap-2 font-medium transition-[background-color,color,box-shadow] duration-150 focus-visible:outline-none disabled:pointer-events-none disabled:bg-surface/25 disabled:text-foreground/45 disabled:shadow-[inset_0_0_0_1px_rgb(var(--border)/0.15)] aria-disabled:cursor-not-allowed aria-disabled:bg-surface/25 aria-disabled:text-foreground/45 aria-disabled:hover:bg-surface/25",
   {
     variants: {
       variant: {
         primary:
-          "bg-primary text-primary-foreground shadow-none hover:bg-primary/85 focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--space-deep)),inset_0_0_0_4px_rgb(var(--primary))]",
+          "bg-primary text-primary-foreground font-semibold shadow-none hover:bg-primary/90 focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--space-deep)),inset_0_0_0_4px_rgb(var(--primary))]",
         secondary:
-          "bg-surface/40 text-foreground hover:bg-surface/70 focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--primary))]",
+          "bg-surface/50 text-foreground hover:bg-nasa-blue hover:text-white focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--primary))]",
         ghost:
-          "bg-transparent text-foreground shadow-none hover:bg-surface/40 focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--primary))]",
+          "bg-transparent text-foreground shadow-none hover:bg-nasa-blue/40 hover:text-white focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--primary))]",
         danger:
-          "bg-warning text-space-deep shadow-none hover:bg-warning/85 focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--space-deep)),inset_0_0_0_4px_rgb(var(--warning))]",
+          "bg-nasa-red text-white font-semibold shadow-none hover:bg-nasa-red/90 focus-visible:shadow-[inset_0_0_0_2px_rgb(var(--space-deep)),inset_0_0_0_4px_rgb(var(--nasa-red))]",
       },
       size: {
         sm: "h-8 px-3 text-sm",
@@ -39,13 +42,19 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, type, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, type, onClick, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
+    const unavailable = props["aria-disabled"] === true || props["aria-disabled"] === "true";
     return (
       <Comp
         ref={ref}
         type={asChild ? undefined : (type ?? "button")}
         className={cn(buttonVariants({ variant, size }), className)}
+        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+          if (unavailable) return e.preventDefault();
+          playSfx("click");
+          onClick?.(e);
+        }}
         {...props}
       />
     );

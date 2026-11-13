@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { create } from "zustand";
 import type { LocalizedText } from "@/i18n";
 
@@ -69,3 +70,13 @@ export const useSceneStore = create<SceneState>((set) => ({
     })),
   reset: () => set({ viewpoints: {}, viewpointId: null, hotspots: {}, highlightedId: null, lookAtRequest: 0 }),
 }));
+
+/** Installs a scene's viewpoints on mount and clears the scene state on unmount. */
+export function useSceneViewpoints(list: Viewpoint[], startId: string) {
+  const setViewpoints = useSceneStore((s) => s.setViewpoints);
+  const reset = useSceneStore((s) => s.reset);
+  useEffect(() => {
+    setViewpoints(list, startId);
+    return reset;
+  }, [list, startId, setViewpoints, reset]);
+}

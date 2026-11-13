@@ -1,0 +1,87 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { CharacterPortrait } from "@/components/cutscene/CharacterPortrait";
+import { useEffect } from "react";
+import { useT } from "@/i18n/useT";
+import { playSfx } from "@/game/sfx";
+import type { CharacterId } from "@/game/characters";
+import { cn } from "@/lib/utils";
+
+interface SignOffDialogProps {
+  open: boolean;
+  /** Who signs the chapter off; their portrait heads the dialog. */
+  character: CharacterId;
+  badge: string;
+  title: string;
+  description: string;
+  continueLabel: string;
+  onContinue: () => void;
+  /** Show the DEMO badge (the details are mocked values). */
+  demo?: boolean;
+  /** Optional details between the text and the button, e.g. a results list. */
+  children?: React.ReactNode;
+}
+
+/** End of a scene: a character signs off on what the player did, then the story moves on. */
+export function SignOffDialog({
+  open,
+  character,
+  badge,
+  title,
+  description,
+  continueLabel,
+  onContinue,
+  demo = false,
+  children,
+}: SignOffDialogProps) {
+  const t = useT();
+  useEffect(() => {
+    if (open) playSfx("success");
+  }, [open]);
+  return (
+    <Dialog open={open}>
+      <DialogContent locked>
+        <DialogHeader>
+          <div className="mb-2 flex items-end gap-4">
+            <div className="h-20 w-16 shrink-0">
+              <CharacterPortrait character={character} />
+            </div>
+            <StatusBadge status="go" className="mb-1">
+              {badge}
+            </StatusBadge>
+          </div>
+          <DialogTitle className="text-2xl">{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        {children}
+        {demo && (
+          <StatusBadge status="demo" className="w-fit">
+            {t.common.demoData}
+          </StatusBadge>
+        )}
+        <DialogFooter>
+          <Button size="lg" onClick={onContinue}>
+            {continueLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** The two-column results list used inside sign-off dialogs. */
+export function SignOffDetails({ className, children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <dl className={cn("grid grid-cols-[1fr_auto] gap-x-6 gap-y-1.5 bg-space-blue/35 px-4 py-3 text-sm", className)}>{children}</dl>
+  );
+}

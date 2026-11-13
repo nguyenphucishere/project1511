@@ -3,7 +3,7 @@
 import { useSettingsStore } from "@/game/settingsStore";
 import { dictionaries, type Dictionary, type LocalizedText } from "./index";
 
-/** UI strings for the current locale: `const t = useT(); t.common.next`. */
+/** UI strings for the current locale: `const t = useT(); t.common.close`. */
 export function useT(): Dictionary {
   return dictionaries[useSettingsStore((s) => s.locale)];
 }

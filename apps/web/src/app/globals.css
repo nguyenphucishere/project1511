@@ -3,27 +3,35 @@
 @tailwind utilities;
 
 /*
- * Palette tokens. The game uses these five colours only (see FRONTEND_AGENT_GUIDELINES §4.1).
+ * Palette tokens. NASA Space Mission theme.
  * Stored as RGB channels so Tailwind opacity modifiers work: bg-space-blue/60.
- *   space-deep   #112936
- *   space-blue   #20556A
- *   space-mist   #D0E0D5
- *   space-gold   #E9BC54
- *   space-orange #CB6944
+ *   space-deep   #0B192C (NASA Midnight Navy)
+ *   space-blue   #0B3D91 (Official NASA Insignia Blue)
+ *   space-mist   #F8FAFC (Clean Spacecraft White)
+ *   space-gold   #FFC72C (Radiant Solar Amber)
+ *   space-orange #FC3D21 (Official NASA Insignia Red)
  */
 @layer base {
   :root {
-    --space-deep: 17 41 54;
-    --space-blue: 32 85 106;
-    --space-mist: 208 224 213;
-    --space-gold: 233 188 84;
-    --space-orange: 203 105 68;
+    --space-deep: 11 25 44;
+    --space-blue: 11 61 145;
+    --space-mist: 248 250 252;
+    --space-gold: 255 199 44;
+    --space-orange: 252 61 33;
+
+    /* NASA Vibrant & Clean Tokens */
+    --nasa-blue: 11 61 145;
+    --nasa-blue-light: 26 115 232;
+    --nasa-red: 252 61 33;
+    --space-white: 255 255 255;
+    --space-cyan: 0 229 255;
+    --space-emerald: 16 185 129;
 
     /* Semantic roles: components use these, never the raw palette. */
     --background: var(--space-deep);
     --surface: var(--space-blue);
     --foreground: var(--space-mist);
-    --muted: var(--space-mist);
+    --muted: 203 213 225;
     --primary: var(--space-gold);
     --primary-foreground: var(--space-deep);
     --warning: var(--space-orange);
@@ -117,4 +125,12 @@
   .bezel-gold {
     box-shadow: inset 0 0 0 1px rgb(var(--primary) / 0.7);
   }
+}
+
+/* uPlot telemetry: crosshair in ink, not the library's default dashed black. */
+.telemetry-chart .u-cursor-x {
+  border-right: 1px solid rgb(var(--foreground) / 0.5);
+}
+.telemetry-chart .u-over {
+  cursor: crosshair;
 }

@@ -5,6 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { MathUtils, Vector3 } from "three";
 import { actionFor, isTypingTarget, type Action } from "@/game/input";
 import { useSceneStore } from "@/game/sceneStore";
+import { clearTrauma, stepShake } from "@/game/shake";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const DRAG_SENSITIVITY = 0.0042; // radians per CSS pixel
@@ -124,7 +125,10 @@ export function FirstPersonCamera() {
     };
   }, []);
 
-  useFrame((_, rawDelta) => {
+  // Shake left over from one scene must not carry into the next.
+  useEffect(() => clearTrauma, []);
+
+  useFrame((state, rawDelta) => {
     if (!viewpoint) return;
     const dt = Math.min(Math.max(rawDelta, 0), 0.1);
     const keys = held.current;
@@ -139,7 +143,8 @@ export function FirstPersonCamera() {
     const look = reduced ? 1 : 1 - Math.exp(-LOOK_SMOOTHING * dt);
     current.current.yaw = MathUtils.lerp(current.current.yaw, target.current.yaw, look);
     current.current.pitch = MathUtils.lerp(current.current.pitch, target.current.pitch, look);
-    camera.rotation.set(current.current.pitch, current.current.yaw, 0, "YXZ");
+    const shake = stepShake(dt, state.clock.elapsedTime, reduced);
+    camera.rotation.set(current.current.pitch + shake.pitch, current.current.yaw + shake.yaw, shake.roll, "YXZ");
 
     const glide = reduced ? 1 : 1 - Math.exp(-MOVE_SMOOTHING * dt);
     camera.position.lerp(goal.current, glide);

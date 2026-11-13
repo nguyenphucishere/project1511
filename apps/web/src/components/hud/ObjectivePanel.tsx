@@ -16,25 +16,25 @@ export interface Objective {
 export function ObjectivePanel({ items, className }: { items: Objective[]; className?: string }) {
   const t = useT();
   return (
-    <section aria-label={t.objectives.title} className={cn("bezel w-full max-w-xs bg-space-deep/90 p-3", className)}>
-      <h2 className="px-1 pb-2 text-sm font-medium text-foreground/75">{t.objectives.title}</h2>
+    <section aria-label={t.objectives.title} className={cn("bezel w-full max-w-xs bg-space-deep/85 backdrop-blur-md p-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.45)]", className)}>
+      <h2 className="px-1 pb-2 text-xs font-semibold uppercase tracking-wider text-space-cyan">{t.objectives.title}</h2>
       <ol className="flex flex-col gap-1.5">
         {items.map((o) => (
           <li key={o.id} className="flex items-start gap-2.5 px-1 text-sm">
             <span
               aria-hidden
               className={cn(
-                "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center",
-                o.done ? "bg-primary text-primary-foreground" : "shadow-[inset_0_0_0_1.5px_rgb(var(--primary))]",
+                "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm",
+                o.done ? "bg-space-emerald text-white" : "shadow-[inset_0_0_0_1.5px_rgb(var(--primary))]",
               )}
             >
               {o.done && <Check className="h-3 w-3" strokeWidth={3} />}
             </span>
-            <span className={cn("flex-1", o.done && "text-foreground/60 line-through decoration-foreground/40")}>
+            <span className={cn("flex-1", o.done ? "text-foreground/60 line-through decoration-foreground/40" : "text-white")}>
               {o.label}
               {o.done && <span className="sr-only"> ({t.objectives.done})</span>}
             </span>
-            {o.progress && !o.done && <span className="font-mono text-xs text-foreground/70">{o.progress}</span>}
+            {o.progress && !o.done && <span className="font-mono text-xs text-space-gold">{o.progress}</span>}
           </li>
         ))}
       </ol>

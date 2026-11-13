@@ -3,17 +3,18 @@
 import { PALETTE } from "@/lib/palette";
 
 /**
- * Lighting tuned for the 5-colour pixel pass: a neutral mist key keeps surfaces close to their
- * own palette colour (tinted light pushes them between two palette colours and the dither turns
- * that into noise); a cool blue/deep hemisphere shades the sides; a weak gold rim adds warmth.
- * No shadows: the pixel pass flattens them and they are the costliest part of a frame.
+ * Lighting tuned for bright, crisp NASA aerospace aesthetic:
+ * - Bright clean white key light brings out surfaces clearly.
+ * - Deep navy/NASA blue hemisphere gives realistic space contrast.
+ * - Gentle solar gold rim light adds warm highlights.
  */
-export function LightingRig({ intensity = 1 }: { intensity?: number }) {
+export function LightingRig({ intensity = 1.25 }: { intensity?: number }) {
   return (
     <>
-      <hemisphereLight args={[PALETTE.mist, PALETTE.deep, 1.6 * intensity]} />
-      <directionalLight position={[3, 6, 5]} color={PALETTE.mist} intensity={2.4 * intensity} />
-      <directionalLight position={[-5, 3, -4]} color={PALETTE.gold} intensity={0.12 * intensity} />
+      <hemisphereLight args={[PALETTE.mist, PALETTE.blue, 2.2 * intensity]} />
+      <directionalLight position={[4, 8, 6]} color="#FFFFFF" intensity={3.5 * intensity} />
+      <directionalLight position={[-6, 4, -5]} color={PALETTE.gold} intensity={0.6 * intensity} />
+      <directionalLight position={[0, -4, 2]} color={PALETTE.blue} intensity={0.4 * intensity} />
     </>
   );
 }

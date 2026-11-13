@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import type { Group } from "three";
-import type { LocalizedText } from "@/i18n";
-import { useLocalized } from "@/i18n/useT";
+import { format, type LocalizedText } from "@/i18n";
+import { useLocalized, useT } from "@/i18n/useT";
 import { useSceneStore, type HotspotKind, type Vec3 } from "@/game/sceneStore";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { playSfx } from "@/game/sfx";
 import { PALETTE } from "@/lib/palette";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,13 @@ interface HotspotProps {
   position: Vec3;
   /** Height of the floating marker above the hotspot origin. */
   markerHeight?: number;
+  /**
+   * Full marker offset from the origin, for objects whose top is not a good spot (e.g. a rocket
+   * stage, where straight above the origin is inside the hull). Overrides markerHeight.
+   */
+  markerOffset?: Vec3;
+  /** Marker size multiplier, for hotspots seen from arm's length (e.g. console switches). */
+  markerScale?: number;
   done?: boolean;
   onActivate: () => void;
   children?: React.ReactNode;
@@ -36,10 +44,13 @@ export function Hotspot({
   label,
   position,
   markerHeight = 0.6,
+  markerOffset,
+  markerScale = 1,
   done = false,
   onActivate,
   children,
 }: HotspotProps) {
+  const t = useT();
   const localize = useLocalized();
   const reduced = useReducedMotion();
   const register = useSceneStore((s) => s.register);
@@ -50,10 +61,14 @@ export function Hotspot({
   const activateRef = useRef(onActivate);
   activateRef.current = onActivate;
   const [x, y, z] = position;
+  const [ox, oy, oz] = markerOffset ?? [0, markerHeight, 0];
+  const hasOffset = markerOffset !== undefined;
 
   useEffect(() => {
-    register({ id, kind, label, position: [x, y + markerHeight * 0.5, z], done, activate: () => activateRef.current() });
-  }, [id, kind, label, x, y, z, markerHeight, done, register]);
+    // Without an explicit offset, aim at the object's middle rather than the marker.
+    const look: Vec3 = hasOffset ? [x + ox, y + oy, z + oz] : [x, y + oy * 0.5, z];
+    register({ id, kind, label, position: look, done, activate: () => activateRef.current() });
+  }, [id, kind, label, x, y, z, ox, oy, oz, hasOffset, done, register]);
 
   useEffect(() => () => unregister(id), [id, unregister]);
 
@@ -61,9 +76,9 @@ export function Hotspot({
     if (!marker.current) return;
     const t = state.clock.elapsedTime;
     marker.current.rotation.y = reduced ? 0.785 : t * 1.2;
-    marker.current.position.y = markerHeight + (reduced ? 0 : Math.sin(t * 2 + x) * 0.04);
+    marker.current.position.y = oy + (reduced ? 0 : Math.sin(t * 2 + x) * 0.04);
     const s = highlighted ? 1.5 : done ? 0.7 : 1;
-    marker.current.scale.setScalar(s);
+    marker.current.scale.setScalar(s * markerScale);
   });
 
   const [hovering, setHovering] = useState(false);
@@ -76,6 +91,7 @@ export function Hotspot({
 
   const over = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
+    if (!hovering) playSfx("hover");
     setHovering(true);
     highlight(id);
   };
@@ -86,6 +102,7 @@ export function Hotspot({
   const click = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     if (e.delta > CLICK_SLOP) return;
+    playSfx("click");
     activateRef.current();
   };
 
@@ -94,9 +111,9 @@ export function Hotspot({
   return (
     <group position={position} onPointerOver={over} onPointerOut={out} onClick={click}>
       {children}
-      <group ref={marker} position={[0, markerHeight, 0]}>
+      <group ref={marker} position={[ox, oy, oz]}>
         {kind === "move" ? (
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -markerHeight + 0.02, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -oy + 0.02, 0]}>
             <ringGeometry args={[0.28, 0.4, 4]} />
             <meshBasicMaterial color={markerColor} />
           </mesh>
@@ -108,14 +125,14 @@ export function Hotspot({
         )}
       </group>
       {highlighted && (
-        <Html position={[0, markerHeight + 0.25, 0]} center zIndexRange={[20, 10]} style={{ pointerEvents: "none" }}>
+        <Html position={[ox, oy + 0.25, oz]} center zIndexRange={[20, 10]} style={{ pointerEvents: "none" }}>
           <span
             className={cn(
               "bezel bezel-sm whitespace-nowrap bg-space-deep px-3 py-1 text-sm font-medium text-foreground",
               !done && "bezel-gold",
             )}
           >
-            {localize(label)}
+            {kind === "move" ? format(t.hud.goTo, { place: localize(label) }) : localize(label)}
           </span>
         </Html>
       )}
