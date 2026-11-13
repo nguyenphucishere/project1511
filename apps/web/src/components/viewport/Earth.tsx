@@ -32,7 +32,7 @@ const atmosphereFragment = /* glsl */ `
  * blue atmosphere. `radius` is in scene metres; position it with the parent group.
  */
 export function Earth({ radius = 7, spin = 0.01 }: { radius?: number; spin?: number }) {
-  const [day, clouds] = useTexture(["/assets/textures/2k_earth_daymap.jpg", "/assets/textures/2k_earth_clouds.jpg"], (t) => {
+  const [day, clouds] = useTexture(["/assets/textures/earth_day_6k.jpg", "/assets/textures/earth_clouds_4k.jpg"], (t) => {
     for (const tex of t) {
       tex.colorSpace = SRGBColorSpace;
       tex.anisotropy = 16;

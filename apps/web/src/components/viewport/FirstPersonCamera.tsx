@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { MathUtils, Vector3 } from "three";
-import { BINDINGS, MOVE_KEYS, actionFor, isTypingTarget, type Action } from "@/game/input";
+import { BINDINGS, MOVE_KEYS, actionFor, inputLock, isTypingTarget, type Action } from "@/game/input";
 import { useSceneStore, type FloorRect, type Viewpoint, type WalkArea } from "@/game/sceneStore";
 import { clearTrauma, stepShake } from "@/game/shake";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -32,6 +32,7 @@ export function FirstPersonCamera() {
 
   const viewpoint = useSceneStore((s) => (s.viewpointId ? s.viewpoints[s.viewpointId] : undefined));
   const lookAtRequest = useSceneStore((s) => s.lookAtRequest);
+  const viewEpoch = useSceneStore((s) => s.viewEpoch);
 
   const target = useRef({ yaw: 0, pitch: 0 });
   const current = useRef({ yaw: 0, pitch: 0 });
@@ -49,7 +50,7 @@ export function FirstPersonCamera() {
       current.current = { ...target.current };
       placed.current = true;
     }
-  }, [viewpoint, camera, reduced]);
+  }, [viewpoint, viewEpoch, camera, reduced]);
 
   // Keyboard focus on a hotspot turns the head toward it.
   useEffect(() => {
@@ -113,7 +114,7 @@ export function FirstPersonCamera() {
     const keys = heldCodes.current;
     const handled = (code: string) => !!actionFor(code) || code === MOVE_KEYS.sprint;
     const onDown = (e: KeyboardEvent) => {
-      if (!handled(e.code) || isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (inputLock.keys || !handled(e.code) || isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
       e.preventDefault();
       keys.add(e.code);
     };

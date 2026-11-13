@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ScanLine, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CharacterPortrait } from "@/components/cutscene/CharacterPortrait";
@@ -10,6 +10,8 @@ import { useLocalized, useT } from "@/i18n/useT";
 import { useSettingsStore } from "@/game/settingsStore";
 import { CHARACTERS } from "@/game/characters";
 import type { RocketPart } from "@/mocks/rocket-parts";
+import { UI } from "./content";
+import { InsideView } from "./InsideView";
 
 interface PartPanelProps {
   part: RocketPart;
@@ -17,10 +19,13 @@ interface PartPanelProps {
   next: RocketPart | null;
   onNext: () => void;
   onClose: () => void;
+  /** The player answered the inside-view question for this part. */
+  onQuiz: (correct: boolean) => void;
 }
 
 /** Chief Bao's explanation of one part: what it does, plus two DEMO facts. */
-export function PartPanel({ part, next, onNext, onClose }: PartPanelProps) {
+export function PartPanel({ part, next, onNext, onClose, onQuiz }: PartPanelProps) {
+  const [inside, setInside] = useState(false);
   const t = useT();
   const localize = useLocalized();
   const locale = useSettingsStore((s) => s.locale);
@@ -41,7 +46,7 @@ export function PartPanel({ part, next, onNext, onClose }: PartPanelProps) {
   return (
     <section
       aria-labelledby={`part-${part.id}`}
-      className="bezel bezel-gold pointer-events-auto relative w-full max-w-md animate-fade-in bg-space-deep/95 p-5"
+      className="bezel bezel-gold pointer-events-auto relative max-h-[78dvh] w-full max-w-md animate-fade-in overflow-y-auto bg-space-deep/95 p-5"
     >
       <button
         type="button"
@@ -64,6 +69,10 @@ export function PartPanel({ part, next, onNext, onClose }: PartPanelProps) {
         </div>
       </div>
 
+      {inside ? (
+        <InsideView part={part.id} onAnswer={onQuiz} />
+      ) : (
+        <>
       <p className="mt-3 max-w-prose text-sm text-foreground/85">
         <span className="sr-only">{format(t.workshop.chiefSays, { name: localize(CHARACTERS["workshop-chief"].name) })}: </span>
         {localize(part.role)}
@@ -79,10 +88,16 @@ export function PartPanel({ part, next, onNext, onClose }: PartPanelProps) {
           <dd>{localize(part.fact.value)}</dd>
         </div>
       </dl>
+        </>
+      )}
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <StatusBadge status="demo">{t.common.demoData}</StatusBadge>
         <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="secondary" onClick={() => setInside((v) => !v)} aria-pressed={inside}>
+            <ScanLine className="mr-1.5 h-4 w-4" aria-hidden />
+            {localize(inside ? UI.inside.close : UI.inside.open)}
+          </Button>
           {next ? (
             <>
               <Button variant="ghost" onClick={onClose}>

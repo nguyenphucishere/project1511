@@ -60,9 +60,12 @@ interface SceneState {
   highlightedId: string | null;
   /** Bumped when the camera should turn toward highlightedId (keyboard focus). */
   lookAtRequest: number;
+  /** Bumped to send the camera back to the current viewpoint's resting position and view. */
+  viewEpoch: number;
 
   setViewpoints: (list: Viewpoint[], startId: string) => void;
   goTo: (viewpointId: string) => void;
+  recenter: () => void;
   register: (info: HotspotInfo) => void;
   unregister: (id: string) => void;
   highlight: (id: string | null, opts?: { lookAt?: boolean }) => void;
@@ -76,10 +79,12 @@ export const useSceneStore = create<SceneState>((set) => ({
   hotspots: {},
   highlightedId: null,
   lookAtRequest: 0,
+  viewEpoch: 0,
 
   setViewpoints: (list, startId) =>
     set({ viewpoints: Object.fromEntries(list.map((v) => [v.id, v])), viewpointId: startId }),
   goTo: (viewpointId) => set({ viewpointId, highlightedId: null }),
+  recenter: () => set((s) => ({ viewEpoch: s.viewEpoch + 1, highlightedId: null })),
   register: (info) => set((s) => ({ hotspots: { ...s.hotspots, [info.id]: info } })),
   unregister: (id) =>
     set((s) => {
@@ -91,7 +96,7 @@ export const useSceneStore = create<SceneState>((set) => ({
       highlightedId: id,
       lookAtRequest: opts?.lookAt && id ? s.lookAtRequest + 1 : s.lookAtRequest,
     })),
-  reset: () => set({ viewpoints: {}, viewpointId: null, hotspots: {}, highlightedId: null, lookAtRequest: 0 }),
+  reset: () => set({ viewpoints: {}, viewpointId: null, hotspots: {}, highlightedId: null, lookAtRequest: 0, viewEpoch: 0 }),
 }));
 
 /** Installs a scene's viewpoints on mount and clears the scene state on unmount. */

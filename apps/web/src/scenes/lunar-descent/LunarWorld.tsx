@@ -750,7 +750,7 @@ const MILKY_TINT = new Color(2.4, 2.5, 2.9);
 
 /** NASA/ESA Milky Way panorama on a huge inverted sphere; never occludes or gets fogged. */
 function MilkyWay() {
-  const tex = useTexture("/assets/textures/2k_stars_milky_way.jpg", (t) => {
+  const tex = useTexture("/assets/textures/milky_way_4k.jpg", (t) => {
     t.colorSpace = SRGBColorSpace;
   });
   return (
@@ -763,7 +763,7 @@ function MilkyWay() {
 
 /** Lunar regolith: the LRO-derived Moon map mirror-tiled over the plain so no seams show. */
 function RegolithMaterial() {
-  const tex = useTexture("/assets/textures/2k_moon.jpg", (t) => {
+  const tex = useTexture("/assets/textures/moon_4k.jpg", (t) => {
     t.colorSpace = SRGBColorSpace;
     t.wrapS = t.wrapT = MirroredRepeatWrapping;
     t.repeat.set(10, 10);

@@ -6,6 +6,9 @@ import {
   eventsBetween,
   formatMet,
   gForce,
+  heating,
+  TROUBLE_LEAD,
+  CRITICAL_LEAD,
   skyBlend,
   speedKms,
   vibration,
@@ -55,6 +58,16 @@ describe("ascent events", () => {
       prev = met;
     }
     expect(fired).toEqual(EVENTS.map((e) => e.id));
+  });
+});
+
+describe("failure timing", () => {
+  it("gives a longer warning than the critical window", () => {
+    expect(TROUBLE_LEAD).toBeGreaterThan(CRITICAL_LEAD);
+  });
+  it("heats up around max q and is gone after staging", () => {
+    expect(heating(85)).toBe(1);
+    expect(heating(300)).toBe(0);
   });
 });
 

@@ -57,14 +57,18 @@ export const BRIEFINGS: Record<BriefingId, Briefing> = {
       {
         speaker: "engineer",
         text: {
-          en: "Chief Bao will walk us through every part. Inspect each one before we roll it out.",
-          vi: "Trưởng xưởng Bảo sẽ giới thiệu từng bộ phận. Hãy kiểm tra hết trước khi đưa ra bệ phóng.",
+          en: "Chief Bao and I will stack the rocket, check every part, hunt for hidden faults and run the checklist before we roll it out.",
+          vi: "Trưởng xưởng Bảo và tôi sẽ dựng tên lửa, kiểm tra từng bộ phận, tìm lỗi ẩn và chạy checklist trước khi đưa ra bệ phóng.",
         },
       },
     ],
     objectives: [
+      { en: "Stack the rocket with the gantry crane", vi: "Dựng tên lửa bằng cầu trục giàn" },
       { en: "Move around the assembly hall", vi: "Di chuyển quanh xưởng lắp ráp" },
       { en: "Inspect every rocket part", vi: "Kiểm tra mọi bộ phận tên lửa" },
+      { en: "Find the hidden faults with the scanner", vi: "Tìm các lỗi ẩn bằng máy quét" },
+      { en: "Run the pre-flight checklist in order", vi: "Chạy checklist trước chuyến bay đúng thứ tự" },
+      { en: "Choose the engines and tanks", vi: "Chọn động cơ và bồn nhiên liệu" },
     ],
   },
   "mission-control": {

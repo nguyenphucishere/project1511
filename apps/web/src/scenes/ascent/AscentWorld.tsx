@@ -22,17 +22,25 @@ import {
 } from "three";
 import {
   COMPRESS,
+  CRITICAL_LEAD,
+  FAIL_ABORT_AT,
+  FAIL_BOOM_AT,
+  FAIL_END_AT,
   INSERTION_MET,
+  TROUBLE_LEAD,
   altitudeKm,
   eventsBetween,
   formatMet,
   gForce,
+  heating,
   skyBlend,
   speedKms,
   tilt,
   vibration,
   type AscentEvent,
+  type AscentFailure,
 } from "@/game/ascentFlight";
+import { fx } from "@/game/fx";
 import { MOVE_KEYS } from "@/game/input";
 import { clearTrauma, stepShake } from "@/game/shake";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -43,25 +51,70 @@ import { SCENE_COLORS } from "@/lib/palette";
 export interface AscentFlight {
   /** Mission elapsed time in seconds. */
   met: number;
-  /** ride: strapped in and climbing; orbit: engines off, still buckled; float: free in the cabin. */
-  mode: "ride" | "orbit" | "float";
+  /**
+   * ride: strapped in and climbing. trouble: something is going wrong (warnings, near real time).
+   * failing: engines are out, the vehicle is tumbling. orbit: engines off, still buckled.
+   * float: free in the cabin.
+   */
+  mode: "ride" | "trouble" | "failing" | "orbit" | "float";
   /** The player pressed "release harness". */
   released: boolean;
   /** Seconds spent in orbit, drives the slow sweep of Earth and sunrise. */
   orbitT: number;
-  /** Camera-flash strength 0..1 (stage separation), decays on its own. */
+  /** Seconds since the engines failed. */
+  failT: number;
+  /** Camera-flash strength 0..1 (stage separation, explosion), decays on its own. */
   flash: number;
+  /** Master alarm is sounding: red light, flashing console. */
+  alarm: boolean;
+  /** The vehicle has been destroyed. */
+  boom: boolean;
+  /** 0..1: how much cloud the capsule is passing through right now. */
+  cloud: number;
+  /** 0..1: air-friction glow at the window. */
+  heat: number;
+  /** Clock times (seconds, scene clock) of one-off visuals, or -1. */
+  sepAt: number;
+  towerAt: number;
+  /** Unit vector toward the sun in world space, and whether the Earth leaves it visible. */
+  sun: Vector3;
+  sunVisible: boolean;
 }
 
 export function createFlight(): AscentFlight {
-  return { met: -0.001, mode: "ride", released: false, orbitT: 0, flash: 0 };
+  return {
+    met: -0.001,
+    mode: "ride",
+    released: false,
+    orbitT: 0,
+    failT: 0,
+    flash: 0,
+    alarm: false,
+    boom: false,
+    cloud: 0,
+    heat: 0,
+    sepAt: -1,
+    towerAt: -1,
+    sun: new Vector3(0, 1, 0),
+    sunVisible: true,
+  };
+}
+
+/** Where the sun appears on screen, for the lens-flare overlay. x/y in -1..1. */
+export interface SunScreen {
+  x: number;
+  y: number;
+  visible: boolean;
 }
 
 interface AscentWorldProps {
   flight: MutableRefObject<AscentFlight>;
   orbitKm: number;
+  failure?: AscentFailure;
   onEvent: (e: AscentEvent) => void;
   onEarthSeen: () => void;
+  onFailureEnd?: () => void;
+  onSun?: (s: SunScreen) => void;
 }
 
 /* Scale: the Earth is drawn 1:10 618 so it fits the draw distance; its apparent size from orbit
@@ -85,7 +138,7 @@ const EARTH_QUAT = (() => {
 })();
 /** Where the sun sits in the outside frame (unit vector). */
 const SUN_COLOR = new Color(7, 6.2, 4.6);
-const SUN_LOCAL = new Vector3(0.2, 0.5, -0.84).normalize();
+const SUN_LOCAL = new Vector3(0.42, 0.06, -0.9).normalize();
 const SPIN_AXIS = new Vector3(0, 1, 0);
 const spinQ = new Quaternion();
 
@@ -94,19 +147,27 @@ const SEAT = new Vector3(0, 1.25, 0.35);
 const WINDOW_CENTER = new Vector3(0, 1.5, -1.6);
 const CABIN = { x: 1.5, yMin: 0.0, yMax: 2.3, zFront: -1.6, zBack: 1.6 };
 
-export function AscentWorld({ flight, orbitKm, onEvent, onEarthSeen }: AscentWorldProps) {
+export function AscentWorld({ flight, orbitKm, failure, onEvent, onEarthSeen, onFailureEnd, onSun }: AscentWorldProps) {
   const outside = useRef<Group>(null);
   const reduced = useReducedMotion();
 
   return (
     <>
       <Environment files="/assets/env/studio.hdr" environmentIntensity={0.22} />
-      <FlightDirector flight={flight} orbitKm={orbitKm} onEvent={onEvent} outside={outside} />
+      <FlightDirector
+        flight={flight}
+        orbitKm={orbitKm}
+        failure={failure}
+        onEvent={onEvent}
+        onFailureEnd={onFailureEnd}
+        outside={outside}
+      />
       <group ref={outside}>
         <Outside flight={flight} orbitKm={orbitKm} />
       </group>
-      <Cabin flight={flight} orbitKm={orbitKm} reduced={reduced} />
-      <CameraRig flight={flight} reduced={reduced} onEarthSeen={onEarthSeen} />
+      <WindowFx flight={flight} reduced={reduced} />
+      <Cabin flight={flight} orbitKm={orbitKm} reduced={reduced} failure={failure} />
+      <CameraRig flight={flight} reduced={reduced} onEarthSeen={onEarthSeen} onSun={onSun} />
     </>
   );
 }
@@ -117,31 +178,93 @@ export function AscentWorld({ flight, orbitKm, onEvent, onEarthSeen }: AscentWor
 function FlightDirector({
   flight,
   orbitKm,
+  failure,
   onEvent,
+  onFailureEnd,
   outside,
-}: Pick<AscentWorldProps, "flight" | "orbitKm" | "onEvent"> & { outside: MutableRefObject<Group | null> }) {
+}: Pick<AscentWorldProps, "flight" | "orbitKm" | "failure" | "onEvent" | "onFailureEnd"> & {
+  outside: MutableRefObject<Group | null>;
+}) {
   const eventRef = useRef(onEvent);
   eventRef.current = onEvent;
+  const endRef = useRef(onFailureEnd);
+  endRef.current = onFailureEnd;
+  const sent = useRef(new Set<string>());
 
-  useFrame((_, raw) => {
+  useFrame(({ clock }, raw) => {
     const dt = Math.min(Math.max(raw, 0), 0.1);
     const f = flight.current;
+    const once = (key: string, run: () => void) => {
+      if (sent.current.has(key)) return;
+      sent.current.add(key);
+      run();
+    };
+    const emit = (e: Omit<AscentEvent, "met">) => eventRef.current({ ...e, met: f.met });
+    const fireTimeline = (from: number, to: number) => {
+      for (const e of eventsBetween(from, to)) {
+        if (e.id === "stageSep") f.sepAt = clock.elapsedTime;
+        if (e.id === "towerJettison") f.towerAt = clock.elapsedTime;
+        eventRef.current(e);
+      }
+    };
+
     if (f.mode === "ride") {
       const from = f.met;
-      f.met = Math.min(INSERTION_MET, f.met + dt * COMPRESS);
-      for (const e of eventsBetween(from, f.met)) eventRef.current(e);
-      if (f.met >= INSERTION_MET) f.mode = "orbit";
+      let next = f.met + dt * COMPRESS;
+      if (failure) next = Math.min(next, failure.met - TROUBLE_LEAD);
+      f.met = Math.min(INSERTION_MET, next);
+      fireTimeline(from, f.met);
+      if (failure && f.met >= failure.met - TROUBLE_LEAD) {
+        f.mode = "trouble";
+        emit({ id: "warn", caution: true, kick: 0.3 });
+      } else if (!failure && f.met >= INSERTION_MET) {
+        f.mode = "orbit";
+      }
+    } else if (f.mode === "trouble" && failure) {
+      // Near real time: the warnings need room to be felt.
+      const from = f.met;
+      f.met = Math.min(failure.met, f.met + dt * 1.6);
+      fireTimeline(from, f.met);
+      if (f.met >= failure.met - CRITICAL_LEAD)
+        once("critical", () => {
+          f.alarm = true;
+          emit({ id: "warnCritical", caution: true, kick: 0.5 });
+        });
+      if (f.met >= failure.met) {
+        f.mode = "failing";
+        f.failT = 0;
+        emit({ id: "engineFail", caution: true, kick: 0.9 });
+      }
+    } else if (f.mode === "failing") {
+      f.failT += dt;
+      if (f.failT >= FAIL_ABORT_AT) once("abort", () => emit({ id: "abort", caution: true, kick: 0.4 }));
+      if (f.failT >= FAIL_BOOM_AT)
+        once("boom", () => {
+          f.boom = true;
+          f.flash = 1;
+          emit({ id: "boom", bang: true, kick: 1 });
+        });
+      if (f.failT >= FAIL_END_AT) once("end", () => endRef.current?.());
     } else {
       f.orbitT += dt;
     }
-    f.flash = Math.max(0, f.flash - dt * 1.6);
+    f.flash = Math.max(0, f.flash - dt * (f.boom ? 0.45 : 1.6));
+
+    const alt = altitudeKm(f.met, orbitKm);
+    // Passing through a cloud deck at 2-3.5 km turns the window white for a moment.
+    f.cloud =
+      f.mode === "orbit" || f.mode === "float"
+        ? 0
+        : MathUtils.smoothstep(alt, 1.9, 2.5) * (1 - MathUtils.smoothstep(alt, 3.0, 3.6));
+    f.heat = f.mode === "ride" || f.mode === "trouble" ? heating(f.met) : 0;
 
     if (outside.current) {
-      // Pitch-over swings Earth into the window; once in orbit it keeps rolling past slowly.
-      outside.current.rotation.x = tilt(f.met);
-      outside.current.rotation.z = 0.1;
+      // Pitch-over swings Earth into the window; a failing vehicle tumbles instead.
+      const p = f.mode === "failing" ? f.failT : 0;
+      outside.current.rotation.x = tilt(f.met) + 0.07 * p * p;
+      outside.current.rotation.y = 0.05 * p * p;
+      outside.current.rotation.z = 0.1 + 0.11 * p * p;
     }
-    void orbitKm;
   });
   return null;
 }
@@ -172,6 +295,7 @@ const skyVertex = /* glsl */ `
 const skyFragment = /* glsl */ `
   uniform sampler2D uStars;
   uniform float uBlend;
+  uniform vec3 uSun;
   varying vec3 vDir;
   const float PI = 3.14159265;
   void main() {
@@ -184,6 +308,10 @@ const skyFragment = /* glsl */ `
     vec3 day = mix(horizon, zenith, pow(h, 0.55));
     // Below the horizon the pale haze of the ground; above it daylight fading out into the star field.
     day = mix(day, vec3(0.52, 0.70, 0.88), smoothstep(0.0, -0.25, d.y));
+    // Dawn: a warm band along the horizon toward the sun and a hot glow around the disc.
+    float sd = max(dot(d, uSun), 0.0);
+    float band = (1.0 - smoothstep(0.0, 0.4, abs(d.y))) * pow(sd, 1.4);
+    day += vec3(1.0, 0.55, 0.22) * (band * 0.95 + pow(sd, 10.0) * 0.5 + pow(sd, 140.0) * 2.5);
     vec3 col = mix(stars, day, uBlend);
     gl_FragColor = vec4(col, 1.0);
   }
@@ -255,10 +383,10 @@ const atmoFragment = /* glsl */ `
 function Outside({ flight, orbitKm }: { flight: MutableRefObject<AscentFlight>; orbitKm: number }) {
   const [day, night, clouds, stars] = useTexture(
     [
-      "/assets/textures/2k_earth_daymap.jpg",
-      "/assets/textures/2k_earth_nightmap.jpg",
-      "/assets/textures/2k_earth_clouds.jpg",
-      "/assets/textures/2k_stars_milky_way.jpg",
+      "/assets/textures/earth_day_6k.jpg",
+      "/assets/textures/earth_night_4k.jpg",
+      "/assets/textures/earth_clouds_4k.jpg",
+      "/assets/textures/milky_way_4k.jpg",
     ],
     (t) => {
       for (const tex of t) {
@@ -298,7 +426,7 @@ function Outside({ flight, orbitKm }: { flight: MutableRefObject<AscentFlight>; 
     () => ({ uSun: { value: new Vector3(0, 1, 0) }, uCam: { value: new Vector3() }, uOpacity: { value: 0 } }),
     [],
   );
-  const skyUniforms = useMemo(() => ({ uStars: { value: stars }, uBlend: { value: 1 } }), [stars]);
+  const skyUniforms = useMemo(() => ({ uStars: { value: stars }, uBlend: { value: 1 }, uSun: { value: SUN_LOCAL } }), [stars]);
 
   // Ground seen from the pad: grass, coast, sea, hazy edge. Drawn once to a canvas.
   const landTex = useMemo(
@@ -381,6 +509,12 @@ function Outside({ flight, orbitKm }: { flight: MutableRefObject<AscentFlight>; 
     camera.getWorldPosition(camWorld);
     // Sun and view vectors in world space, from the outside frame's current orientation.
     sunWorld.copy(SUN_LOCAL).transformDirection(root_.matrixWorld);
+    f.sun.copy(sunWorld);
+    {
+      // The Earth hides the sun below its horizon; from higher up that horizon dips further.
+      const ratio = EARTH_R / (EARTH_R + alt * KM_TO_UNITS);
+      f.sunVisible = SUN_LOCAL.y > -Math.sqrt(Math.max(0, 1 - ratio * ratio));
+    }
     for (const m of [earthMat.current, atmoMat.current]) {
       if (!m) continue;
       m.uniforms.uSun.value.copy(sunWorld);
@@ -394,7 +528,10 @@ function Outside({ flight, orbitKm }: { flight: MutableRefObject<AscentFlight>; 
       earthMat.current.uniforms.uRim.value = 0.08 + 0.92 * MathUtils.smoothstep(alt, 70, 170);
     }
 
-    if (sun.current) sun.current.position.copy(SUN_LOCAL).multiplyScalar(780);
+    if (sun.current) {
+      sun.current.position.copy(SUN_LOCAL).multiplyScalar(780);
+      sun.current.visible = f.sunVisible;
+    }
 
     // Launch-site ground: scaled so the climb feels fast, gone by the time the Earth takes over.
     const groundFade = 1 - MathUtils.smoothstep(alt, 4, 22);
@@ -493,6 +630,153 @@ function SunLight() {
   return <directionalLight position={SUN_LOCAL.clone().multiplyScalar(100).toArray()} intensity={2.4} color="#FFF1DC" />;
 }
 
+/* ------------------------------------------------------------ window effects */
+
+/**
+ * Everything that happens just outside the glass: speed streaks, cloud white-out, heating glow,
+ * the spent first stage falling away and the escape tower firing past.
+ */
+function WindowFx({ flight, reduced }: { flight: MutableRefObject<AscentFlight>; reduced: boolean }) {
+  const cloudMat = useRef<MeshBasicMaterial>(null);
+  const heatMat = useRef<MeshBasicMaterial>(null);
+  const streaks = useRef<Group>(null);
+  const stage = useRef<Group>(null);
+  const stageFlame = useRef<Mesh>(null);
+  const tower = useRef<Group>(null);
+
+  const heatTex = useMemo(
+    () =>
+      makeRadial(
+        [
+          [0, "rgba(255,120,40,0)"],
+          [0.5, "rgba(255,140,50,0)"],
+          [0.82, "rgba(255,150,60,0.5)"],
+          [1, "rgba(255,225,160,0.95)"],
+        ],
+        256,
+      ),
+    [],
+  );
+  const streakData = useMemo(() => {
+    const r = seeded(23);
+    return Array.from({ length: 46 }, () => ({
+      x: (r() - 0.5) * 5.6,
+      z: -3 - r() * 7,
+      phase: r() * 10,
+      len: 0.5 + r() * 1.3,
+      speed: 0.7 + r() * 0.6,
+    }));
+  }, []);
+
+  useFrame(({ clock }) => {
+    const f = flight.current;
+    const t = clock.elapsedTime;
+    if (cloudMat.current) cloudMat.current.opacity = f.cloud * 0.96;
+    if (heatMat.current) heatMat.current.opacity = f.heat * (reduced ? 0.35 : 0.5 + 0.25 * Math.sin(t * 23) + 0.1 * Math.sin(t * 41));
+
+    // Streaks of air rushing downward past the window while the atmosphere is thick.
+    if (streaks.current) {
+      const thick = f.mode === "ride" || f.mode === "trouble" ? 1 - MathUtils.smoothstep(f.met, 70, 190) : 0;
+      const v = 2.5 + f.met * 0.18;
+      streaks.current.visible = thick > 0.01;
+      streaks.current.children.forEach((child, i) => {
+        const d = streakData[i];
+        const m = child as Mesh;
+        m.position.set(d.x, 6 - ((d.phase + t * v * d.speed) % 11), d.z);
+        m.scale.set(1, d.len, 1);
+        (m.material as MeshBasicMaterial).opacity = 0.3 * thick;
+      });
+    }
+
+    // First stage falls away after staging, engines still glowing, tumbling out of sight.
+    if (stage.current) {
+      const k = f.sepAt >= 0 ? t - f.sepAt : -1;
+      stage.current.visible = k >= 0 && k < 9;
+      if (stage.current.visible) {
+        stage.current.position.set(0.7 + 0.35 * k, 0.8 - 0.55 * k * k - 0.5 * k, -9 - 4.5 * k);
+        stage.current.rotation.set(0.15 + 0.22 * k, 0.1 * k, 0.28 * k);
+        if (stageFlame.current) stageFlame.current.scale.y = Math.max(0.05, 1 - k * 0.14) * (1 + 0.2 * Math.sin(t * 40));
+      }
+    }
+
+    // Escape tower motor: a bright streak that shoots up and away past the window.
+    if (tower.current) {
+      const k = f.towerAt >= 0 ? t - f.towerAt : -1;
+      tower.current.visible = k >= 0 && k < 3.2;
+      if (tower.current.visible) {
+        tower.current.position.set(-0.6 - 1.3 * k, 0.9 + 8 * k, -5.5 - 16 * k);
+        tower.current.rotation.set(0.5, 0, 0.1);
+        tower.current.scale.setScalar(Math.max(0.2, 1 - k * 0.22));
+      }
+    }
+  });
+
+  return (
+    <group>
+      {/* Plates just outside the window opening: white-out and heating glow. */}
+      <mesh position={[0, 1.475, -1.64]} renderOrder={5}>
+        <planeGeometry args={[2.4, 1.05]} />
+        <meshBasicMaterial ref={cloudMat} color="#f4f8ff" transparent opacity={0} depthWrite={false} toneMapped={false} />
+      </mesh>
+      <mesh position={[0, 1.475, -1.63]} renderOrder={6}>
+        <planeGeometry args={[2.4, 1.05]} />
+        <meshBasicMaterial
+          ref={heatMat}
+          map={heatTex}
+          transparent
+          opacity={0}
+          depthWrite={false}
+          blending={AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+
+      <group ref={streaks}>
+        {streakData.map((_, i) => (
+          <mesh key={i}>
+            <planeGeometry args={[0.014, 1]} />
+            <meshBasicMaterial color="#cfe6ff" transparent opacity={0} depthWrite={false} blending={AdditiveBlending} />
+          </mesh>
+        ))}
+      </group>
+
+      <group ref={stage} visible={false}>
+        <mesh>
+          <cylinderGeometry args={[0.95, 0.95, 6, 20]} />
+          <meshStandardMaterial color="#F1F5F9" roughness={0.45} metalness={0.2} />
+        </mesh>
+        <mesh position={[0, 1.2, 0]}>
+          <cylinderGeometry args={[0.96, 0.96, 0.7, 20]} />
+          <meshStandardMaterial color="#10151c" roughness={0.6} />
+        </mesh>
+        <mesh position={[0, -3.2, 0]}>
+          <cylinderGeometry args={[0.55, 0.85, 0.5, 16]} />
+          <meshStandardMaterial color="#334155" metalness={0.7} roughness={0.35} />
+        </mesh>
+        <mesh ref={stageFlame} position={[0, -4.4, 0]} rotation={[Math.PI, 0, 0]}>
+          <coneGeometry args={[0.6, 2.2, 14]} />
+          <meshBasicMaterial color={new Color(3.2, 1.5, 0.5)} transparent opacity={0.85} toneMapped={false} />
+        </mesh>
+      </group>
+
+      <group ref={tower} visible={false}>
+        <mesh>
+          <cylinderGeometry args={[0.07, 0.12, 3.4, 8]} />
+          <meshStandardMaterial color="#F8FAFC" roughness={0.4} />
+        </mesh>
+        <mesh position={[0, 1.8, 0]}>
+          <coneGeometry args={[0.07, 0.4, 8]} />
+          <meshStandardMaterial color={SCENE_COLORS.nasaRed} />
+        </mesh>
+        <mesh position={[0, -2.3, 0]} rotation={[Math.PI, 0, 0]}>
+          <coneGeometry args={[0.22, 2.4, 10]} />
+          <meshBasicMaterial color={new Color(4, 2.2, 0.8)} transparent opacity={0.9} toneMapped={false} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
 /* ------------------------------------------------------------------ cabin */
 
 function makeScreen(width: number, height: number) {
@@ -506,7 +790,17 @@ function makeScreen(width: number, height: number) {
 }
 
 /** The interior of the crew capsule: window wall, console, seats, crewmates and loose items. */
-function Cabin({ flight, orbitKm, reduced }: { flight: MutableRefObject<AscentFlight>; orbitKm: number; reduced: boolean }) {
+function Cabin({
+  flight,
+  orbitKm,
+  reduced,
+  failure,
+}: {
+  flight: MutableRefObject<AscentFlight>;
+  orbitKm: number;
+  reduced: boolean;
+  failure?: AscentFailure;
+}) {
   const w = CABIN.x;
   const h = CABIN.yMax;
   const d = CABIN.zBack - CABIN.zFront;
@@ -520,8 +814,27 @@ function Cabin({ flight, orbitKm, reduced }: { flight: MutableRefObject<AscentFl
   const warm = useRef<PointLight>(null);
   useFrame(({ clock }) => {
     const f = flight.current;
-    if (flash.current) flash.current.intensity = f.flash * 14;
-    if (warm.current) warm.current.intensity = 2.6 + (f.mode === "ride" ? 0.25 * Math.sin(clock.elapsedTime * 40) * vibration(f.met) : 0);
+    const t = clock.elapsedTime;
+    const burning = f.mode === "ride" || f.mode === "trouble";
+    if (flash.current) {
+      // Engine glow flickering up through the floor while burning, plus one-off flashes.
+      const glow = burning ? (0.5 + 0.35 * Math.sin(t * 37) + 0.15 * Math.sin(t * 61)) * (0.5 + f.heat) : 0;
+      flash.current.intensity = f.flash * (f.boom ? 30 : 14) + glow;
+      flash.current.color.set(f.boom ? "#FFF2D8" : "#FFB066");
+    }
+    if (warm.current) {
+      const l = warm.current;
+      if (f.boom) {
+        l.intensity = 0.15;
+      } else if (f.alarm) {
+        const on = Math.sin(t * 5.5) > 0;
+        l.color.set(on ? "#ff3b24" : "#5a0d06");
+        l.intensity = on ? 3.4 : 1.0;
+      } else {
+        l.color.set(f.heat > 0.3 ? "#FFD2A0" : "#FFE9C8");
+        l.intensity = 2.6 + (burning ? 0.25 * Math.sin(t * 40) * vibration(f.met) : 0);
+      }
+    }
   });
 
   return (
@@ -594,7 +907,7 @@ function Cabin({ flight, orbitKm, reduced }: { flight: MutableRefObject<AscentFl
         </mesh>
       ))}
 
-      <Console flight={flight} orbitKm={orbitKm} />
+      <Console flight={flight} orbitKm={orbitKm} failure={failure} />
       <Seats />
       <Harness flight={flight} reduced={reduced} />
       <FloatingItems flight={flight} />
@@ -602,7 +915,15 @@ function Cabin({ flight, orbitKm, reduced }: { flight: MutableRefObject<AscentFl
   );
 }
 
-function Console({ flight, orbitKm }: { flight: MutableRefObject<AscentFlight>; orbitKm: number }) {
+function Console({
+  flight,
+  orbitKm,
+  failure,
+}: {
+  flight: MutableRefObject<AscentFlight>;
+  orbitKm: number;
+  failure?: AscentFailure;
+}) {
   const main = useMemo(() => makeScreen(512, 256), []);
   const side = useMemo(() => makeScreen(256, 256), []);
   const acc = useRef(0);
@@ -636,6 +957,17 @@ function Console({ flight, orbitKm }: { flight: MutableRefObject<AscentFlight>; 
     c.fillRect(330, 60, 160, 14);
     c.fillStyle = "#7ee7ff";
     c.fillRect(330, 60, 160 * Math.min(1, f.met / INSERTION_MET), 14);
+    if (f.alarm || f.mode === "failing") {
+      const blink = Math.sin(clock.elapsedTime * 7) > 0;
+      c.fillStyle = blink ? "#c1121f" : "#4a0a10";
+      c.fillRect(252, 98, 248, 142);
+      c.fillStyle = "#ffffff";
+      c.font = "bold 28px monospace";
+      c.fillText("MASTER ALARM", 262, 134);
+      c.font = "bold 20px monospace";
+      c.fillText(failure?.code === "slow-climb" ? "THRUST < WEIGHT" : "STG2 PROPELLANT LOW", 262, 168);
+      c.fillText(f.mode === "failing" ? "ENGINE OUT" : "ABORT ARMED", 262, 200);
+    }
     main.texture.needsUpdate = true;
 
     const s = side.canvas.getContext("2d")!;
@@ -670,8 +1002,17 @@ function Console({ flight, orbitKm }: { flight: MutableRefObject<AscentFlight>; 
     lamps.current.forEach((m, i) => {
       if (!m) return;
       const on = Math.sin(clock.elapsedTime * (1.1 + (i % 5) * 0.37) + i) > (i % 4 === 0 ? -0.2 : 0.4);
-      const base = i % 4 === 0 ? SCENE_COLORS.screenAmber : i % 3 === 0 ? SCENE_COLORS.nasaRed : SCENE_COLORS.screenGreen;
-      m.color.set(on ? base : "#1d2a24");
+      const alarm = flight.current.alarm;
+      const base = alarm
+        ? i % 2 === 0
+          ? SCENE_COLORS.nasaRed
+          : SCENE_COLORS.screenAmber
+        : i % 4 === 0
+          ? SCENE_COLORS.screenAmber
+          : i % 3 === 0
+            ? SCENE_COLORS.nasaRed
+            : SCENE_COLORS.screenGreen;
+      m.color.set(alarm ? (Math.sin(clock.elapsedTime * 6 + i * 0.7) > 0 ? base : "#2a0d0a") : on ? base : "#1d2a24");
     });
   });
 
@@ -900,7 +1241,7 @@ function FloatingItems({ flight }: { flight: MutableRefObject<AscentFlight> }) {
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.1);
     const f = flight.current;
-    const zeroG = f.mode !== "ride";
+    const zeroG = f.mode === "orbit" || f.mode === "float" || f.mode === "failing";
     refs.current.forEach((g, i) => {
       if (!g) return;
       if (!ready.current) g.position.set(...(items[i].p as [number, number, number]));
@@ -990,11 +1331,15 @@ function CameraRig({
   flight,
   reduced,
   onEarthSeen,
+  onSun,
 }: {
   flight: MutableRefObject<AscentFlight>;
   reduced: boolean;
   onEarthSeen: () => void;
+  onSun?: (s: SunScreen) => void;
 }) {
+  const onSunRef = useRef(onSun);
+  onSunRef.current = onSun;
   const camera = useThree((s) => s.camera);
   const gl = useThree((s) => s.gl);
   const pos = useRef(SEAT.clone());
@@ -1007,7 +1352,10 @@ function CameraRig({
   const floatStarted = useRef(false);
   const onSeen = useRef(onEarthSeen);
   onSeen.current = onEarthSeen;
-  const tmp = useMemo(() => ({ fwd: new Vector3(), right: new Vector3(), acc: new Vector3(), to: new Vector3() }), []);
+  const tmp = useMemo(
+    () => ({ fwd: new Vector3(), right: new Vector3(), acc: new Vector3(), to: new Vector3(), proj: new Vector3() }),
+    [],
+  );
 
   useEffect(() => {
     const el = gl.domElement;
@@ -1060,7 +1408,13 @@ function CameraRig({
     };
   }, [gl]);
 
-  useEffect(() => clearTrauma, []);
+  useEffect(
+    () => () => {
+      clearTrauma();
+      fx.aberration = 0;
+    },
+    [],
+  );
 
   useFrame((state, raw) => {
     const dt = Math.min(Math.max(raw, 0), 0.1);
@@ -1086,18 +1440,29 @@ function CameraRig({
     cur.current.pitch = MathUtils.lerp(cur.current.pitch, target.current.pitch, lk);
 
     // --- position ---
+    fx.aberration = 0;
     let ox = 0;
     let oy = 0;
     let roll = 0;
     let pitchShake = 0;
-    if (f.mode === "ride") {
-      const vib = vibration(f.met) * (reduced ? 0.2 : 1);
+    if (f.mode === "ride" || f.mode === "trouble" || f.mode === "failing") {
+      let vib = vibration(f.met);
+      if (f.mode === "trouble") vib = Math.max(vib, 0.4) + 0.3 * Math.abs(Math.sin(t * 2.7));
+      if (f.mode === "failing") vib = f.boom ? 2.4 : 1.15 + 0.25 * Math.sin(t * 9);
+      vib *= reduced ? 0.2 : 1;
       ox = vib * 0.011 * (Math.sin(t * 47) + 0.6 * Math.sin(t * 71.3));
       oy = vib * 0.015 * (Math.sin(t * 53.1) + 0.7 * Math.sin(t * 89));
       roll = vib * 0.012 * Math.sin(t * 31) + vib * 0.02 * Math.sin(t * 2.3);
       pitchShake = vib * 0.008 * Math.sin(t * 43);
-      const g = gForce(f.met);
+      if (f.mode === "failing" && !reduced) {
+        // The vehicle starts to tumble: the whole view swings.
+        const ramp = Math.min(1, f.failT / 2.5);
+        roll += 0.24 * Math.sin(f.failT * 1.6) * ramp;
+        pitchShake += 0.07 * Math.sin(f.failT * 2.1) * ramp;
+      }
+      const g = f.mode === "failing" ? 0.2 : gForce(f.met);
       oy -= 0.012 * (g - 1);
+      fx.aberration = Math.min(0.0025, vib * 0.0009);
       pos.current.copy(SEAT);
     } else if (!floating) {
       pos.current.copy(SEAT);
@@ -1159,6 +1524,23 @@ function CameraRig({
       roll + s.roll * 2.2,
       "YXZ",
     );
+
+    // Where the sun is on screen (if the window lets it through), for the lens-flare overlay.
+    camera.updateMatrixWorld();
+    const d = f.sun;
+    let visible = f.sunVisible && d.z < -0.02;
+    if (visible) {
+      const tt = (CABIN.zFront - camera.position.z) / d.z;
+      const hx = camera.position.x + tt * d.x;
+      const hy = camera.position.y + tt * d.y;
+      visible = hx > -1.15 && hx < 1.15 && hy > 0.98 && hy < 1.97;
+    }
+    tmp.proj.copy(camera.position).addScaledVector(d, 200).project(camera);
+    onSunRef.current?.({
+      x: tmp.proj.x,
+      y: tmp.proj.y,
+      visible: visible && Math.abs(tmp.proj.x) < 1.1 && Math.abs(tmp.proj.y) < 1.1 && tmp.proj.z < 1,
+    });
   });
 
   return null;

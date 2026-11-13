@@ -29,7 +29,10 @@ export type SfxId =
   | "caution"
   | "bang"
   | "whoosh"
-  | "unlatch";
+  | "unlatch"
+  | "boom"
+  | "groan"
+  | "sputter";
 
 export type LoopId = "engine";
 
@@ -188,6 +191,24 @@ const RECIPES: Record<SfxId, (c: AudioContext, out: AudioNode, t: number) => voi
     tone(c, out, t, { type: "square", freq: 180, dur: 0.06, gain: 0.09 });
     burst(c, out, t + 0.12, { dur: 0.35, gain: 0.08, filter: "bandpass", freq: 1800, freqEnd: 900 });
   },
+  // Vehicle lost: a huge blast that rolls and fades, with debris crackle behind it.
+  boom: (c, out, t) => {
+    burst(c, out, t, { dur: 0.25, gain: 0.9, filter: "highpass", freq: 600 });
+    tone(c, out, t, { freq: 90, freqEnd: 24, dur: 2.2, gain: 0.95, attack: 0.004 });
+    burst(c, out, t + 0.03, { dur: 3.4, gain: 0.7, filter: "lowpass", freq: 2200, freqEnd: 90, attack: 0.02 });
+    for (let i = 0; i < 9; i++) burst(c, out, t + 0.5 + i * 0.22, { dur: 0.12, gain: 0.12, filter: "highpass", freq: 1800 });
+  },
+  // A room full of people breathing out: slow, low, falling.
+  groan: (c, out, t) => {
+    burst(c, out, t, { dur: 2.6, gain: 0.16, filter: "bandpass", freq: 520, freqEnd: 260, q: 1.6, attack: 0.5 });
+    burst(c, out, t + 0.2, { dur: 2.2, gain: 0.1, filter: "bandpass", freq: 340, freqEnd: 190, q: 1.2, attack: 0.5 });
+  },
+  // Engine losing its fuel: coughs and stutters.
+  sputter: (c, out, t) => {
+    [0, 0.22, 0.4, 0.7, 0.85, 1.2].forEach((d) =>
+      burst(c, out, t + d, { dur: 0.16, gain: 0.35, filter: "lowpass", freq: 700, freqEnd: 150, attack: 0.01 }),
+    );
+  },
   touchdown: (c, out, t) => {
     tone(c, out, t, { freq: 70, freqEnd: 35, dur: 0.6, gain: 0.6, attack: 0.01 });
     burst(c, out, t, { dur: 1, gain: 0.3, filter: "lowpass", freq: 500, freqEnd: 150 });
@@ -337,4 +358,118 @@ export function speak(text: string, locale: "en" | "vi") {
 
 export function stopSpeaking() {
   if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+}
+
+export type ScoreMood = "ride" | "awe" | "dread" | "hush";
+
+/** Chord voices per mood: [frequency, gain]. Four slow oscillators crossfade between them. */
+const CHORDS: Record<ScoreMood, [number, number][]> = {
+  ride: [[55, 0.5], [82.4, 0.4], [110, 0.35], [164.8, 0.2]],
+  awe: [[73.4, 0.4], [146.8, 0.4], [220, 0.35], [370, 0.28]],
+  dread: [[55, 0.55], [58.3, 0.45], [77.8, 0.35], [233, 0.15]],
+  hush: [[55, 0.06], [82.4, 0.05], [110, 0.04], [164.8, 0.03]],
+};
+
+export interface Score {
+  setMood: (mood: ScoreMood) => void;
+  stop: () => void;
+}
+
+/**
+ * A procedural film-score pad: four soft oscillators through a moving low-pass filter. It cannot
+ * play a tune, but it sets the mood the way a held string chord does (rising dread, then awe).
+ */
+export function startScore(initial: ScoreMood = "ride"): Score {
+  const none: Score = { setMood: () => {}, stop: () => {} };
+  if (!enabled()) return none;
+  const a = audio();
+  if (!a) return none;
+  const { c, out } = a;
+  const master = c.createGain();
+  master.gain.value = 0.0001;
+  const filter = c.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = 500;
+  filter.Q.value = 0.8;
+  const lfo = c.createOscillator();
+  const lfoGain = c.createGain();
+  lfo.frequency.value = 0.12;
+  lfoGain.gain.value = 180;
+  lfo.connect(lfoGain).connect(filter.frequency);
+  const voices = CHORDS[initial].map(([f], i) => {
+    const o = c.createOscillator();
+    o.type = i % 2 ? "triangle" : "sawtooth";
+    o.frequency.value = f;
+    o.detune.value = (i - 1.5) * 6;
+    const g = c.createGain();
+    g.gain.value = 0;
+    o.connect(g).connect(filter);
+    o.start();
+    return { o, g };
+  });
+  filter.connect(master).connect(out);
+  lfo.start();
+  master.gain.setTargetAtTime(0.5, c.currentTime, 1.5);
+
+  let stopped = false;
+  const apply = (mood: ScoreMood) => {
+    const now = c.currentTime;
+    CHORDS[mood].forEach(([f, g], i) => {
+      voices[i].o.frequency.setTargetAtTime(f, now, 1.2);
+      voices[i].g.gain.setTargetAtTime(g * 0.5, now, 1.6);
+    });
+    filter.frequency.setTargetAtTime(mood === "awe" ? 1800 : mood === "dread" ? 380 : mood === "hush" ? 250 : 650, now, 2);
+  };
+  apply(initial);
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    liveLoops.delete(stop);
+    const now = c.currentTime;
+    master.gain.cancelScheduledValues(now);
+    master.gain.setTargetAtTime(0.0001, now, 0.5);
+    for (const v of voices) v.o.stop(now + 2.5);
+    lfo.stop(now + 2.5);
+  };
+  liveLoops.add(stop);
+  return { setMood: (m) => !stopped && apply(m), stop };
+}
+
+/** A pulsing klaxon for the master alarm. Returns its stop function. */
+export function startAlarm(): () => void {
+  if (!enabled()) return () => {};
+  const a = audio();
+  if (!a) return () => {};
+  const { c, out } = a;
+  const osc = c.createOscillator();
+  osc.type = "square";
+  osc.frequency.value = 820;
+  const pulse = c.createGain();
+  pulse.gain.value = 0;
+  const lfo = c.createOscillator();
+  lfo.type = "square";
+  lfo.frequency.value = 2.4;
+  const lfoGain = c.createGain();
+  lfoGain.gain.value = 0.06;
+  const bias = c.createConstantSource();
+  bias.offset.value = 0.06;
+  lfo.connect(lfoGain).connect(pulse.gain);
+  bias.connect(pulse.gain);
+  osc.connect(pulse).connect(out);
+  osc.start();
+  lfo.start();
+  bias.start();
+  let stopped = false;
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    liveLoops.delete(stop);
+    const now = c.currentTime;
+    pulse.gain.cancelScheduledValues(now);
+    bias.stop(now + 0.05);
+    lfo.stop(now + 0.05);
+    osc.stop(now + 0.05);
+  };
+  liveLoops.add(stop);
+  return stop;
 }

@@ -60,6 +60,11 @@ export const vibration = (met: number) => sample(VIBRATION, met);
 export const tilt = (met: number) => sample(TILT, met);
 
 export type AscentEventId =
+  | "warn"
+  | "warnCritical"
+  | "engineFail"
+  | "abort"
+  | "boom"
   | "liftoff"
   | "towerClear"
   | "rollProgram"
@@ -100,6 +105,27 @@ export const EVENTS: AscentEvent[] = [
 /** Events whose time falls in (from, to]. Used to fire each one exactly once as the clock advances. */
 export function eventsBetween(from: number, to: number): AscentEvent[] {
   return EVENTS.filter((e) => e.met > from && e.met <= to);
+}
+
+/** Air friction heating at the window, 0..1: builds toward max dynamic pressure, gone after staging. */
+const HEAT: Row[] = [[0, 0], [40, 0.12], [70, 0.7], [85, 1], [100, 0.6], [125, 0.5], [132, 0], [540, 0]];
+export const heating = (met: number) => sample(HEAT, met);
+
+/** Mission seconds of warning before a failure, played at near real time so the dread has room. */
+export const TROUBLE_LEAD = 30;
+/** Mission seconds before the failure at which the situation turns critical (master alarm). */
+export const CRITICAL_LEAD = 12;
+/** Real seconds after the engines fail: the abort call, then the vehicle is lost. */
+export const FAIL_ABORT_AT = 2.4;
+export const FAIL_BOOM_AT = 6.8;
+export const FAIL_END_AT = 9.6;
+
+/** What went wrong, so the scene can say the right thing. */
+export type FailureCode = "slow-climb" | "fuel-depleted";
+export interface AscentFailure {
+  /** Mission time (s) at which the engines quit. */
+  met: number;
+  code: FailureCode;
 }
 
 /** Sky colour mix: 1 = daytime blue, 0 = black space. */

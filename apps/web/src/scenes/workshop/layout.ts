@@ -7,7 +7,7 @@ import type { LevelId, PartId } from "@/mocks/rocket-parts";
  * the parts of that level fill the view at rest and nothing has to be hunted for.
  */
 export const EYE = 1.65;
-export const HALL = { minX: -20, maxX: 20, minZ: -16, maxZ: 18, height: 36 } as const;
+export const HALL = { minX: -20, maxX: 20, minZ: -16, maxZ: 18, height: 42 } as const;
 
 /** Bottom and top (y) of each section of the stack, plus its radius at bottom and top. */
 export const STACK = {
@@ -81,6 +81,58 @@ export const VIEWPOINTS: Viewpoint[] = [
 ];
 
 export const VIEWPOINT_BY_LEVEL = Object.fromEntries(VIEWPOINTS.map((v) => [v.id, v])) as Record<LevelId, Viewpoint>;
+
+/* ------------------------------------------------------------------ crane stacking */
+
+export type CraneViewId = "crane1" | "crane2" | "crane3";
+
+/** The three lifts that build the rocket: bottom-to-top sections stacked on the first stage. */
+export interface CraneLift {
+  index: 0 | 1 | 2;
+  view: CraneViewId;
+  parts: PartId[];
+  /** Underside of the section once it is seated. */
+  seatY: number;
+  /** Section height, so the crane knows how far below the hook the load hangs. */
+  height: number;
+  start: { x: number; z: number; y: number };
+}
+
+export const CRANE_LIFTS: CraneLift[] = [
+  { index: 0, view: "crane1", parts: ["interstage", "stage2"], seatY: 12, height: 7.2, start: { x: -6.2, z: 3.8, y: 14.6 } },
+  { index: 1, view: "crane2", parts: ["lander", "service-module"], seatY: 19.2, height: 5, start: { x: 6.4, z: -3.2, y: 21.8 } },
+  { index: 2, view: "crane3", parts: ["crew-capsule", "escape-tower"], seatY: 24.2, height: 5.4, start: { x: -5.4, z: -3.6, y: 26.8 } },
+];
+
+const CRANE_EYE: Vec3 = [0, EYE, 16.8];
+const CRANE_AIM = [14, 19.5, 24];
+
+/** Fixed viewpoints that frame each lift from the hall floor; WASD drives the crane there, not the head. */
+export const CRANE_VIEWPOINTS: Viewpoint[] = CRANE_LIFTS.map((l) => ({
+  id: l.view,
+  label: { en: "the crane control point", vi: "vị trí điều khiển cầu trục" },
+  position: CRANE_EYE,
+  ...aim(CRANE_EYE, [0, CRANE_AIM[l.index], 0]),
+  yawRange: 0.1,
+  pitchRange: 0.1,
+}));
+
+export const ALL_VIEWPOINTS: Viewpoint[] = [...VIEWPOINTS, ...CRANE_VIEWPOINTS];
+
+/* ------------------------------------------------------------------ checklist stations */
+
+export interface StationSpot {
+  id: "fuel" | "electrical" | "pressure";
+  position: Vec3;
+  rotationY: number;
+}
+
+/** Three consoles around the pad. Each faces the rocket. */
+export const STATIONS: StationSpot[] = [
+  { id: "fuel", position: [6.2, 0, -0.6], rotationY: -Math.PI / 2 },
+  { id: "electrical", position: [-6.4, 0, 0.8], rotationY: Math.PI / 2 },
+  { id: "pressure", position: [-6.2, 0, -6.0], rotationY: Math.PI / 4 },
+];
 
 /** Local (viewpoint-relative, yaw-rotated) offset to world. Local -Z is the resting view direction. */
 export function toWorld(v: Viewpoint, local: Vec3): Vec3 {

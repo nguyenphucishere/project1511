@@ -2,7 +2,7 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { DoubleSide, type Group, type MeshBasicMaterial } from "three";
+import { DoubleSide, MathUtils, type Group, type MeshBasicMaterial } from "three";
 import { LightingRig } from "@/components/viewport/LightingRig";
 import { Environment } from "@react-three/drei";
 import { seeded } from "@/lib/random";
@@ -10,10 +10,14 @@ import { addTrauma } from "@/game/shake";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { SCENE_COLORS } from "@/lib/palette";
 import { GROUND_Y, PAD, ROCKET_HEIGHT, ROOM, TIER, WINDOW } from "./layout";
+import { mood } from "./mood";
+import { SkyExplosion } from "./SkyExplosion";
 
 interface ControlRoomWorldProps {
   /** performance.now() at ignition (T-0), or null while the rocket waits on the pad. */
   ignitionAt: number | null;
+  /** performance.now() when the vehicle is lost in the sky (failure cutscene), or null. */
+  explodeAt?: number | null;
 }
 
 /** Seconds of engine build-up before the clamps release. */
@@ -25,7 +29,7 @@ const CLIMB = 3.5;
  * Scene 3 geometry: the control room's back tier and front row, the window, and outside the
  * rocket on its pad at dawn. The launch itself is DOM-driven; this only plays the liftoff.
  */
-export function ControlRoomWorld({ ignitionAt }: ControlRoomWorldProps) {
+export function ControlRoomWorld({ ignitionAt, explodeAt = null }: ControlRoomWorldProps) {
   return (
     <>
       <LightingRig />
@@ -35,6 +39,7 @@ export function ControlRoomWorld({ ignitionAt }: ControlRoomWorldProps) {
       <Outside />
       {/* Remount per launch so smoke and position reset for the replacement vehicle. */}
       <LaunchPad key={ignitionAt ?? "idle"} ignitionAt={ignitionAt} />
+      {explodeAt !== null && <SkyExplosion explodeAt={explodeAt} />}
     </>
   );
 }
@@ -292,6 +297,16 @@ function SeatedOperator({
   const reduced = useReducedMotion();
 
   useFrame(({ clock }) => {
+    if (mood.dismay > 0) {
+      // Work stops: head drops forward, both hands come up to the face.
+      if (head.current) {
+        head.current.rotation.x = MathUtils.lerp(head.current.rotation.x, 0.55, 0.08);
+        head.current.rotation.y = MathUtils.lerp(head.current.rotation.y, 0, 0.08);
+      }
+      if (leftArm.current) leftArm.current.rotation.x = MathUtils.lerp(leftArm.current.rotation.x, -2.55, 0.08);
+      if (rightArm.current) rightArm.current.rotation.x = MathUtils.lerp(rightArm.current.rotation.x, -2.55, 0.08);
+      return;
+    }
     if (reduced) return;
     const t = clock.elapsedTime + phase;
     if (head.current) {
@@ -400,6 +415,14 @@ function WalkingStaff({
 
   useFrame(({ clock }) => {
     if (!root.current) return;
+    if (mood.dismay > 0) {
+      // Freeze in place, turn toward the window, hands on head.
+      root.current.rotation.y = MathUtils.lerp(root.current.rotation.y, Math.PI, 0.06);
+      for (const leg of [leftLeg.current, rightLeg.current]) if (leg) leg.rotation.x = MathUtils.lerp(leg.rotation.x, 0, 0.1);
+      for (const arm of [leftArm.current, rightArm.current]) if (arm) arm.rotation.x = MathUtils.lerp(arm.rotation.x, -2.6, 0.08);
+      if (body.current) body.current.rotation.x = MathUtils.lerp(body.current.rotation.x, 0.18, 0.06);
+      return;
+    }
     const mid = (minX + maxX) / 2;
     const amp = (maxX - minX) / 2;
     if (reduced) {

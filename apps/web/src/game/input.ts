@@ -24,3 +24,9 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
   return !!el?.closest?.("input, textarea, select, [contenteditable='true'], [role='group'], [role='tablist'], [role='slider']");
 }
+
+/**
+ * Set by a minigame that wants WASD for itself (the gantry crane): while locked the camera
+ * ignores the movement and look keys. A plain mutable flag, read every frame.
+ */
+export const inputLock = { keys: false };
