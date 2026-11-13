@@ -31,7 +31,7 @@ import { PAD } from "./layout";
  * Particles live in the pad's local space (this renders inside the pad group).
  */
 
-const MAX = 1600;
+const MAX = 3600;
 
 /** Heights on the stack (pad-local, above the stack base) where exhaust leaves the engines. */
 const STAGE1_NOZZLE_Y = 1.4;
@@ -115,9 +115,13 @@ function emit(
   const stage1 = t < SEPARATION_T;
   const stage2 = t >= STAGE2_T && t < Math.min(SEP2_T, burnEndT);
   const stage3 = t >= STAGE3_T && t < Math.min(burnEndT, CUTOFF_T);
-  if ((stage1 || stage2 || stage3) && rise > 0.5) {
-    const nozzle = stage1 ? STAGE1_NOZZLE_Y : stage2 ? STAGE2_NOZZLE_Y : STAGE3_NOZZLE_Y;
-    const rate = stage1 ? 60 : stage2 ? 46 : 30;
+  // Between stages the engines are off, but vapour keeps streaming off the freshly cut skirt, so the
+  // column behind the rocket never breaks into separate pieces.
+  const coast1 = t >= SEPARATION_T && t < STAGE2_T;
+  const coast2 = t >= SEP2_T && t < STAGE3_T;
+  if ((stage1 || stage2 || stage3 || coast1 || coast2) && rise > 0.5) {
+    const nozzle = stage1 || coast1 ? (coast1 ? INTERSTAGE_Y : STAGE1_NOZZLE_Y) : stage2 ? STAGE2_NOZZLE_Y : coast2 ? INTERSTAGE2_Y : STAGE3_NOZZLE_Y;
+    const rate = coast1 || coast2 ? 38 : stage1 ? 70 : stage2 ? 56 : 38;
     carry.trail += rate * dt;
     const count = Math.floor(carry.trail);
     carry.trail -= count;
@@ -125,7 +129,7 @@ function emit(
     for (let i = 0; i < count; i++) {
       const k = (i + Math.random()) / Math.max(count, 1);
       const y = prevRise + (rise - prevRise) * k + nozzle;
-      sim.spawnTrail(y, rocketSpeed(t), stage1);
+      sim.spawnTrail(y, rocketSpeed(t), stage1 ? 1 : stage2 || coast1 ? 2 : 3);
     }
   }
 
@@ -133,8 +137,8 @@ function emit(
   const puff = (at: number, y: number, n: number) => {
     if (prevT < at && t >= at) for (let i = 0; i < n; i++) sim.spawnRing(rocketRise(at) + y);
   };
-  puff(SEPARATION_T, INTERSTAGE_Y, 48);
-  puff(SEP2_T, INTERSTAGE2_Y, 36);
+  puff(SEPARATION_T, INTERSTAGE_Y, 90);
+  puff(SEP2_T, INTERSTAGE2_Y, 70);
   puff(ADAPTER_T, ADAPTER_Y, 24);
 }
 
@@ -205,10 +209,12 @@ class SmokeSim {
     this.lift[i] = 0.35 + r() * 0.5;
   }
 
-  spawnTrail(y: number, rocketV: number, stage1: boolean) {
+  /** `stage` 1..3: the exhaust column behind the climbing rocket; it lingers for many seconds so the whole climb stays drawn on the sky. */
+  spawnTrail(y: number, rocketV: number, stage: 1 | 2 | 3) {
     const r = this.rand;
     const i = this.add();
-    this.base(i, stage1 ? 4 + r() * 2 : 3 + r() * 1.5);
+    const stage1 = stage === 1;
+    this.base(i, stage1 ? 13 + r() * 6 : stage === 2 ? 11 + r() * 5 : 9 + r() * 4);
     this.px[i] = (r() - 0.5) * 0.8;
     this.pz[i] = (r() - 0.5) * 0.8;
     this.py[i] = y;
@@ -217,9 +223,9 @@ class SmokeSim {
     this.vx[i] = (r() - 0.5) * 2.5;
     this.vz[i] = (r() - 0.5) * 2.5;
     this.vy[i] = -Math.min(rocketV * 0.15, 6) - r() * 3;
-    this.size0[i] = stage1 ? 1.6 : 0.9;
-    this.size1[i] = stage1 ? 7 + r() * 4 : 4 + r() * 2;
-    this.alpha[i] = stage1 ? 0.7 : 0.4;
+    this.size0[i] = stage1 ? 2.2 : 1.4;
+    this.size1[i] = stage1 ? 10 + r() * 5 : stage === 2 ? 7 + r() * 3 : 5 + r() * 2;
+    this.alpha[i] = stage1 ? 0.62 : 0.5;
     this.heat[i] = 1;
     this.drag[i] = 1.4;
     this.lift[i] = 0.1;

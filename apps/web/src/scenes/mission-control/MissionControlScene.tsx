@@ -218,9 +218,12 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
         const people = cut.startsWith("room-") || cut.startsWith("crowd-");
         if (people) level = cut.endsWith("cheer") ? 1 : Math.min(level, 0.24);
         for (const b of beats) {
-          if (t >= b - 2 && t < b - 1.9 && !risers.has(b)) {
+          // The stage separations are twenty operations long: the tension climbs through all of them.
+          const long = b === SEPARATION_T || b === SEP2_T;
+          const lead = long ? 6.6 : 2;
+          if (t >= b - lead && t < b - lead + 0.1 && !risers.has(b)) {
             risers.add(b);
-            score.current?.riser(1.7); // tremolo strings, noise sweep and a timpani roll building to the cut
+            score.current?.riser(lead - 0.3); // tremolo strings, noise sweep and a timpani roll building to the cut
           }
           if (t >= b - 0.35 && t < b - 0.1) level = 0; // total drop-out, then the hit
           if (t >= b - 0.1 && !hits.has(b) && t < b + 1) {

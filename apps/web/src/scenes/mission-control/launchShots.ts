@@ -1,4 +1,5 @@
 import { ADAPTER_T, CSM_SEP_T, CUTOFF_T, DOCK_T, FILM_END, FLIP_FROM, FLIP_TO, HOLD_DOWN, INTER_T, LES_T, SEP2_T, SEPARATION_T, STAGE2_T, STAGE3_T, TOW_T, detachedPose } from "./ascent";
+import { GEAR_STATIONS, STATION } from "./separation";
 import { CABIN_FROM, CSM_Y, cabinEyeY, csmPose, towOffset } from "./docking";
 
 /** Where the cabin window is, along the eye's line of sight. */
@@ -156,6 +157,94 @@ function flyFrame({ pad, rise, speed, t }: ShotContext): ShotFrame {
 }
 const fly = (id: string, from: number): Shot => ({ id, from, frame: flyFrame });
 
+
+/* ---- the separation sequence: from the gears inside the skirt out to the ring and beyond ---- */
+
+const ease3 = (k: number) => k * k * (3 - 2 * k);
+const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+const lerp3 = (a: Vec, b: Vec, k: number): Vec => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+
+interface Ring {
+  /** Height of the cut above the stack base, and its radius. */
+  y: number;
+  r: number;
+  /** +1 when the sequencer sits above the cut, -1 when below. */
+  side: 1 | -1;
+  /** Height of the burning engines being cut off. */
+  flameY: number;
+}
+const RING_1: Ring = { y: 11.4, r: 1.6, side: 1, flameY: 4 };
+const RING_2: Ring = { y: 20.6, r: 1.16, side: -1, flameY: 13 };
+
+/** A point in a gear drive's own frame (x along the wall, y up, z inward), in world space. */
+function drive(pad: Vec, rise: number, ring: Ring, a: number, x: number, y: number, z: number): Vec {
+  const R = ring.r - 0.03;
+  return [
+    pad[0] + Math.sin(a) * R - Math.cos(a) * x - Math.sin(a) * z,
+    pad[1] + rise + ring.y + ring.side * 0.5 + y,
+    pad[2] + Math.cos(a) * R + Math.sin(a) * x - Math.cos(a) * z,
+  ];
+}
+
+/** A point on the outside of the ring at angle `a`, `out` metres off the skin, `dy` above the cut. */
+function outer(pad: Vec, rise: number, ring: Ring, a: number, out: number, dy: number): Vec {
+  const R = ring.r + out;
+  return [pad[0] + Math.sin(a) * R, pad[1] + rise + ring.y + dy, pad[2] + Math.cos(a) * R];
+}
+
+/**
+ * One continuous move, inside to outside: it starts a hand's breadth from the gear train on the
+ * inner wall, slides past it, goes out through the skin and keeps backing away while the view swings
+ * round onto the ring and its hardware.
+ */
+function gearOut(from: number, ring: Ring) {
+  const D = 3.4;
+  const a = GEAR_STATIONS[0]!;
+  return ({ pad, rise, t }: ShotContext): ShotFrame => {
+    const u = clamp01((t - from) / D);
+    const S = drive(pad, rise, ring, a, 0.02, 0.0, ring.r * 0.52);
+    const X = drive(pad, rise, ring, a, 0.5, 0.05, -0.12);
+    const E: Vec = [X[0] + Math.sin(a) * 5.5, X[1] + 1.6, X[2] + Math.cos(a) * 5.5];
+    const pos = u < 0.55 ? lerp3(S, X, ease3(u / 0.55)) : lerp3(X, E, ease3((u - 0.55) / 0.45));
+    const cluster = drive(pad, rise, ring, a, 0, 0, 0.12);
+    const hardware = outer(pad, rise, ring, a + 0.5, 0.05, 0);
+    const aim = lerp3(cluster, hardware, ease3(clamp01((u - 0.3) / 0.3)));
+    return { pos, aim, rate: 200, zoom: u < 0.5 ? 1.25 : 1.3, shake: 0.012 };
+  };
+}
+
+/** A close look at one piece of ring hardware from just off the skin. */
+const hardwareShot = (id: string, from: number, ring: Ring, a: number, zoom = 1.7): Shot => ({
+  id,
+  from,
+  frame: ({ pad, rise }) => ({
+    pos: outer(pad, rise, ring, a - 0.55 / ring.r * 1.6, 1.9, 0.5),
+    aim: outer(pad, rise, ring, a, 0.03, 0),
+    rate: 200,
+    zoom,
+    shake: 0.02,
+  }),
+});
+
+/** The shots of one separation, from the gear train out to the engines cutting off. */
+function separationShots(prefix: string, T: number, ring: Ring): Shot[] {
+  return [
+    { id: `${prefix}-gears`, from: T - 7.3, frame: gearOut(T - 7.3, ring) },
+    hardwareShot(`${prefix}-umbilical`, T - 3.9, ring, STATION.umbilical[0]),
+    hardwareShot(`${prefix}-valve`, T - 3.5, ring, STATION.valve[0]),
+    hardwareShot(`${prefix}-hook`, T - 3.1, ring, STATION.hook[0]),
+    hardwareShot(`${prefix}-pins`, T - 2.7, ring, STATION.hook[0] + 0.2 / ring.r, 2.2),
+    hardwareShot(`${prefix}-guide`, T - 2.3, ring, STATION.guidePin[0], 2.0),
+    hardwareShot(`${prefix}-pushers`, T - 1.9, ring, STATION.pusher[0]),
+    {
+      // Looking up the plume as the engines cut off one after another.
+      id: `${prefix}-cutoff`,
+      from: T - 1.5,
+      frame: ({ pad, rise }) => ({ pos: at(pad, 5.2, rise + ring.flameY + 3.5, 5.2), aim: at(pad, 0, rise + ring.flameY + 1, 0), rate: 30, zoom: 1.4, shake: 0.05 }),
+    },
+  ];
+}
+
 export const SHOTS: Shot[] = [
   {
     // Hold-down: a low, close look at the engines building up, smoke rolling out.
@@ -205,7 +294,7 @@ export const SHOTS: Shot[] = [
   {
     // The classic long lens from the viewing field.
     id: "tracking",
-    from: SEPARATION_T - 4.4,
+    from: HOLD_DOWN + 11,
     frame: ({ pad, rise, speed }) => ({
       pos: at(pad, -24 - rise * 0.22, 5 + rise * 0.18, 43),
       aim: at(pad, 0, rise + speed / 5 + 17, 0),
@@ -215,14 +304,14 @@ export const SHOTS: Shot[] = [
     }),
   },
 
-  crowdShot(CROWD_BEACH, BEACH_R, SEPARATION_T - 3.0, "crowd-beach", 2.0),
+  crowdShot(CROWD_BEACH, BEACH_R, HOLD_DOWN + 12.6, "crowd-beach", 2.0),
 
-  /* ---- first separation ---- */
-  { id: "ring", from: SEPARATION_T - 2.2, frame: orbit(SEPARATION_T - 2.2, RING1, 5.2, 1.7, 0.6, 0.5, 1.7, 0.02, 20) },
+  /* ---- first separation: twenty operations, from the gears inside outward ---- */
+  ...separationShots("sep1", SEPARATION_T, RING_1),
   {
-    // Staging: very tight on the ring as the bolts fire and the shock ring flashes out.
+    // Staging: very tight on the ring as the charge fires and the shock ring flashes out.
     id: "staging",
-    from: SEPARATION_T - 0.9,
+    from: SEPARATION_T - 0.7,
     frame: ({ pad, rise }) => ({ pos: at(pad, 3.6, rise + 13.4, 3.4), aim: at(pad, 0.4, rise + 11.9, 0), rate: 26, zoom: 1.9, shake: 0.04 }),
   },
   // The petals unfold: an orbit the other way, the spent stage sliding off underneath.
@@ -323,13 +412,11 @@ export const SHOTS: Shot[] = [
     }),
   },
 
-  roomBacks("room-backs-2", SEP2_T - 3.0, -2.4),
-
   /* ---- second separation ---- */
-  { id: "ring-2", from: SEP2_T - 2.2, frame: orbit(SEP2_T - 2.2, RING2, 4.6, 1.6, 3.7, -0.5, 1.7, 0.02, 20) },
+  ...separationShots("sep2", SEP2_T, RING_2),
   {
     id: "staging-2",
-    from: SEP2_T - 0.9,
+    from: SEP2_T - 0.7,
     frame: ({ pad, rise }) => ({ pos: at(pad, 3.2, rise + 20.7, 3), aim: at(pad, 0.3, rise + 19.3, 0), rate: 26, zoom: 1.9, shake: 0.04 }),
   },
   {

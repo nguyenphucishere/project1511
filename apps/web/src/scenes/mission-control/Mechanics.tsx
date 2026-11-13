@@ -2,12 +2,13 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { AdditiveBlending, CylinderGeometry, DoubleSide, MeshBasicMaterial, type BufferGeometry, type Group, type Mesh } from "three";
+import { AdditiveBlending, BoxGeometry, CylinderGeometry, DoubleSide, LatheGeometry, Matrix4, MeshBasicMaterial, Quaternion, Vector2, Vector3, type BufferGeometry, type Group, type Mesh } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { addTrauma } from "@/game/shake";
 import { playSfx, type SfxId } from "@/game/sfx";
 import { SCENE_COLORS } from "@/lib/palette";
 import { HOLD_DOWN, LES_T } from "./ascent";
+import { bake, type BakePart } from "./bake";
 
 /**
  * The hardware of the launch, as it works on a real vehicle (Saturn V, from the flight manual and
@@ -20,16 +21,16 @@ import { HOLD_DOWN, LES_T } from "./ascent";
  * ignition itself, so the camera can cut anywhere and find it moving.
  */
 
-const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+export const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const ease = (k: number) => k * k * (3 - 2 * k);
 /** 0 before `a`, 1 after `b`, eased in between. */
-const span = (t: number, a: number, b: number) => ease(clamp01((t - a) / (b - a)));
-const since = (ignitionAt: number | null) => (ignitionAt === null ? -1 : (performance.now() - ignitionAt) / 1000);
+export const span = (t: number, a: number, b: number) => ease(clamp01((t - a) / (b - a)));
+export const since = (ignitionAt: number | null) => (ignitionAt === null ? -1 : (performance.now() - ignitionAt) / 1000);
 
-type Cue = [offset: number, id: SfxId, trauma?: number];
+export type Cue = [offset: number, id: SfxId, trauma?: number];
 
 /** Plays each sound once as the film passes its time (`base` + offset). */
-function useCues(base: number, cues: Cue[]) {
+export function useCues(base: number, cues: Cue[]) {
   const prev = useRef(-1);
   return (t: number) => {
     for (const [o, id, trauma] of cues) {
@@ -602,14 +603,73 @@ export function AdapterPanels({ ignitionAt, at, y0, h, r0, r1, stackAccel }: Ada
 
 /* ---------------------------------------------------------------- the escape tower */
 
+/** A thin strut between two points, as a part for `bake`. */
+function strut(a: [number, number, number], b: [number, number, number], r: number, color: string): BakePart {
+  const va = new Vector3(...a);
+  const vb = new Vector3(...b);
+  const dir = vb.clone().sub(va);
+  const len = dir.length();
+  const q = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), dir.normalize());
+  const m = new Matrix4().compose(va.clone().add(vb).multiplyScalar(0.5), q, new Vector3(1, 1, 1));
+  return { g: new CylinderGeometry(r, r, len, 5), color, at: [0, 0, 0], matrix: m };
+}
+
+/** The tower's lattice: four legs, ring struts and X-bracing on every face, between two heights. */
+function trussGeometry(y0: number, y1: number, r0: number, r1: number): BufferGeometry {
+  const parts: BakePart[] = [];
+  const levels = 4;
+  const at = (leg: number, k: number): [number, number, number] => {
+    const a = (leg * Math.PI) / 2 + Math.PI / 4;
+    const r = r0 + (r1 - r0) * (k / levels);
+    return [Math.sin(a) * r, y0 + ((y1 - y0) * k) / levels, Math.cos(a) * r];
+  };
+  for (let leg = 0; leg < 4; leg++) parts.push(strut(at(leg, 0), at(leg, levels), 0.034, "#dfe3e8"));
+  for (let k = 0; k <= levels; k++) {
+    for (let leg = 0; leg < 4; leg++) parts.push(strut(at(leg, k), at((leg + 1) % 4, k), 0.016, "#c4cbd4"));
+  }
+  for (let k = 0; k < levels; k++) {
+    for (let leg = 0; leg < 4; leg++) {
+      const n = (leg + 1) % 4;
+      parts.push(strut(at(leg, k), at(n, k + 1), 0.013, "#b4bcc6"));
+      parts.push(strut(at(n, k), at(leg, k + 1), 0.013, "#b4bcc6"));
+    }
+  }
+  return bake(parts);
+}
+
+/** The boost protective cover: a smooth ogive shell over the command module. */
+function coverGeometry(): BufferGeometry {
+  const pts: Vector2[] = [];
+  const n = 18;
+  for (let i = 0; i <= n; i++) {
+    const k = i / n;
+    // Wide at the base, curving in to a blunt cap the tower stands on
+    const r = 0.99 - 0.69 * (1 - Math.pow(1 - k, 1.7));
+    pts.push(new Vector2(r, 2.25 * k));
+  }
+  return new LatheGeometry(pts, 32);
+}
+
+/** The nose: a long ogive on the pitch-control motor and a thin probe with a banded tip. */
+function noseGeometry(): BufferGeometry {
+  const pts: Vector2[] = [];
+  const n = 14;
+  for (let i = 0; i <= n; i++) {
+    const k = i / n;
+    pts.push(new Vector2(0.3 * Math.pow(1 - k, 0.62) + 0.025 * k, 1.35 * k));
+  }
+  return new LatheGeometry(pts, 20);
+}
+
 /**
- * The launch escape tower: lattice legs, a solid motor with four canted nozzles and two canard fins
- * that flip out. At LES_T the tower is cut loose, the motor lights and it pulls away from the
- * capsule, pitching off to the side.
+ * The launch escape system as flown on Apollo, bottom to top: the boost protective cover over the
+ * command module, a four-legged lattice tower, the escape motor (four canted nozzles at its base,
+ * white with black bands), the canard section with its two fins folded flat, the pitch-control
+ * motor with its ring of small ports, an ogive nose and a thin probe. At LES_T the tower is cut
+ * loose and the motor carries tower and cover away to the side, uncovering the capsule.
  */
 export function EscapeTower({ ignitionAt, y0 }: { ignitionAt: number | null; y0: number }) {
   const body = useRef<Group>(null);
-  const canards = useRef<(Group | null)[]>([]);
   const flame = useRef<Group>(null);
   const cues = useCues(LES_T, [
     [-0.8, "relay"],
@@ -617,6 +677,24 @@ export function EscapeTower({ ignitionAt, y0 }: { ignitionAt: number | null; y0:
     [-0.05, "pyro", 0.5],
     [0.05, "retro", 0.4],
   ]);
+  const cover = useMemo(() => coverGeometry(), []);
+  const nose = useMemo(() => noseGeometry(), []);
+  const truss = useMemo(() => trussGeometry(y0 + 0.6, y0 + 4.0, 0.34, 0.5), [y0]);
+  const ports = useMemo(() => {
+    const parts: BakePart[] = [];
+    const port = new BoxGeometry(0.05, 0.06, 0.03);
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      const m = new Matrix4().compose(
+        new Vector3(Math.sin(a) * 0.2, 0, Math.cos(a) * 0.2),
+        new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), a),
+        new Vector3(1, 1, 1),
+      );
+      parts.push({ g: port, color: "#15181d", at: [0, 0, 0], matrix: m });
+    }
+    return bake(parts);
+  }, []);
+
   useFrame(() => {
     const t = since(ignitionAt);
     const tau = t - LES_T;
@@ -626,10 +704,6 @@ export function EscapeTower({ ignitionAt, y0 }: { ignitionAt: number | null; y0:
       body.current.rotation.z = -Math.min(1.25, go * 0.32);
       body.current.visible = tau < 7;
     }
-    const flip = span(tau, -0.6, -0.1) * 1.5;
-    canards.current.forEach((c) => {
-      if (c) c.rotation.z = flip;
-    });
     if (flame.current) {
       const on = tau >= 0 && tau < 3.2;
       flame.current.visible = on;
@@ -637,68 +711,110 @@ export function EscapeTower({ ignitionAt, y0 }: { ignitionAt: number | null; y0:
     }
     cues(t);
   });
-  const motorY = y0 + 3.8;
+
+  const base = y0 - 1.65;
+  const motorBot = y0 + 4.35;
+  const motorTop = y0 + 7.2;
   return (
     <group>
       <group ref={body}>
-        {[0, 1, 2, 3].map((i) => {
-          const a = (i * Math.PI) / 2 + Math.PI / 4;
-          return (
-            <mesh key={i} position={[Math.sin(a) * 0.5, y0 + 1.8, Math.cos(a) * 0.5]} rotation={[Math.cos(a) * 0.23, 0, -Math.sin(a) * 0.23]}>
-              <cylinderGeometry args={[0.03, 0.04, 3.7, 5]} />
-              <meshStandardMaterial {...STEEL} />
-            </mesh>
-          );
-        })}
-        {[0.7, 1.7, 2.7].map((dy) => (
-          <mesh key={dy} position={[0, y0 + dy, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.72 - dy * 0.1, 0.025, 5, 16]} />
-            <meshStandardMaterial {...STEEL} />
-          </mesh>
-        ))}
-        <mesh position={[0, motorY + 0.6, 0]}>
-          <cylinderGeometry args={[0.3, 0.3, 2.4, 12]} />
-          <meshStandardMaterial color={SCENE_COLORS.spaceWhite} roughness={0.45} />
+        {/* Boost protective cover, with its seam ring and the tower's mounting collar */}
+        <mesh geometry={cover} position={[0, base, 0]}>
+          <meshStandardMaterial color="#eef1f5" roughness={0.42} metalness={0.15} />
         </mesh>
-        <mesh position={[0, motorY + 2.3, 0]}>
-          <coneGeometry args={[0.3, 1.3, 12]} />
-          <meshStandardMaterial color={SCENE_COLORS.nasaRed} roughness={0.4} />
+        <mesh position={[0, base + 0.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.99, 0.022, 6, 40]} />
+          <meshStandardMaterial {...STEEL} />
         </mesh>
-        <mesh position={[0, motorY - 0.65, 0]}>
-          <cylinderGeometry args={[0.4, 0.34, 0.35, 12]} />
+        <mesh position={[0, base + 0.6, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.89, 0.014, 5, 40]} />
+          <meshStandardMaterial color="#1b1f26" roughness={0.6} />
+        </mesh>
+        <mesh position={[0, y0 + 0.55, 0]}>
+          <cylinderGeometry args={[0.36, 0.4, 0.14, 12]} />
+          <meshStandardMaterial {...DARK} />
+        </mesh>
+
+        {/* The lattice tower */}
+        <mesh geometry={truss}>
+          <meshStandardMaterial vertexColors metalness={0.6} roughness={0.4} />
+        </mesh>
+        {/* Skirt the legs end in, over the nozzles */}
+        <mesh position={[0, y0 + 4.1, 0]}>
+          <cylinderGeometry args={[0.5, 0.52, 0.2, 14]} />
           <meshStandardMaterial {...DARK} />
         </mesh>
         {[0, 1, 2, 3].map((i) => {
           const a = (i * Math.PI) / 2;
           return (
-            <mesh key={i} position={[Math.sin(a) * 0.3, motorY - 0.95, Math.cos(a) * 0.3]} rotation={[Math.cos(a) * 0.5, 0, -Math.sin(a) * 0.5]}>
-              <cylinderGeometry args={[0.07, 0.12, 0.4, 8, 1, true]} />
+            <mesh key={i} position={[Math.sin(a) * 0.34, y0 + 4.15, Math.cos(a) * 0.34]} rotation={[Math.cos(a) * 0.55, 0, -Math.sin(a) * 0.55]}>
+              <cylinderGeometry args={[0.07, 0.13, 0.42, 10, 1, true]} />
               <meshStandardMaterial {...BRASS} side={DoubleSide} />
             </mesh>
           );
         })}
-        {[1, -1].map((side, i) => (
-          <group key={side} position={[0.3 * side, motorY + 1.8, 0]} scale={[side, 1, 1]}>
-            <group ref={(el) => (canards.current[i] = el)}>
-              <mesh position={[0.35, 0, 0]}>
-                <boxGeometry args={[0.7, 0.04, 0.34]} />
-                <meshStandardMaterial {...STEEL} />
-              </mesh>
-            </group>
-          </group>
+
+        {/* The escape motor: white case, black bands and a red tracking stripe */}
+        <mesh position={[0, (motorBot + motorTop) / 2, 0]}>
+          <cylinderGeometry args={[0.33, 0.33, motorTop - motorBot, 20]} />
+          <meshStandardMaterial color="#f3f5f8" roughness={0.4} metalness={0.1} />
+        </mesh>
+        {[0.25, 1.35, 2.5].map((d) => (
+          <mesh key={d} position={[0, motorBot + d, 0]}>
+            <cylinderGeometry args={[0.338, 0.338, 0.22, 20]} />
+            <meshStandardMaterial color="#14171c" roughness={0.55} />
+          </mesh>
         ))}
-        <group ref={flame} position={[0, motorY - 1.1, 0]} visible={false}>
-          <mesh position={[0, -1, 0]} rotation={[Math.PI, 0, 0]}>
-            <coneGeometry args={[0.45, 2.4, 10, 1, true]} />
+        <mesh position={[0, motorBot + 1.9, 0]}>
+          <cylinderGeometry args={[0.336, 0.336, 0.08, 20]} />
+          <meshStandardMaterial color={SCENE_COLORS.nasaRed} roughness={0.5} />
+        </mesh>
+
+        {/* Canard section: a collar, two fins folded flat against it */}
+        <mesh position={[0, motorTop + 0.25, 0]}>
+          <cylinderGeometry args={[0.3, 0.34, 0.5, 16]} />
+          <meshStandardMaterial color="#d7dce2" metalness={0.4} roughness={0.45} />
+        </mesh>
+        {[1, -1].map((s) => (
+          <mesh key={s} position={[s * 0.31, motorTop + 0.25, 0]}>
+            <boxGeometry args={[0.03, 0.36, 0.2]} />
+            <meshStandardMaterial {...STEEL} />
+          </mesh>
+        ))}
+
+        {/* Pitch-control motor with its ring of ports, then the nose */}
+        <mesh position={[0, motorTop + 0.85, 0]}>
+          <cylinderGeometry args={[0.2, 0.3, 0.7, 16]} />
+          <meshStandardMaterial color="#f3f5f8" roughness={0.4} />
+        </mesh>
+        <mesh geometry={ports} position={[0, motorTop + 0.9, 0]}>
+          <meshStandardMaterial vertexColors roughness={0.6} />
+        </mesh>
+        <mesh geometry={nose} position={[0, motorTop + 1.2, 0]}>
+          <meshStandardMaterial color="#f3f5f8" roughness={0.4} />
+        </mesh>
+        <mesh position={[0, motorTop + 2.2, 0]}>
+          <cylinderGeometry args={[0.014, 0.025, 0.65, 8]} />
+          <meshStandardMaterial {...STEEL} />
+        </mesh>
+        <mesh position={[0, motorTop + 2.56, 0]}>
+          <sphereGeometry args={[0.032, 8, 6]} />
+          <meshStandardMaterial color="#c1121f" roughness={0.4} />
+        </mesh>
+
+        {/* The motor's plume once the tower is cut loose */}
+        <group ref={flame} position={[0, y0 + 3.9, 0]} visible={false}>
+          <mesh position={[0, -1.1, 0]} rotation={[Math.PI, 0, 0]}>
+            <coneGeometry args={[0.55, 2.8, 12, 1, true]} />
             <meshBasicMaterial color={SCENE_COLORS.flameOuter} side={DoubleSide} toneMapped={false} />
           </mesh>
-          <mesh position={[0, -0.7, 0]} rotation={[Math.PI, 0, 0]}>
-            <coneGeometry args={[0.24, 1.6, 10]} />
+          <mesh position={[0, -0.8, 0]} rotation={[Math.PI, 0, 0]}>
+            <coneGeometry args={[0.3, 1.8, 12]} />
             <meshBasicMaterial color={SCENE_COLORS.flameCore} toneMapped={false} />
           </mesh>
         </group>
       </group>
-      <CutFlash ignitionAt={ignitionAt} at={LES_T} y={y0} r={0.55} sound={false} />
+      <CutFlash ignitionAt={ignitionAt} at={LES_T} y={y0 + 0.55} r={0.45} sound={false} />
     </group>
   );
 }

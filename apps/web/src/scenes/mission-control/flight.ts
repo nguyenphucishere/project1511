@@ -15,14 +15,14 @@ import type { Dictionary } from "@/i18n";
 const TIME_WARP: [real: number, mission: number][] = [
   [0, 0],
   [8, 6],
-  [17, 162],
-  [19, 166],
-  [28, 200],
-  [35, 400],
-  [38.5, 408],
-  [41, 440],
-  [55, 500],
-  [74, 540],
+  [24, 162],
+  [28, 166],
+  [38, 200],
+  [50, 400],
+  [55, 408],
+  [60, 440],
+  [76, 500],
+  [96, 540],
 ];
 
 /** Scale of the early launch beats (hold-down, smoke); the whole launch runs about a minute. */

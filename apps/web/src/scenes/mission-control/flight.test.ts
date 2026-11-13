@@ -4,13 +4,13 @@ import { ADAPTER_SEC, LES_SEC, STAGE2_IGNITION_SEC, STAGE2_SEP_SEC, STAGE3_IGNIT
 describe("flight time warp", () => {
   it("plays liftoff in slow motion and reaches orbit insertion after the long film", () => {
     expect(missionSecondsAt(3)).toBeLessThan(3);
-    expect(missionSecondsAt(73.8)).toBeGreaterThan(535);
-    expect(realSecondsAt(540)).toBeGreaterThan(70);
+    expect(missionSecondsAt(95.8)).toBeGreaterThan(535);
+    expect(realSecondsAt(540)).toBeGreaterThan(90);
   });
 
   it("is monotonic and inverts", () => {
     let last = -1;
-    for (let r = 0; r <= 75; r += 0.25) {
+    for (let r = 0; r <= 100; r += 0.25) {
       const m = missionSecondsAt(r);
       expect(m).toBeGreaterThan(last);
       expect(realSecondsAt(m)).toBeCloseTo(r, 6);

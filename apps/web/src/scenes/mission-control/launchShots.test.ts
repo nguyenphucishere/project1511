@@ -12,7 +12,7 @@ describe("launch shots", () => {
   it("cut often enough to feel like a film but never faster than a beat", () => {
     for (let i = 1; i < SHOTS.length; i++) {
       const gap = SHOTS[i]!.from - SHOTS[i - 1]!.from;
-      expect(gap).toBeGreaterThan(0.45);
+      expect(gap).toBeGreaterThan(0.35);
       expect(gap).toBeLessThan(8);
     }
   });

@@ -23,6 +23,7 @@ import {
 import { CabinView } from "./CabinView";
 import { Capsule, LunarModule, VaporCone } from "./DockedParts";
 import { LaunchSmoke } from "./LaunchSmoke";
+import { SeparationRig } from "./SeparationRig";
 import {
   AdapterPanels,
   CutFlash,
@@ -103,15 +104,15 @@ export function LaunchVehicle({ ignitionAt, burnEndT }: { ignitionAt: number | n
 
     // Stage 1 flame: grows as the clamps release and the stack picks up speed; out at staging.
     if (flame1.current) {
-      flame1.current.visible = t >= 0 && !sep1;
+      flame1.current.visible = t >= 0 && t < SEPARATION_T - 0.6;
       const climb = Math.max(0, t - HOLD_DOWN);
       // The centre engine shuts down a moment early, so the plume narrows before the cut.
-      const narrow = t > SEPARATION_T - 1.8 ? 0.78 : 1;
+      const narrow = t > SEPARATION_T - 1.4 ? 0.7 : 1;
       flame1.current.scale.set((1 + Math.min(climb, 6) * 0.05) * narrow, Math.min(1, t / 0.9) * (1 + Math.min(climb, 5) * 0.28) * flicker, (1 + Math.min(climb, 6) * 0.05) * narrow);
     }
     // Stage 2: a broad plume from five engines, until it is dropped.
     if (flame2.current) {
-      const on = t >= STAGE2_T && t < Math.min(SEP2_T, burnEndT);
+      const on = t >= STAGE2_T && t < Math.min(SEP2_T - 0.6, burnEndT);
       flame2.current.visible = on;
       if (on) {
         const k = Math.min(1, (t - STAGE2_T) / 0.5);
@@ -147,8 +148,8 @@ export function LaunchVehicle({ ignitionAt, burnEndT }: { ignitionAt: number | n
 
       <group ref={stage1}>
         <FirstStage gimbals={gimbals} />
-        <Fairings ignitionAt={ignitionAt} at={SEPARATION_T} />
-        <RetroRockets ignitionAt={ignitionAt} at={SEPARATION_T} y={4.2} r={1.9} count={8} dur={0.8} length={2.8} rotate={Math.PI / 8} />
+        <Fairings ignitionAt={ignitionAt} at={SEPARATION_T + 0.5} />
+        <RetroRockets ignitionAt={ignitionAt} at={SEPARATION_T + 0.1} y={4.2} r={1.9} count={8} dur={0.8} length={2.8} rotate={Math.PI / 8} />
         <FlangeBolts y={11.3} r={1.62} n={48} />
         <group ref={flame1} visible={false} position={[0, 1.5, 0]}>
           <Flame radius={1.9} length={7.5} />
@@ -160,12 +161,14 @@ export function LaunchVehicle({ ignitionAt, burnEndT }: { ignitionAt: number | n
         <InterstageShell y0={11.4} h={2.2} r0={1.6} r1={1.52} color="#d8dde6" />
         <UllageMotors ignitionAt={ignitionAt} y={13.3} r={1.58} from={SEPARATION_T - 0.1} to={SEPARATION_T + 3.6} count={8} />
         <CutFlash ignitionAt={ignitionAt} at={SEPARATION_T} y={11.4} r={1.62} />
+        <SeparationRig ignitionAt={ignitionAt} at={SEPARATION_T} y={11.4} r={1.6} side={1} />
       </group>
 
       <group ref={stage2}>
         <SecondStage />
         <InterstageShell y0={19} h={1.6} r0={1.5} r1={1.16} color="#2b3445" />
-        <RetroRockets ignitionAt={ignitionAt} at={SEP2_T} y={18.5} r={1.56} count={4} dur={1.1} length={2.2} rotate={Math.PI / 4} />
+        <SeparationRig ignitionAt={ignitionAt} at={SEP2_T} y={20.6} r={1.16} side={-1} />
+        <RetroRockets ignitionAt={ignitionAt} at={SEP2_T + 0.1} y={18.5} r={1.56} count={4} dur={1.1} length={2.2} rotate={Math.PI / 4} />
         <CutFlash ignitionAt={ignitionAt} at={INTER_T} y={13.6} r={1.52} />
         <VaporCone ignitionAt={ignitionAt} from={11.0} to={14.6} y={24} />
         <group ref={flame2} visible={false} position={[0, 12.6, 0]}>
