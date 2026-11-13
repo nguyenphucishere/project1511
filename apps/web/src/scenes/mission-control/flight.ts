@@ -5,15 +5,44 @@ import type { Dictionary } from "@/i18n";
  * telemetry curves. Telemetry is interpolated from a small table, not computed from physics.
  */
 
-/** Real seconds shown at 1× so the liftoff can be watched before time is sped up. */
-const REALTIME_SPAN = 6;
-/** Mission seconds per real second after that: ~9 min of ascent in ~13 s total. */
-const WARP = 75;
+/**
+ * Real seconds → mission seconds. The liftoff plays at 1× so it can be watched, the climb is
+ * sped up 75×, then time slows around staging (T+02:42 separation, T+02:46 stage 2 ignition)
+ * so the stage falling away and the second engine lighting are visible, then 75× to orbit.
+ */
+const TIME_WARP: [real: number, mission: number][] = [
+  [0, 0],
+  [6, 6],
+  [8, 156],
+  [10.4, 172],
+  [15.36, 544],
+];
+
+function interpolate(table: [number, number][], x: number, from: 0 | 1): number {
+  const to = from === 0 ? 1 : 0;
+  if (x <= 0) return Math.max(0, x);
+  for (let i = 1; i < table.length; i++) {
+    const a = table[i - 1]!;
+    const b = table[i]!;
+    if (x <= b[from]) return a[to] + ((b[to] - a[to]) * (x - a[from])) / (b[from] - a[from]);
+  }
+  const a = table[table.length - 2]!;
+  const b = table[table.length - 1]!;
+  return b[to] + ((b[to] - a[to]) * (x - b[from])) / (b[from] - a[from]);
+}
 
 export function missionSecondsAt(realSec: number): number {
-  if (realSec <= REALTIME_SPAN) return Math.max(0, realSec);
-  return REALTIME_SPAN + (realSec - REALTIME_SPAN) * WARP;
+  return interpolate(TIME_WARP, realSec, 0);
 }
+
+/** Inverse of missionSecondsAt: when (real seconds after ignition) a mission time is shown. */
+export function realSecondsAt(missionSec: number): number {
+  return interpolate(TIME_WARP, missionSec, 1);
+}
+
+/** Mission times the 3D rocket acts on. */
+export const STAGING_SEC = 162;
+export const STAGE2_IGNITION_SEC = 166;
 
 export interface FlightEvent {
   t: number;

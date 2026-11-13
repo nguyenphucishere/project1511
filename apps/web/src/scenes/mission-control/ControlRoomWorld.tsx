@@ -1,42 +1,141 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { BackSide, DoubleSide, type Group, type MeshBasicMaterial } from "three";
+import { BackSide, DoubleSide, PerspectiveCamera, Vector3, type Camera, type Group, type MeshBasicMaterial } from "three";
 import { LightingRig } from "@/components/viewport/LightingRig";
 import { Starfield } from "@/components/viewport/Starfield";
 import { seeded } from "@/lib/random";
-import { addTrauma } from "@/game/shake";
+import { useSceneStore, type CameraRig } from "@/game/sceneStore";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { SCENE_COLORS } from "@/lib/palette";
-import { GROUND_Y, PAD, ROCKET_HEIGHT, ROOM, TIER, WINDOW } from "./layout";
+import { rocketRise, rocketSpeed } from "./ascent";
+import { LaunchVehicle } from "./LaunchVehicle";
+import { GROUND_Y, LAUNCH_VANTAGE, PAD, ROCKET_HEIGHT, ROOM, TIER, WINDOW } from "./layout";
 
 interface ControlRoomWorldProps {
   /** performance.now() at ignition (T-0), or null while the rocket waits on the pad. */
   ignitionAt: number | null;
+  /** From the launch command on: the camera leaves the console to watch the rocket outside. */
+  launchView: boolean;
+  /** Real seconds after ignition when the last engine shuts down (orbit, or propellant out). */
+  burnEndT: number;
 }
-
-/** Seconds of engine build-up before the clamps release. */
-const HOLD_DOWN = 1.2;
-/** Visual climb acceleration (m/s²): slow enough to read, fast enough to feel heavy. */
-const CLIMB = 3.5;
 
 /**
  * Scene 3 geometry: the control room's back tier and front row, the window, and outside the
  * rocket on its pad at dawn. The launch itself is DOM-driven; this only plays the liftoff.
  */
-export function ControlRoomWorld({ ignitionAt }: ControlRoomWorldProps) {
+export function ControlRoomWorld({ ignitionAt, launchView, burnEndT }: ControlRoomWorldProps) {
   return (
     <>
+      <LaunchCamera active={launchView} ignitionAt={ignitionAt} />
       <LightingRig />
       <Room />
       <Consoles />
       <MissionStaff />
       <Outside />
       {/* Remount per launch so smoke and position reset for the replacement vehicle. */}
-      <LaunchPad key={ignitionAt ?? "idle"} ignitionAt={ignitionAt} />
+      <LaunchPad key={ignitionAt ?? "idle"} ignitionAt={ignitionAt} burnEndT={burnEndT} />
     </>
   );
+}
+
+/* ---------------------------------------------------------------- launch camera */
+
+/** Seconds to fly from the console, out through the window, to the vantage point. */
+const FLY_OUT = 3.2;
+/** Where the flight path crosses the window: centred, just past the glass. */
+const WINDOW_GATE = new Vector3(0, 2.1, ROOM.minZ - 3);
+/** How fast the aim catches up with the rocket (1/s); the lead below cancels the lag. */
+const AIM_RATE = 5;
+/** As the rocket climbs, the camera backs away and cranes up a little to keep it framed. */
+const PULL_BACK = 0.22;
+const CRANE = 0.18;
+/** Telephoto follow: zoom in as the rocket gets farther, like a tracking camera at a launch. */
+const ZOOM_REF_DIST = 60;
+const MAX_ZOOM = 5;
+const ZOOM_RATE = 2.5;
+
+const easeInOut = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
+
+/**
+ * Cinematic launch view. On the launch command the camera dollies off the flight director's
+ * tier, out through the big window and down to a spot near the pad; from ignition it tracks
+ * the rocket as it climbs. Clearing it (hold, anomaly → adjust) cuts back to the console.
+ */
+function LaunchCamera({ active, ignitionAt }: { active: boolean; ignitionAt: number | null }) {
+  const setCameraRig = useSceneStore((s) => s.setCameraRig);
+  const reduced = useReducedMotion();
+  // Read per frame, so ignition doesn't restart the fly-out.
+  const ignition = useRef(ignitionAt);
+  ignition.current = ignitionAt;
+
+  useEffect(() => {
+    if (!active) return;
+    const vantage = new Vector3(...LAUNCH_VANTAGE);
+    const pad = new Vector3(...PAD);
+    // Horizontal direction from the pad to the vantage: the camera backs away along it.
+    const away = vantage.clone().sub(pad).setY(0).normalize();
+    const start = new Vector3();
+    const aim = new Vector3();
+    const goal = new Vector3();
+    const pos = new Vector3();
+    let started = false;
+    let elapsed = 0;
+    let lens: Camera | null = null;
+
+    const rig: CameraRig = (camera, dt) => {
+      if (!started) {
+        // Start exactly where the player was looking, so the move begins without a jump.
+        start.copy(camera.position);
+        camera.getWorldDirection(aim).multiplyScalar(90).add(start);
+        started = true;
+      }
+      elapsed += dt;
+      const k = reduced ? 1 : easeInOut(Math.min(1, elapsed / FLY_OUT));
+      // Quadratic Bézier: console → (window gate) → vantage.
+      const a = (1 - k) * (1 - k);
+      const b = 2 * k * (1 - k);
+      const c = k * k;
+      pos.set(
+        a * start.x + b * WINDOW_GATE.x + c * vantage.x,
+        a * start.y + b * WINDOW_GATE.y + c * vantage.y,
+        a * start.z + b * WINDOW_GATE.z + c * vantage.z,
+      );
+
+      const t = ignition.current === null ? -1 : (performance.now() - ignition.current) / 1000;
+      const rise = t < 0 ? 0 : rocketRise(t);
+      pos.addScaledVector(away, rise * PULL_BACK);
+      pos.y += rise * CRANE;
+      camera.position.copy(pos);
+
+      // Aim at the middle of the stack, led by its speed so the smoothing doesn't trail it.
+      const lead = t < 0 ? 0 : rocketSpeed(t) / AIM_RATE;
+      goal.set(pad.x, pad.y + rise + lead + ROCKET_HEIGHT * 0.55, pad.z);
+      aim.lerp(goal, reduced ? 1 : 1 - Math.exp(-AIM_RATE * dt));
+      camera.lookAt(aim);
+
+      if (camera instanceof PerspectiveCamera) {
+        lens = camera;
+        const want = Math.min(MAX_ZOOM, Math.max(1, camera.position.distanceTo(goal) / ZOOM_REF_DIST));
+        camera.zoom += (want - camera.zoom) * (reduced ? 1 : 1 - Math.exp(-ZOOM_RATE * dt));
+        camera.updateProjectionMatrix();
+      }
+    };
+
+    setCameraRig(rig);
+    return () => {
+      setCameraRig(null);
+      // Back to the naked eye at the console.
+      if (lens instanceof PerspectiveCamera) {
+        lens.zoom = 1;
+        lens.updateProjectionMatrix();
+      }
+    };
+  }, [active, reduced, setCameraRig]);
+
+  return null;
 }
 
 /* ---------------------------------------------------------------- inside */
@@ -1016,41 +1115,8 @@ function FireTruck({
   );
 }
 
-function LaunchPad({ ignitionAt }: { ignitionAt: number | null }) {
-  const reduced = useReducedMotion();
-  const rocket = useRef<Group>(null);
-  const plume = useRef<Group>(null);
-  const smoke = useRef<Group>(null);
-  const flame = useRef<Group>(null);
-
-  useFrame(() => {
-    const t = ignitionAt === null ? -1 : (performance.now() - ignitionAt) / 1000;
-    const lit = t >= 0;
-    if (plume.current) plume.current.visible = lit;
-    if (smoke.current) smoke.current.visible = lit;
-    if (!lit) return;
-
-    // Engines build up on the clamps, then the stack climbs with constant acceleration.
-    const climbT = Math.max(0, t - HOLD_DOWN);
-    const rise = 0.5 * CLIMB * climbT * climbT;
-    if (rocket.current) {
-      rocket.current.position.y = rise;
-      rocket.current.visible = rise < 400;
-    }
-    if (flame.current) {
-      const flicker = reduced ? 1 : 1 + Math.sin(t * 47) * 0.08 + Math.sin(t * 31) * 0.06;
-      flame.current.scale.set(1, Math.min(1, t / 0.6) * (1 + Math.min(climbT, 3) * 0.4) * flicker, 1);
-    }
-    if (smoke.current) {
-      // Exhaust cloud spreading out from the pad and drifting up, independent of the rocket.
-      const grow = Math.min(1, t / 3.5);
-      smoke.current.scale.set(0.3 + grow * 1.4, 0.3 + grow, 0.3 + grow * 1.4);
-      smoke.current.position.y = Math.min(t, 8) * 0.25;
-    }
-    // Rumble while the vehicle is low and loud: keep the trauma topped up, it decays itself.
-    if (t < HOLD_DOWN + 6) addTrauma(t < HOLD_DOWN ? 0.03 : 0.02);
-  });
-
+/** The pad, its umbilical tower, and the vehicle standing on it. */
+function LaunchPad({ ignitionAt, burnEndT }: { ignitionAt: number | null; burnEndT: number }) {
   return (
     <group position={PAD}>
       {/* Concrete flame trench & steel launch pedestal with angled ramps */}
@@ -1121,74 +1187,7 @@ function LaunchPad({ ignitionAt }: { ignitionAt: number | null }) {
         </mesh>
       </group>
 
-      <group ref={rocket} position={[0, 0, 0]}>
-        <MiniRocket />
-        <group ref={plume} visible={false} position={[0, 2.2, 0]}>
-          {/* Flame cone hangs below the engines; its scale stretches it downward. */}
-          <group ref={flame}>
-            <group position={[0, -3, 0]}>
-              <mesh rotation={[Math.PI, 0, 0]}>
-                <coneGeometry args={[1.6, 6.5, 12, 1, true]} />
-                <meshBasicMaterial color={SCENE_COLORS.flameOuter} side={DoubleSide} />
-              </mesh>
-              <mesh rotation={[Math.PI, 0, 0]} position={[0, 0.9, 0]}>
-                <coneGeometry args={[0.95, 4.5, 12]} />
-                <meshBasicMaterial color={SCENE_COLORS.flameCore} />
-              </mesh>
-            </group>
-          </group>
-        </group>
-      </group>
-
-      <group ref={smoke} visible={false} position={[0, 0, 0]}>
-        {[
-          [-6, 2, 1, 4],
-          [6, 2.4, -1, 4.5],
-          [-2.5, 3, 4, 3.5],
-          [3, 2.6, 4.5, 3.8],
-          [0, 4, -3, 4],
-          [-9, 1.6, -2, 3],
-          [9.5, 1.8, 2, 3.2],
-        ].map(([x, y, z, r], i) => (
-          <mesh key={i} position={[x, y, z]}>
-            <icosahedronGeometry args={[r, 0]} />
-            <meshStandardMaterial color={SCENE_COLORS.spaceWhite} flatShading />
-          </mesh>
-        ))}
-      </group>
-    </group>
-  );
-}
-
-/** Saturn-style NASA rocket with crisp white fuselage, blue/red stripes & metallic engine section. */
-function MiniRocket() {
-  const sections: [number, number, number, number, string][] = [
-    // [y0, y1, rBottom, rTop, colour]
-    [2.2, 3.3, 1.75, 1.6, SCENE_COLORS.steelDark],
-    [3.3, 12, 1.6, 1.6, SCENE_COLORS.spaceWhite],
-    [12, 13.6, 1.6, 1.3, SCENE_COLORS.nasaBlue],
-    [13.6, 19.2, 1.3, 1.3, SCENE_COLORS.spaceWhite],
-    [19.2, 22.2, 1.3, 1.0, SCENE_COLORS.spaceWhite],
-    [22.2, 24.2, 1.0, 1.0, SCENE_COLORS.steelLight],
-    [24.2, 25.6, 1.0, 0.3, SCENE_COLORS.spaceWhite],
-    [25.6, 29.2, 0.22, 0.22, SCENE_COLORS.spaceWhite],
-    [29.2, ROCKET_HEIGHT, 0.22, 0.01, SCENE_COLORS.nasaRed],
-  ];
-  return (
-    <group>
-      {sections.map(([y0, y1, r0, r1, color]) => (
-        <mesh key={y0} position={[0, (y0 + y1) / 2, 0]}>
-          <cylinderGeometry args={[r1, r0, y1 - y0, 16]} />
-          <meshStandardMaterial color={color} metalness={color === SCENE_COLORS.steelLight ? 0.5 : 0.15} roughness={0.4} />
-        </mesh>
-      ))}
-      {/* Black & Red aerospace roll-pattern stripes */}
-      {[[3.3, 4.2], [7.5, 7.9], [11.4, 12]].map(([y0, y1], idx) => (
-        <mesh key={y0} position={[0, (y0 + y1) / 2, 0]}>
-          <cylinderGeometry args={[1.62, 1.62, y1 - y0, 16]} />
-          <meshStandardMaterial color={idx === 1 ? SCENE_COLORS.nasaRed : SCENE_COLORS.steelDark} />
-        </mesh>
-      ))}
+      <LaunchVehicle ignitionAt={ignitionAt} burnEndT={burnEndT} />
     </group>
   );
 }

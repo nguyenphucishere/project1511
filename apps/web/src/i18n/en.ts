@@ -111,6 +111,8 @@ export const en = {
   missionControl: {
     sceneLabel: "Mission control seen from the flight director's console, with the rocket on its launch pad through the window",
     consoleLabel: "Launch console",
+    collapse: "Collapse the console",
+    expand: "Expand the console",
     configTitle: "Launch configuration",
     attempt: "Attempt {n}",
     vehicle: "Launch vehicle",
@@ -188,6 +190,7 @@ export const en = {
     verticalSpeed: "Vertical speed",
     fuel: "Fuel",
     safeLimit: "Safe touchdown −{value} m/s",
+    chartsToggle: "Charts and table",
     tableToggle: "Show telemetry as a table",
     time: "Time",
     contactLight: "Contact light",

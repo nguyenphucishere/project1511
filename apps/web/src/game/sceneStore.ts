@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { create } from "zustand";
+import type { Camera } from "three";
 import type { LocalizedText } from "@/i18n";
 
 export type Vec3 = [number, number, number];
@@ -16,6 +17,13 @@ export interface Viewpoint {
   yawRange: number;
   pitchRange: number;
 }
+
+/**
+ * A scripted camera move that temporarily replaces first-person look (e.g. the launch view).
+ * Called every frame with the camera and a clamped delta; it sets position and orientation.
+ * Screen shake is still added on top. When it is cleared, the player's view eases back.
+ */
+export type CameraRig = (camera: Camera, dt: number) => void;
 
 export type HotspotKind = "inspect" | "move";
 
@@ -37,12 +45,14 @@ interface SceneState {
   highlightedId: string | null;
   /** Bumped when the camera should turn toward highlightedId (keyboard focus). */
   lookAtRequest: number;
+  cameraRig: CameraRig | null;
 
   setViewpoints: (list: Viewpoint[], startId: string) => void;
   goTo: (viewpointId: string) => void;
   register: (info: HotspotInfo) => void;
   unregister: (id: string) => void;
   highlight: (id: string | null, opts?: { lookAt?: boolean }) => void;
+  setCameraRig: (rig: CameraRig | null) => void;
   reset: () => void;
 }
 
@@ -53,6 +63,7 @@ export const useSceneStore = create<SceneState>((set) => ({
   hotspots: {},
   highlightedId: null,
   lookAtRequest: 0,
+  cameraRig: null,
 
   setViewpoints: (list, startId) =>
     set({ viewpoints: Object.fromEntries(list.map((v) => [v.id, v])), viewpointId: startId }),
@@ -68,7 +79,9 @@ export const useSceneStore = create<SceneState>((set) => ({
       highlightedId: id,
       lookAtRequest: opts?.lookAt && id ? s.lookAtRequest + 1 : s.lookAtRequest,
     })),
-  reset: () => set({ viewpoints: {}, viewpointId: null, hotspots: {}, highlightedId: null, lookAtRequest: 0 }),
+  setCameraRig: (cameraRig) => set({ cameraRig }),
+  reset: () =>
+    set({ viewpoints: {}, viewpointId: null, hotspots: {}, highlightedId: null, lookAtRequest: 0, cameraRig: null }),
 }));
 
 /** Installs a scene's viewpoints on mount and clears the scene state on unmount. */

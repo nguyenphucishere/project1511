@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ReadoutGrid } from "@/components/hud/ReadoutGrid";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
@@ -117,6 +116,7 @@ export function PollPanel({
 
 export const COUNTDOWN_FROM = 10;
 
+/** Compact top-right timer while the camera is outside: the big number and a Hold button. */
 export function CountdownPanel({ onIgnition, onHold }: { onIgnition: () => void; onHold: () => void }) {
   const m = useT().missionControl;
   const [left, setLeft] = useState(COUNTDOWN_FROM);
@@ -139,24 +139,32 @@ export function CountdownPanel({ onIgnition, onHold }: { onIgnition: () => void;
   }, [left]);
 
   return (
-    <div className="flex flex-col items-center gap-4 py-4">
-      <p className="text-sm text-foreground/75">{left <= 3 ? m.ignition : m.countdownTitle}</p>
-      {/* Keyed so each new number replays the pop; the global reduced-motion rule stills it. */}
-      <p key={left} className="animate-count-pop font-mono text-7xl tabular-nums text-primary" role="timer" aria-live="off">
-        {formatMissionTime(-left)}
-      </p>
+    <HudCard>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs text-foreground/70">{left <= 3 ? m.ignition : m.countdownTitle}</p>
+          {/* Keyed so each new number replays the pop; the global reduced-motion rule stills it. */}
+          <p key={left} className="animate-count-pop font-mono text-3xl tabular-nums text-primary" role="timer" aria-live="off">
+            {formatMissionTime(-left)}
+          </p>
+        </div>
+        <Button ref={holdRef} variant="secondary" size="sm" onClick={onHold}>
+          {m.hold}
+        </Button>
+      </div>
       <span className="sr-only" aria-live="polite">
         {left <= 3 || left === COUNTDOWN_FROM ? String(left) : ""}
       </span>
-      <Button ref={holdRef} variant="secondary" size="lg" onClick={onHold} className="w-full">
-        {m.hold}
-      </Button>
-    </div>
+    </HudCard>
   );
 }
 
 /* ---------------------------------------------------------------- flight */
 
+/**
+ * Compact flight HUD for the top-right corner: a small clock card (mission time, altitude,
+ * speed) and the list of flight stages below it, so the launch itself stays in view.
+ */
 export function FlightPanel({
   config,
   result,
@@ -215,42 +223,57 @@ export function FlightPanel({
   ].sort((a, b) => a.t - b.t);
 
   return (
-    <div className="flex flex-col gap-4">
-      <ReadoutGrid
-        className="grid-cols-3"
-        items={[
-          [m.clock, formatMissionTime(sec)],
-          [m.altitude, `${altitudeKm(sec, config.orbitKm).toFixed(0)} km`],
-          [m.speed, `${speedKms(sec).toFixed(1)} km/s`],
-        ]}
-      />
-      <ol className="flex flex-col gap-1" aria-live="polite" aria-relevant="additions">
-        {rows.map((r) => {
-          const reached = sec >= r.t;
-          return (
-            <li
-              key={r.key}
-              className={cn(
-                "flex items-center gap-3 px-3 py-1.5 text-sm",
-                r.fault && reached ? "bg-warning/20" : "bg-space-blue/25",
-                !reached && "text-foreground/45",
-              )}
-            >
-              <span className="w-16 shrink-0 font-mono text-xs">{formatMissionTime(r.t)}</span>
-              <span className="flex-1">{r.text}</span>
-              {reached &&
-                (r.fault ? (
-                  <StatusBadge status="fault">{m.noGo}</StatusBadge>
-                ) : (
-                  <Check className="h-4 w-4 text-primary" aria-hidden />
-                ))}
-            </li>
-          );
-        })}
-      </ol>
-      <StatusBadge status="demo" className="w-fit">
-        {t.common.demoData}
-      </StatusBadge>
-    </div>
+    <>
+      <HudCard>
+        <p className="text-xs text-foreground/70">{m.clock}</p>
+        <p className="font-mono text-3xl tabular-nums text-primary" role="timer" aria-live="off">
+          {formatMissionTime(sec)}
+        </p>
+        <dl className="mt-1 flex gap-4 font-mono text-xs tabular-nums">
+          <div className="flex gap-1.5">
+            <dt className="text-foreground/65">{m.altitude}</dt>
+            <dd>{altitudeKm(sec, config.orbitKm).toFixed(0)} km</dd>
+          </div>
+          <div className="flex gap-1.5">
+            <dt className="text-foreground/65">{m.speed}</dt>
+            <dd>{speedKms(sec).toFixed(1)} km/s</dd>
+          </div>
+        </dl>
+      </HudCard>
+      <HudCard>
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <h2 className="text-xs font-medium">{m.flightTitle}</h2>
+          <StatusBadge status="demo">{t.common.demoData}</StatusBadge>
+        </div>
+        <ol className="flex flex-col gap-0.5" aria-live="polite" aria-relevant="additions">
+          {rows.map((r) => {
+            const reached = sec >= r.t;
+            return (
+              <li
+                key={r.key}
+                className={cn(
+                  "flex items-center gap-2 px-1.5 py-0.5 text-xs",
+                  r.fault && reached && "bg-warning/25",
+                  !reached && "text-foreground/45",
+                )}
+              >
+                <span className="w-14 shrink-0 font-mono tabular-nums">{formatMissionTime(r.t)}</span>
+                <span className="flex-1 leading-tight">{r.text}</span>
+                {reached &&
+                  (r.fault ? (
+                    <span className="font-mono text-[10px] font-semibold text-warning">{m.noGo}</span>
+                  ) : (
+                    <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  ))}
+              </li>
+            );
+          })}
+        </ol>
+      </HudCard>
+    </>
   );
+}
+
+function HudCard({ children }: { children: React.ReactNode }) {
+  return <div className="bezel bezel-sm bg-space-deep/80 px-3 py-2 backdrop-blur-sm">{children}</div>;
 }

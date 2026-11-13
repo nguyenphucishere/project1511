@@ -48,9 +48,13 @@ export function ConfigPanel({ config, onChange, assessment: a, onProceed }: Conf
         ? { status: "fault", text: m.fuelShort }
         : { status: "go", text: m.ok };
 
+  const vehicle = VEHICLES.find((v) => v.id === config.vehicle);
+  const payload = PAYLOADS.find((p) => p.id === config.payload);
+  const orbit = ORBITS.find((o) => o.km === config.orbitKm);
+
   return (
-    <div className="flex flex-col gap-5">
-      <Choice legend={m.vehicle}>
+    <div className="flex flex-col gap-3.5">
+      <Choice legend={m.vehicle} note={vehicle && `${localize(vehicle.kind)}. ${localize(vehicle.note)}`}>
         {VEHICLES.map((v) => (
           <Option
             key={v.id}
@@ -58,13 +62,13 @@ export function ConfigPanel({ config, onChange, assessment: a, onProceed }: Conf
             checked={config.vehicle === v.id}
             onSelect={() => set("vehicle", v.id)}
             title={v.name}
-            meta={`${format(m.carries, { value: v.capacityT })} · ${format(m.money, { value: n.format(v.costM) })}`}
-            note={`${localize(v.kind)}. ${localize(v.note)}`}
+            meta={format(m.tonnes, { value: v.capacityT })}
+            meta2={format(m.money, { value: n.format(v.costM) })}
           />
         ))}
       </Choice>
 
-      <Choice legend={m.payload}>
+      <Choice legend={m.payload} note={payload && localize(payload.note)}>
         {PAYLOADS.map((p) => (
           <Option
             key={p.id}
@@ -72,18 +76,18 @@ export function ConfigPanel({ config, onChange, assessment: a, onProceed }: Conf
             checked={config.payload === p.id}
             onSelect={() => set("payload", p.id)}
             title={localize(p.name)}
-            meta={`${format(m.tonnes, { value: p.massT })} · ${format(m.money, { value: n.format(p.costM) })}`}
-            note={localize(p.note)}
+            meta={format(m.tonnes, { value: p.massT })}
+            meta2={format(m.money, { value: n.format(p.costM) })}
           />
         ))}
       </Choice>
 
       <div>
         <div className="flex items-baseline justify-between">
-          <label htmlFor={fuelId} className="text-sm font-medium">
+          <label htmlFor={fuelId} className="text-xs font-medium">
             {m.fuel}
           </label>
-          <span className="font-mono text-lg">{config.fuelPct}%</span>
+          <span className="font-mono text-sm">{config.fuelPct}%</span>
         </div>
         <input
           id={fuelId}
@@ -93,11 +97,11 @@ export function ConfigPanel({ config, onChange, assessment: a, onProceed }: Conf
           step={FUEL_STEP}
           value={config.fuelPct}
           onChange={(e) => set("fuelPct", Number(e.target.value))}
-          className="mt-2 w-full accent-[rgb(var(--primary))]"
+          className="mt-1 w-full accent-[rgb(var(--primary))]"
         />
       </div>
 
-      <Choice legend={m.orbit} columns={3}>
+      <Choice legend={m.orbit} note={orbit && localize(orbit.note)}>
         {ORBITS.map((o) => (
           <Option
             key={o.km}
@@ -105,12 +109,11 @@ export function ConfigPanel({ config, onChange, assessment: a, onProceed }: Conf
             checked={config.orbitKm === o.km}
             onSelect={() => set("orbitKm", o.km)}
             title={format(m.km, { value: o.km })}
-            note={localize(o.note)}
           />
         ))}
       </Choice>
 
-      <Choice legend={m.window} columns={3}>
+      <Choice legend={m.window}>
         {WINDOWS.map((w) => (
           <Option
             key={w.id}
@@ -119,7 +122,7 @@ export function ConfigPanel({ config, onChange, assessment: a, onProceed }: Conf
             onSelect={() => set("window", w.id)}
             title={localize(w.time)}
             meta={format(m.wind, { value: w.windKmh })}
-            note={
+            meta2={
               w.windKmh > WIND_LIMIT_KMH
                 ? `> ${WIND_LIMIT_KMH} km/h`
                 : w.delayCostM
@@ -131,9 +134,9 @@ export function ConfigPanel({ config, onChange, assessment: a, onProceed }: Conf
         ))}
       </Choice>
 
-      <section aria-labelledby="readouts" className="flex flex-col gap-3 bg-space-blue/30 p-3">
+      <section aria-labelledby="readouts" className="flex flex-col gap-2 bg-space-blue/30 px-3 py-2.5">
         <div className="flex items-center justify-between gap-3">
-          <h3 id="readouts" className="text-sm font-medium">
+          <h3 id="readouts" className="text-xs font-medium">
             {m.readouts}
           </h3>
           <StatusBadge status="demo">{t.common.demoData}</StatusBadge>
@@ -163,15 +166,15 @@ export function ConfigPanel({ config, onChange, assessment: a, onProceed }: Conf
           max={a.budgetM}
           status={a.overBudget ? { status: "fault", text: m.overBudget } : { status: "go", text: m.ok }}
         />
-        <p className="text-xs text-foreground/65">{m.rulesNote}</p>
+        <p className="text-[11px] text-foreground/60">{m.rulesNote}</p>
       </section>
 
-      <div className="flex flex-col items-stretch gap-2">
-        <Button size="lg" onClick={onProceed} disabled={a.overBudget} aria-describedby={a.overBudget ? "blocked" : undefined}>
+      <div className="flex flex-col items-stretch gap-1.5">
+        <Button onClick={onProceed} disabled={a.overBudget} aria-describedby={a.overBudget ? "blocked" : undefined}>
           {m.proceed}
         </Button>
         {a.overBudget && (
-          <p id="blocked" className="text-sm text-foreground/80">
+          <p id="blocked" className="text-xs text-foreground/80">
             {m.blockedBudget}
           </p>
         )}
@@ -180,11 +183,13 @@ export function ConfigPanel({ config, onChange, assessment: a, onProceed }: Conf
   );
 }
 
-function Choice({ legend, columns = 1, children }: { legend: string; columns?: 1 | 3; children: React.ReactNode }) {
+/** Three options side by side; only the selected one's description is shown, underneath. */
+function Choice({ legend, note, children }: { legend: string; note?: string; children: React.ReactNode }) {
   return (
     <fieldset>
-      <legend className="mb-2 text-sm font-medium">{legend}</legend>
-      <div className={cn("grid gap-1.5", columns === 3 ? "grid-cols-3" : "grid-cols-1")}>{children}</div>
+      <legend className="mb-1.5 text-xs font-medium">{legend}</legend>
+      <div className="grid grid-cols-3 gap-1">{children}</div>
+      {note && <p className="mt-1 text-[11px] leading-snug text-foreground/65">{note}</p>}
     </fieldset>
   );
 }
@@ -195,25 +200,25 @@ interface OptionProps {
   onSelect: () => void;
   title: string;
   meta?: string;
-  note?: string;
+  meta2?: string;
   warn?: boolean;
 }
 
 /** A native radio (keyboard arrows, screen readers) dressed as a console selector. */
-function Option({ name, checked, onSelect, title, meta, note, warn }: OptionProps) {
+function Option({ name, checked, onSelect, title, meta, meta2, warn }: OptionProps) {
   return (
     <label className="relative block cursor-pointer">
       <input type="radio" name={name} checked={checked} onChange={onSelect} className="peer sr-only" />
       <span
         className={cn(
-          "flex h-full flex-col gap-0.5 bg-space-blue/25 px-3 py-2 text-sm transition-colors hover:bg-surface/40",
+          "flex h-full flex-col gap-0.5 bg-space-blue/25 px-2 py-1.5 text-xs transition-colors hover:bg-surface/40",
           "peer-checked:bg-surface/60 peer-checked:shadow-[inset_0_0_0_2px_rgb(var(--primary))]",
           "peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[rgb(var(--primary))]",
         )}
       >
-        <span className="font-medium">{title}</span>
-        {meta && <span className="font-mono text-xs text-foreground/80">{meta}</span>}
-        {note && <span className={cn("text-xs", warn ? "text-warning" : "text-foreground/65")}>{note}</span>}
+        <span className="font-medium leading-tight">{title}</span>
+        {meta && <span className="font-mono text-[11px] text-foreground/80">{meta}</span>}
+        {meta2 && <span className={cn("font-mono text-[11px]", warn ? "text-warning" : "text-foreground/65")}>{meta2}</span>}
       </span>
     </label>
   );
@@ -229,15 +234,17 @@ interface ReadoutProps {
   status: { status: Status; text: string };
 }
 
+/** One line of label + value, a thin bar, and the verdict only when something is wrong. */
 function Readout({ label, value, fill, max, marker, status }: ReadoutProps) {
+  const fault = status.status === "fault";
   return (
     <div>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs">
         <span className="text-foreground/85">{label}</span>
-        <span className="font-mono text-xs">{value}</span>
+        <span className="font-mono text-[11px]">{value}</span>
       </div>
-      <div className="relative mt-1.5">
-        <Progress value={fill} max={max} tone={status.status === "fault" ? "warning" : "default"} aria-label={label} />
+      <div className="relative mt-1">
+        <Progress className="h-2" value={fill} max={max} tone={fault ? "warning" : "default"} aria-label={`${label}: ${status.text}`} />
         {marker !== undefined && (
           <span
             aria-hidden
@@ -246,9 +253,11 @@ function Readout({ label, value, fill, max, marker, status }: ReadoutProps) {
           />
         )}
       </div>
-      <StatusBadge status={status.status} className="mt-1.5">
-        {status.text}
-      </StatusBadge>
+      {fault && (
+        <StatusBadge status="fault" className="mt-1">
+          {status.text}
+        </StatusBadge>
+      )}
     </div>
   );
 }

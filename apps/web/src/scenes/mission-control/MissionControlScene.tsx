@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
@@ -28,7 +29,9 @@ import { ConfigPanel } from "./ConfigPanel";
 import { ControlRoomWorld } from "./ControlRoomWorld";
 import { CountdownPanel, FlightPanel, PollPanel } from "./LaunchPanels";
 import { formatMissionTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { VIEWPOINTS } from "./layout";
+import { realSecondsAt } from "./flight";
 
 /** How long the liftoff roar lasts, in real time (the climb out of sight). */
 const ROAR_MS = 8000;
@@ -65,12 +68,15 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
   const roar = useRef<() => void>(() => {});
   useEffect(() => () => roar.current(), []);
   const consoleRef = useRef<HTMLElement>(null);
+  // The planning console can fold down to its title bar, to look at the pad and the room.
+  const [collapsed, setCollapsed] = useState(false);
 
   useSceneViewpoints(VIEWPOINTS, "console");
 
   // The console scrolls on small screens; each phase starts at its top.
   useEffect(() => {
     consoleRef.current?.scrollTo({ top: 0 });
+    setCollapsed(false);
   }, [phase]);
 
   const assessment = useMemo(() => launchSimulator.assess(config), [config]);
@@ -125,19 +131,24 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
     anomaly: m.flightTitle,
     orbit: m.flightTitle,
   };
+  // From the launch command on, the camera is outside and the console shrinks to a corner HUD.
+  const launching = phase !== "config" && phase !== "poll";
+  // When the last engine stops in the 3D view: orbit insertion, or stage 2 running dry.
+  const burnEndT = result ? realSecondsAt(result.endSec) : Infinity;
   const overweight = result?.failureTrace.some((s) => s.code === "slow-climb") ?? false;
 
   return (
     <section className="relative h-dvh w-full overflow-hidden" aria-label={m.sceneLabel}>
       <WorldCanvas label={m.sceneLabel}>
-        <ControlRoomWorld ignitionAt={ignitionAt} />
+        <ControlRoomWorld ignitionAt={ignitionAt} launchView={launching} burnEndT={burnEndT} />
       </WorldCanvas>
 
       {alarm > 0 && (
         <div key={alarm} aria-hidden className="pointer-events-none absolute inset-0 animate-alarm-flash bg-warning/35" />
       )}
 
-      <div className="pointer-events-none absolute left-3 top-16 sm:left-8 sm:top-20">
+      {/* On phones the corner flight HUD needs this space during the launch. */}
+      <div className={cn("pointer-events-none absolute left-3 top-16 sm:left-8 sm:top-20", launching && "hidden sm:block")}>
         <ObjectivePanel
           className="pointer-events-auto"
           items={[
@@ -147,27 +158,54 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
         />
       </div>
 
-      <aside
-        ref={consoleRef}
-        aria-label={m.consoleLabel}
-        className="bezel absolute inset-x-3 bottom-3 max-h-[56dvh] overflow-y-auto bg-space-deep/95 p-4 sm:inset-x-auto sm:bottom-6 sm:right-8 sm:top-20 sm:max-h-none sm:w-[27rem] sm:p-5"
-      >
-        <header className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">{titles[phase]}</h2>
-          <span className="font-mono text-xs text-foreground/70">{format(m.attempt, { n: attempt })}</span>
-        </header>
+      {launching ? (
+        // Launch: only a small clock and the stage list in the top-right corner, so the
+        // rocket (seen from outside) owns the screen.
+        <aside
+          aria-label={m.consoleLabel}
+          className="absolute right-3 top-16 flex w-[15.5rem] flex-col gap-2 sm:right-8 sm:top-20"
+        >
+          {phase === "countdown" && <CountdownPanel onIgnition={ignite} onHold={() => setPhase("poll")} />}
+          {phase !== "countdown" && result && ignitionAt !== null && (
+            <FlightPanel config={config} result={result} ignitionAt={ignitionAt} onEnd={endFlight} />
+          )}
+        </aside>
+      ) : (
+        <aside
+          ref={consoleRef}
+          aria-label={m.consoleLabel}
+          className={cn(
+            "bezel absolute inset-x-3 bottom-3 overflow-y-auto bg-space-deep/95 p-3.5",
+            "sm:inset-x-auto sm:bottom-auto sm:right-8 sm:top-20 sm:w-[21rem] sm:max-h-[calc(100dvh-6.5rem)]",
+            collapsed ? "max-h-none" : "max-h-[50dvh]",
+          )}
+        >
+          <header className={cn("flex items-center justify-between gap-2", !collapsed && "mb-3")}>
+            <h2 className="text-base font-semibold">{titles[phase]}</h2>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-foreground/70">{format(m.attempt, { n: attempt })}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 px-0"
+                onClick={() => setCollapsed((c) => !c)}
+                aria-expanded={!collapsed}
+                aria-label={collapsed ? m.expand : m.collapse}
+                title={collapsed ? m.expand : m.collapse}
+              >
+                {collapsed ? <ChevronDown className="h-4 w-4" aria-hidden /> : <ChevronUp className="h-4 w-4" aria-hidden />}
+              </Button>
+            </div>
+          </header>
 
-        {phase === "config" && (
-          <ConfigPanel config={config} onChange={setConfig} assessment={assessment} onProceed={() => setPhase("poll")} />
-        )}
-        {phase === "poll" && (
-          <PollPanel assessment={assessment} onLaunch={startCountdown} onBack={() => setPhase("config")} />
-        )}
-        {phase === "countdown" && <CountdownPanel onIgnition={ignite} onHold={() => setPhase("poll")} />}
-        {(phase === "flight" || phase === "anomaly" || phase === "orbit") && result && ignitionAt !== null && (
-          <FlightPanel config={config} result={result} ignitionAt={ignitionAt} onEnd={endFlight} />
-        )}
-      </aside>
+          {!collapsed && phase === "config" && (
+            <ConfigPanel config={config} onChange={setConfig} assessment={assessment} onProceed={() => setPhase("poll")} />
+          )}
+          {!collapsed && phase === "poll" && (
+            <PollPanel assessment={assessment} onLaunch={startCountdown} onBack={() => setPhase("config")} />
+          )}
+        </aside>
+      )}
 
       <Dialog open={phase === "anomaly"}>
         <DialogContent locked>

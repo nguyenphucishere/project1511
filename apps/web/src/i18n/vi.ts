@@ -108,6 +108,8 @@ export const vi: Dictionary = {
   missionControl: {
     sceneLabel: "Trung tâm điều khiển nhìn từ bàn của chỉ huy bay, qua ô cửa thấy tên lửa trên bệ phóng",
     consoleLabel: "Bàn điều khiển phóng",
+    collapse: "Thu gọn bảng điều khiển",
+    expand: "Mở rộng bảng điều khiển",
     configTitle: "Thông số phóng",
     attempt: "Lần thử {n}",
     vehicle: "Phương tiện phóng",
@@ -185,6 +187,7 @@ export const vi: Dictionary = {
     verticalSpeed: "Tốc độ thẳng đứng",
     fuel: "Nhiên liệu",
     safeLimit: "Tiếp đất an toàn −{value} m/s",
+    chartsToggle: "Biểu đồ và bảng số liệu",
     tableToggle: "Xem số liệu dạng bảng",
     time: "Thời gian",
     contactLight: "Đèn tiếp đất",
