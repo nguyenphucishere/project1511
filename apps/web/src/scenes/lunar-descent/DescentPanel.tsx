@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CharacterPortrait } from "@/components/cutscene/CharacterPortrait";
 import { TelemetryChart } from "@/components/dashboard/TelemetryChart";
-import { ReadoutGrid } from "@/components/hud/ReadoutGrid";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
 import { cn } from "@/lib/utils";
@@ -25,44 +24,33 @@ const SERIES = (() => {
   return xs.map(sampleAt);
 })();
 
-interface DescentPanelProps {
-  /** Mission seconds since powered descent started. */
-  t: number;
+interface DescentCommandProps {
   stepsDone: number;
   /** Index of the switch the player may throw now, or null while a segment plays. */
   armed: number | null;
   landed: boolean;
-  contactLight: boolean;
   onPress: (index: number) => void;
 }
 
-/** The DOM half of the console: crew cue, the next control, readouts, and the two telemetry traces. */
-export function DescentPanel({ t, stepsDone, armed, landed, contactLight, onPress }: DescentPanelProps) {
-  const tr = useT();
-  const d = tr.lunarDescent;
+/**
+ * The player's half of the console, kept small so the window stays clear: the crew cue, the
+ * one control that matters now, and the four-step checklist as a compact list.
+ */
+export function DescentCommand({ stepsDone, armed, landed, onPress }: DescentCommandProps) {
+  const d = useT().lunarDescent;
   const localize = useLocalized();
-  const now = sampleAt(t);
-
-  // The traces grow with the clock: samples so far (SERIES is on a 2 s grid), plus the live point.
-  const pts = [...SERIES.slice(0, Math.ceil(t / 2)), now];
-  const xs = pts.map((p) => p.t);
-  const alt = pts.map((p) => p.altM);
-  const vs = pts.map((p) => p.vsMs);
-
   const current = DESCENT_STEPS[Math.min(stepsDone, DESCENT_STEPS.length - 1)];
   const cueStep = armed !== null ? DESCENT_STEPS[armed] : null;
-  // Keyframes passed so far, then the live reading.
-  const rows = t > 0 ? [...KEYFRAMES.filter((k) => k.t < t - 0.01), now] : [KEYFRAMES[0]];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2.5">
       {/* Crew cue for the next control. */}
-      <div className="flex items-start gap-3 bg-space-blue/30 p-3">
-        <div className="h-14 w-11 shrink-0">
+      <div className="flex items-start gap-2.5">
+        <div className="h-10 w-8 shrink-0">
           <CharacterPortrait character="astronaut" />
         </div>
-        <div className="flex flex-col gap-1.5">
-          <p className="text-sm" aria-live="polite">
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="text-sm leading-snug" aria-live="polite">
             {landed ? d.touchdownBody : cueStep ? localize(cueStep.cue) : localize(current.cue)}
           </p>
           {!landed &&
@@ -80,130 +68,172 @@ export function DescentPanel({ t, stepsDone, armed, landed, contactLight, onPres
       </div>
 
       {!landed && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <Button
-            size="lg"
+            data-descent-action
             // aria-disabled, not disabled: a disabled button drops keyboard focus to the page while
             // the segment plays; this one keeps it, so Enter works again at the next hold.
-            className="h-14 text-lg"
+            className="h-11 text-base"
             aria-disabled={armed === null}
             onClick={() => onPress(stepsDone)}
             aria-describedby="press-hint"
           >
             {localize(current.label)}
           </Button>
-          <p id="press-hint" className="text-center text-xs text-foreground/65">
+          {/* Taught once: after the first switch the player knows either control works. */}
+          <p
+            id="press-hint"
+            className={cn("text-center text-[11px] leading-tight text-foreground/60", stepsDone > 0 && "sr-only")}
+          >
             {d.pressHint}
           </p>
         </div>
       )}
 
       <section aria-labelledby="checklist-title">
-        <div className="mb-2 flex items-baseline justify-between">
-          <h3 id="checklist-title" className="text-sm font-medium">
+        <div className="mb-1 flex items-baseline justify-between">
+          <h3 id="checklist-title" className="text-xs font-medium">
             {d.checklistTitle}
           </h3>
-          <span className="font-mono text-xs text-foreground/70">
+          <span className="font-mono text-[11px] text-foreground/70">
             {format(d.stepOf, { n: Math.min(stepsDone + 1, DESCENT_STEPS.length), total: DESCENT_STEPS.length })}
           </span>
         </div>
-        <ol className="flex flex-col gap-1">
+        {/* Phones keep the "Step n of 4" line above; the full list needs the screen space. */}
+        <ol className="hidden flex-col gap-0.5 sm:flex">
           {DESCENT_STEPS.map((s, i) => {
             const done = i < stepsDone;
-            const next = i === stepsDone;
+            const next = i === stepsDone && !landed;
             return (
               <li
                 key={s.id}
+                aria-current={next ? "step" : undefined}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-1.5 text-sm",
-                  next ? "bg-surface/50 shadow-[inset_2px_0_0_rgb(var(--primary))]" : "bg-space-blue/25",
+                  "flex items-center gap-2 px-2 py-1 text-xs",
+                  next && "bg-surface/50 shadow-[inset_2px_0_0_rgb(var(--primary))]",
                   !done && !next && "text-foreground/50",
                 )}
               >
-                <span className="w-4 font-mono text-xs">{i + 1}</span>
+                <span className="w-3 font-mono text-[11px]">{i + 1}</span>
                 <span className="flex-1">{localize(s.label)}</span>
                 {done ? (
-                  <Check className="h-4 w-4 text-primary" aria-label={d.stepDone} />
+                  <Check className="h-3.5 w-3.5 text-primary" aria-label={d.stepDone} />
                 ) : (
-                  <span className="text-xs">{next ? d.stepNext : d.stepLater}</span>
+                  <span className="text-[11px]">{next ? d.stepNext : d.stepLater}</span>
                 )}
               </li>
             );
           })}
         </ol>
       </section>
+    </div>
+  );
+}
 
-      <ReadoutGrid
-        className="grid-cols-2"
-        items={[
-          [d.clock, formatMissionTime(t)],
-          [d.altitude, formatAltitude(now.altM)],
-          [d.verticalSpeed, formatVs(now.vsMs)],
-          [d.fuel, `${Math.round(now.fuelPct)}%`],
-        ]}
-      />
+/**
+ * Live numbers in a 2×2 strip with the contact light, and the full charts and table folded
+ * away underneath for anyone who wants the curves.
+ */
+export function DescentTelemetry({ t, contactLight }: { t: number; contactLight: boolean }) {
+  const tr = useT();
+  const d = tr.lunarDescent;
+  const now = sampleAt(t);
 
-      <div
-        className={cn(
-          "flex items-center justify-center gap-2 py-1.5 text-sm font-medium uppercase tracking-wider",
-          contactLight ? "bg-primary text-primary-foreground" : "bg-space-blue/25 text-foreground/45",
-        )}
-        role="status"
-      >
-        {d.contactLight}
-        <span className="sr-only">{contactLight ? ": ON" : ": OFF"}</span>
+  // The traces grow with the clock: samples so far (SERIES is on a 2 s grid), plus the live point.
+  const pts = [...SERIES.slice(0, Math.ceil(t / 2)), now];
+  const xs = pts.map((p) => p.t);
+  const alt = pts.map((p) => p.altM);
+  const vs = pts.map((p) => p.vsMs);
+  // Keyframes passed so far, then the live reading.
+  const rows = t > 0 ? [...KEYFRAMES.filter((k) => k.t < t - 0.01), now] : [KEYFRAMES[0]];
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-mono text-xl tabular-nums text-primary" role="timer" aria-label={d.clock}>
+          {formatMissionTime(t)}
+        </p>
+        <span
+          role="status"
+          className={cn(
+            "px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+            contactLight ? "bg-primary text-primary-foreground" : "bg-space-blue/40 text-foreground/45",
+          )}
+        >
+          {d.contactLight}
+          <span className="sr-only">{contactLight ? ": ON" : ": OFF"}</span>
+        </span>
       </div>
+      <dl className="grid grid-cols-3 gap-px bg-space-blue/60 text-xs">
+        {(
+          [
+            [d.altitude, formatAltitude(now.altM)],
+            [d.verticalSpeed, formatVs(now.vsMs)],
+            [d.fuel, `${Math.round(now.fuelPct)}%`],
+          ] as const
+        ).map(([label, value]) => (
+          <div key={label} className="bg-space-deep/85 px-2 py-1">
+            <dt className="text-[10px] leading-tight text-foreground/65">{label}</dt>
+            <dd className="font-mono tabular-nums">{value}</dd>
+          </div>
+        ))}
+      </dl>
 
-      <TelemetryChart
-        title={d.altitude}
-        xs={xs}
-        ys={alt}
-        xMax={TOUCHDOWN.t}
-        yMin={0}
-        yMax={16000}
-        formatValue={formatAltitude}
-        formatTick={formatAltitudeTick}
-        formatX={formatMissionTime}
-      />
-      <TelemetryChart
-        title={d.verticalSpeed}
-        xs={xs}
-        ys={vs}
-        xMax={TOUCHDOWN.t}
-        yMin={-40}
-        yMax={5}
-        formatValue={formatVs}
-        formatTick={formatVsTick}
-        formatX={formatMissionTime}
-        reference={{ value: -SAFE_TOUCHDOWN_MS, label: format(d.safeLimit, { value: SAFE_TOUCHDOWN_MS }) }}
-      />
-      {/* Same numbers without the charts: keyboard, screen readers, and anyone who wants exact values. */}
-      <details className="text-sm">
-        <summary className="cursor-pointer text-foreground/80">{d.tableToggle}</summary>
-        <table className="mt-2 w-full text-left font-mono text-xs tabular-nums">
-          <thead className="text-foreground/65">
-            <tr>
-              <th className="py-1 font-normal">{d.time}</th>
-              <th className="py-1 font-normal">{d.altitude}</th>
-              <th className="py-1 font-normal">{d.verticalSpeed}</th>
-              <th className="py-1 font-normal">{d.fuel}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((k) => (
-              <tr key={k.t} className="border-t border-space-blue/60">
-                <td className="py-1">{formatMissionTime(k.t)}</td>
-                <td className="py-1">{formatAltitude(k.altM)}</td>
-                <td className="py-1">{formatVs(k.vsMs)}</td>
-                <td className="py-1">{Math.round(k.fuelPct)}%</td>
+      <details className="group text-xs">
+        <summary className="flex cursor-pointer items-center justify-between text-foreground/75">
+          {d.chartsToggle}
+          <StatusBadge status="demo">{tr.common.demoData}</StatusBadge>
+        </summary>
+        <div className="mt-2 flex flex-col gap-2">
+          <TelemetryChart
+            title={d.altitude}
+            xs={xs}
+            ys={alt}
+            xMax={TOUCHDOWN.t}
+            yMin={0}
+            yMax={16000}
+            height={90}
+            formatValue={formatAltitude}
+            formatTick={formatAltitudeTick}
+            formatX={formatMissionTime}
+          />
+          <TelemetryChart
+            title={d.verticalSpeed}
+            xs={xs}
+            ys={vs}
+            xMax={TOUCHDOWN.t}
+            yMin={-40}
+            yMax={5}
+            height={90}
+            formatValue={formatVs}
+            formatTick={formatVsTick}
+            formatX={formatMissionTime}
+            reference={{ value: -SAFE_TOUCHDOWN_MS, label: format(d.safeLimit, { value: SAFE_TOUCHDOWN_MS }) }}
+          />
+          {/* Same numbers without the charts: keyboard, screen readers, and anyone who wants exact values. */}
+          <table className="w-full text-left font-mono text-[11px] tabular-nums">
+            <caption className="sr-only">{d.tableToggle}</caption>
+            <thead className="text-foreground/65">
+              <tr>
+                <th className="py-0.5 font-normal">{d.time}</th>
+                <th className="py-0.5 font-normal">{d.altitude}</th>
+                <th className="py-0.5 font-normal">{d.verticalSpeed}</th>
+                <th className="py-0.5 font-normal">{d.fuel}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((k) => (
+                <tr key={k.t} className="border-t border-space-blue/60">
+                  <td className="py-0.5">{formatMissionTime(k.t)}</td>
+                  <td className="py-0.5">{formatAltitude(k.altM)}</td>
+                  <td className="py-0.5">{formatVs(k.vsMs)}</td>
+                  <td className="py-0.5">{Math.round(k.fuelPct)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </details>
-      <StatusBadge status="demo" className="w-fit">
-        {tr.common.demoData}
-      </StatusBadge>
     </div>
   );
 }

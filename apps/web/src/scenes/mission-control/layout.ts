@@ -15,6 +15,12 @@ export const GROUND_Y = -14;
 export const PAD: Vec3 = [5, GROUND_Y, -85];
 export const ROCKET_HEIGHT = 30;
 
+/**
+ * Launch view: outside on the grass, ~50 m from the pad and a few metres up, so the whole stack
+ * and the umbilical tower beside it fill the frame from a low, heroic angle.
+ */
+export const LAUNCH_VANTAGE: Vec3 = [-24, GROUND_Y + 5, -42];
+
 const EYE: Vec3 = [0, EYE_Y, 2.4];
 
 /** Standing eye height above whichever floor the player is on: main floor or the raised back tier. */

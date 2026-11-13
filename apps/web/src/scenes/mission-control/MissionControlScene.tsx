@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
@@ -34,6 +35,7 @@ import { ControlRoomWorld } from "./ControlRoomWorld";
 import { CountdownPanel, FlightPanel, PollPanel } from "./LaunchPanels";
 import { formatMissionTime } from "@/lib/format";
 import { VIEWPOINTS } from "./layout";
+import { realSecondsAt } from "./flight";
 import { consoleSeed, engineOption, tankOption } from "@/scenes/workshop/loadout";
 
 /** How long the liftoff roar lasts, in real time (the climb out of sight). */
@@ -85,12 +87,15 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
     };
   }, []);
   const consoleRef = useRef<HTMLElement>(null);
+  // The planning console can fold down to its title bar, to look at the pad and the room.
+  const [collapsed, setCollapsed] = useState(false);
 
   useSceneViewpoints(VIEWPOINTS, "console");
 
   // The console scrolls on small screens; each phase starts at its top.
   useEffect(() => {
     consoleRef.current?.scrollTo({ top: 0 });
+    setCollapsed(false);
   }, [phase]);
 
   const assessment = useMemo(() => launchSimulator.assess(config), [config]);
@@ -116,7 +121,9 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
   }, []);
 
   const endFlight = useCallback(() => {
-    if (!result) return;
+    // Only the live flight ends the flight: a FlightPanel shown again on the anomaly report
+    // would otherwise fire onEnd a second time and replay the failure cutscene.
+    if (!result || phase !== "flight") return;
     recordLaunch(config, result.isSuccess);
     if (result.isSuccess) {
       setPhase("orbit");
@@ -125,7 +132,7 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
       roar.current();
       setPhase("failure-pov");
     }
-  }, [config, result, recordLaunch]);
+  }, [config, result, recordLaunch, phase]);
 
   /** Back from the capsule: the vehicle comes apart in the sky and the room reacts. */
   const startExplosion = useCallback(() => {
@@ -191,6 +198,13 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
     if (!result || result.isSuccess) return undefined;
     return { met: Math.max(60, result.endSec), code: result.failureTrace[0]?.code ?? "fuel-depleted" };
   }, [result]);
+  // From the launch command until orbit, the camera is outside watching the rocket. The failure
+  // cutscene and the anomaly report are seen from the control room again.
+  const launchView = phase === "countdown" || phase === "flight" || phase === "orbit";
+  // While the vehicle flies (and on the report after), the console shrinks to a corner HUD.
+  const flightHud = phase === "countdown" || phase === "flight" || phase === "orbit" || phase === "anomaly";
+  // When the last engine stops in the 3D view: orbit insertion, or stage 2 running dry.
+  const burnEndT = result ? realSecondsAt(result.endSec) : Infinity;
   const overweight = result?.failureTrace.some((s) => s.code === "slow-climb") ?? false;
 
   return (
@@ -198,7 +212,12 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
       {phase !== "failure-pov" && (
         <WorldCanvas label={m.sceneLabel}>
           {/* After a failure the rocket is long gone from the pad: start the explosion with it out of sight. */}
-          <ControlRoomWorld ignitionAt={worldIgnition} explodeAt={explodeAt} />
+          <ControlRoomWorld
+            ignitionAt={worldIgnition}
+            launchView={launchView}
+            burnEndT={burnEndT}
+            explodeAt={explodeAt}
+          />
         </WorldCanvas>
       )}
       {phase === "failure-pov" && failure && (
@@ -231,7 +250,14 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
         <div key={alarm} aria-hidden className="pointer-events-none absolute inset-0 animate-alarm-flash bg-warning/35" />
       )}
 
-      <div className={cn("pointer-events-none absolute left-3 top-16 sm:left-8 sm:top-20", cinematic && "hidden")}>
+      {/* Hidden in the failure cutscene; on phones also while the corner flight HUD needs the space. */}
+      <div
+        className={cn(
+          "pointer-events-none absolute left-3 top-16 sm:left-8 sm:top-20",
+          cinematic && "hidden",
+          flightHud && "hidden sm:block",
+        )}
+      >
         <ObjectivePanel
           className="pointer-events-auto"
           items={[
@@ -241,38 +267,62 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
         />
       </div>
 
-      <aside
-        ref={consoleRef}
-        aria-label={m.consoleLabel}
-        className={cn(
-          "bezel absolute inset-x-3 bottom-3 max-h-[56dvh] overflow-y-auto bg-space-deep/95 p-4 sm:inset-x-auto sm:bottom-6 sm:right-8 sm:top-20 sm:max-h-none sm:w-[27rem] sm:p-5",
-          cinematic && "hidden",
-        )}
-      >
-        <header className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">{titles[phase]}</h2>
-          <span className="font-mono text-xs text-foreground/70">{format(m.attempt, { n: attempt })}</span>
-        </header>
+      {cinematic ? null : flightHud ? (
+        // Launch: only a small clock and the stage list in the top-right corner, so the
+        // rocket (seen from outside) owns the screen.
+        <aside
+          aria-label={m.consoleLabel}
+          className="absolute right-3 top-16 flex w-[15.5rem] flex-col gap-2 sm:right-8 sm:top-20"
+        >
+          {phase === "countdown" && <CountdownPanel onIgnition={ignite} onHold={() => setPhase("poll")} />}
+          {phase !== "countdown" && result && ignitionAt !== null && (
+            <FlightPanel config={config} result={result} ignitionAt={ignitionAt} onEnd={endFlight} />
+          )}
+        </aside>
+      ) : (
+        <aside
+          ref={consoleRef}
+          aria-label={m.consoleLabel}
+          className={cn(
+            "bezel absolute inset-x-3 bottom-3 overflow-y-auto bg-space-deep/95 p-3.5",
+            "sm:inset-x-auto sm:bottom-auto sm:right-8 sm:top-20 sm:w-[21rem] sm:max-h-[calc(100dvh-6.5rem)]",
+            collapsed ? "max-h-none" : "max-h-[50dvh]",
+          )}
+        >
+          <header className={cn("flex items-center justify-between gap-2", !collapsed && "mb-3")}>
+            <h2 className="text-base font-semibold">{titles[phase]}</h2>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-foreground/70">{format(m.attempt, { n: attempt })}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 px-0"
+                onClick={() => setCollapsed((c) => !c)}
+                aria-expanded={!collapsed}
+                aria-label={collapsed ? m.expand : m.collapse}
+                title={collapsed ? m.expand : m.collapse}
+              >
+                {collapsed ? <ChevronDown className="h-4 w-4" aria-hidden /> : <ChevronUp className="h-4 w-4" aria-hidden />}
+              </Button>
+            </div>
+          </header>
 
-        {phase === "config" && loadout && (
-          <p className="mb-3 border-l-2 border-primary bg-space-blue/35 px-3 py-2 text-xs text-foreground/85">
-            {format(m.fromWorkshop, {
-              engines: localize(engineOption(loadout.engine).name),
-              tanks: localize(tankOption(loadout.tank).name),
-            })}
-          </p>
-        )}
-        {phase === "config" && (
-          <ConfigPanel config={config} onChange={setConfig} assessment={assessment} onProceed={() => setPhase("poll")} />
-        )}
-        {phase === "poll" && (
-          <PollPanel assessment={assessment} onLaunch={startCountdown} onBack={() => setPhase("config")} />
-        )}
-        {phase === "countdown" && <CountdownPanel onIgnition={ignite} onHold={() => setPhase("poll")} />}
-        {(phase === "flight" || phase === "anomaly" || phase === "orbit") && result && ignitionAt !== null && (
-          <FlightPanel config={config} result={result} ignitionAt={ignitionAt} onEnd={endFlight} />
-        )}
-      </aside>
+          {!collapsed && phase === "config" && loadout && (
+            <p className="mb-3 border-l-2 border-primary bg-space-blue/35 px-3 py-2 text-xs text-foreground/85">
+              {format(m.fromWorkshop, {
+                engines: localize(engineOption(loadout.engine).name),
+                tanks: localize(tankOption(loadout.tank).name),
+              })}
+            </p>
+          )}
+          {!collapsed && phase === "config" && (
+            <ConfigPanel config={config} onChange={setConfig} assessment={assessment} onProceed={() => setPhase("poll")} />
+          )}
+          {!collapsed && phase === "poll" && (
+            <PollPanel assessment={assessment} onLaunch={startCountdown} onBack={() => setPhase("config")} />
+          )}
+        </aside>
+      )}
 
       <Dialog open={phase === "anomaly"}>
         <DialogContent locked>

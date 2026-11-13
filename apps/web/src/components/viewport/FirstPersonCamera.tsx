@@ -39,6 +39,7 @@ export function FirstPersonCamera() {
   const heldCodes = useRef(new Set<string>());
   const placed = useRef(false);
   const goal = useRef(new Vector3());
+  const rigActive = useRef(false);
 
   // Arriving at a viewpoint: face its resting direction. The very first one is a hard cut.
   useEffect(() => {
@@ -138,6 +139,27 @@ export function FirstPersonCamera() {
   useFrame((state, rawDelta) => {
     if (!viewpoint) return;
     const dt = Math.min(Math.max(rawDelta, 0), 0.1);
+
+    // A scripted move owns the camera; shake still rides on top of it.
+    const rig = useSceneStore.getState().cameraRig;
+    if (rig) {
+      rig(camera, dt);
+      const shake = stepShake(dt, state.clock.elapsedTime, reduced);
+      camera.rotateY(shake.yaw);
+      camera.rotateX(shake.pitch);
+      camera.rotateZ(shake.roll);
+      rigActive.current = true;
+      return;
+    }
+    if (rigActive.current) {
+      // Back from a scripted move: a clean cut to the viewpoint's resting view. Gliding back
+      // from outside would fly the camera through the building.
+      target.current = { yaw: viewpoint.yaw, pitch: viewpoint.pitch };
+      current.current = { ...target.current };
+      camera.position.copy(goal.current);
+      rigActive.current = false;
+    }
+
     const keys = heldCodes.current;
     const walk = viewpoint.walk;
 
