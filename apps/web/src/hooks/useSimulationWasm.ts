@@ -2,6 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { handleWorkerMessage, type WorkerRequestMessage } from "@/workers/simulation.worker";
+import type {
+  DsnTelemetryInput,
+  DsnTelemetryResult,
+  LandingRadarInput,
+  LandingRadarMeasurement,
+  MissionDesignBudgetInput,
+  MissionDesignBudgetResult,
+} from "@/lib/simulation/nasa.types";
 
 export interface WasmLaunchConfigInput {
   vehicle_mass?: number;
@@ -123,6 +131,24 @@ export function useSimulationWasm() {
     [dispatchMessage],
   );
 
+  /** Ryan landing radar vs AGC inertial altitude (WASM calculate_landing_radar). */
+  const calculateLandingRadar = useCallback(
+    (input: LandingRadarInput) => dispatchMessage<LandingRadarMeasurement>("LANDING_RADAR", input),
+    [dispatchMessage],
+  );
+
+  /** Goddard MDL mass / power / Δv budget and JPL CML (WASM evaluate_mission_design_budget). */
+  const evaluateMissionDesignBudget = useCallback(
+    (input: MissionDesignBudgetInput) => dispatchMessage<MissionDesignBudgetResult>("MISSION_DESIGN_BUDGET", input),
+    [dispatchMessage],
+  );
+
+  /** DSN round-trip light time, path loss and occultation (WASM calculate_dsn_telemetry). */
+  const calculateDsnTelemetry = useCallback(
+    (input: DsnTelemetryInput) => dispatchMessage<DsnTelemetryResult>("DSN_TELEMETRY", input),
+    [dispatchMessage],
+  );
+
   const runSimulation = useCallback(
     async (config: unknown): Promise<WasmLaunchValidationResult> => {
       return validateLaunch((config ?? {}) as WasmLaunchConfigInput);
@@ -141,6 +167,9 @@ export function useSimulationWasm() {
     validateLaunch,
     stepDescent,
     calculateScore,
+    calculateLandingRadar,
+    evaluateMissionDesignBudget,
+    calculateDsnTelemetry,
     runSimulation,
   };
 }

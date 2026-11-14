@@ -1,8 +1,18 @@
 /// <reference lib="webworker" />
 
+import { dsnTelemetry, landingRadar, missionDesignBudget } from "@/lib/simulation/nasa.physics";
+
 export interface WorkerRequestMessage {
   id: string;
-  type: "INIT" | "PING" | "VALIDATE_LAUNCH" | "STEP_DESCENT" | "CALCULATE_SCORE";
+  type:
+    | "INIT"
+    | "PING"
+    | "VALIDATE_LAUNCH"
+    | "STEP_DESCENT"
+    | "CALCULATE_SCORE"
+    | "LANDING_RADAR"
+    | "MISSION_DESIGN_BUDGET"
+    | "DSN_TELEMETRY";
   payload?: unknown;
 }
 
@@ -20,6 +30,27 @@ interface SimWasmExports {
   validate_launch: (jsonStr: string) => string;
   run_descent_step: (jsonStr: string) => string;
   calculate_score: (jsonStr: string) => string;
+  // NASA realism exports (crates/sim-wasm). Optional: an older binary may not ship them.
+  calculate_landing_radar?: (jsonStr: string) => string;
+  evaluate_mission_design_budget?: (jsonStr: string) => string;
+  calculate_dsn_telemetry?: (jsonStr: string) => string;
+}
+
+/** Calls a WASM export, or the TypeScript mirror when the export is missing or rejects the input. */
+function callNasa<T extends { error_message?: string }>(
+  wasmFn: ((json: string) => string) | undefined,
+  fallback: (input: never) => T,
+  payload: unknown,
+): T {
+  if (typeof wasmFn === "function") {
+    try {
+      const parsed = JSON.parse(wasmFn(JSON.stringify(payload ?? {}))) as T;
+      if (!parsed.error_message) return parsed;
+    } catch {
+      // fall through to the mirror
+    }
+  }
+  return fallback(payload as never);
 }
 
 let wasmModule: SimWasmExports | null = null;
@@ -211,6 +242,24 @@ export async function handleWorkerMessage(msg: WorkerRequestMessage): Promise<Wo
         const raw = engine.calculate_score(JSON.stringify(msg.payload ?? {}));
         return { id: msg.id, type: "RESULT", result: JSON.parse(raw) };
       }
+      case "LANDING_RADAR":
+        return {
+          id: msg.id,
+          type: "RESULT",
+          result: callNasa(engine.calculate_landing_radar, landingRadar, msg.payload),
+        };
+      case "MISSION_DESIGN_BUDGET":
+        return {
+          id: msg.id,
+          type: "RESULT",
+          result: callNasa(engine.evaluate_mission_design_budget, missionDesignBudget, msg.payload),
+        };
+      case "DSN_TELEMETRY":
+        return {
+          id: msg.id,
+          type: "RESULT",
+          result: callNasa(engine.calculate_dsn_telemetry, dsnTelemetry, msg.payload),
+        };
       default:
         return { id: msg.id, type: "ERROR", error: `Unknown message type: ${String((msg as any).type)}` };
     }

@@ -11,9 +11,15 @@ import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
 import { playSfx, startLoop } from "@/game/sfx";
 import { useSimulationWasm } from "@/hooks/useSimulationWasm";
+import { useNasaData } from "@/hooks/useNasaData";
+import { DsnTrackingStatus } from "@/components/hud/DsnTrackingStatus";
+import { landingRadar } from "@/lib/simulation/nasa.physics";
+import type { DsnTelemetryResult, LandingRadarMeasurement } from "@/lib/simulation/nasa.types";
 import { DESCENT_STEPS, TOUCHDOWN } from "@/mocks/descent";
 import { DescentCommand, DescentTelemetry, formatVs } from "./DescentPanel";
+import { LandingRadarProfile } from "./LandingRadarProfile";
 import { LunarWorld } from "./LunarWorld";
+import { radarInputAt } from "./radar";
 import { VIEWPOINTS, missionTimeNow, type DescentClock } from "./layout";
 
 type Phase = "hold" | "playing" | "landed";
@@ -43,7 +49,10 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
   const [missionT, setMissionT] = useState(0);
   const [touchdownAt, setTouchdownAt] = useState<number | null>(null);
   const [dialog, setDialog] = useState(false);
-  const { stepDescent, lastDescentState } = useSimulationWasm();
+  const { stepDescent, lastDescentState, calculateLandingRadar, calculateDsnTelemetry } = useSimulationWasm();
+  const nasa = useNasaData();
+  const [radar, setRadar] = useState<LandingRadarMeasurement>(() => landingRadar(radarInputAt(0)));
+  const [dsnLink, setDsnLink] = useState<DsnTelemetryResult | null>(null);
   const timers = useRef<number[]>([]);
 
   useSceneViewpoints(VIEWPOINTS, "window");
@@ -67,6 +76,28 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
     const id = window.setInterval(() => setMissionT(missionTimeNow(clock)), PANEL_TICK_MS);
     return () => window.clearInterval(id);
   }, [clock, phase]);
+
+  // Landing radar follows the panel clock (same 80 ms cadence as the other readouts).
+  useEffect(() => {
+    let alive = true;
+    calculateLandingRadar(radarInputAt(missionT))
+      .then((m) => alive && setRadar(m))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [missionT, calculateLandingRadar]);
+
+  // S-band link to Earth for the current Earth–Moon distance (Eagle is on the near side).
+  useEffect(() => {
+    let alive = true;
+    calculateDsnTelemetry({ distance_km: nasa.ephemeris.distance_km, true_anomaly_deg: 0 })
+      .then((l) => alive && setDsnLink(l))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [nasa.ephemeris.distance_km, calculateDsnTelemetry]);
 
   const armed = phase === "hold" && clock.stepsDone < DESCENT_STEPS.length ? clock.stepsDone : null;
 
@@ -160,6 +191,10 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
               </div>
             </div>
           )}
+        </div>
+        <div className="bezel bezel-sm flex shrink-0 flex-col gap-2.5 bg-space-deep/85 px-3 py-2.5 backdrop-blur-sm">
+          <LandingRadarProfile measurement={radar} />
+          <DsnTrackingStatus status={nasa.dsn} link={dsnLink} compact className="border-t border-space-blue/60 pt-2" />
         </div>
       </aside>
 

@@ -34,6 +34,11 @@ import {
 import { TRACE_TEXT } from "@/lib/simulation/launch.mock";
 import type { LaunchConfig, LaunchResult } from "@/lib/simulation/launch.types";
 import { useSimulationWasm } from "@/hooks/useSimulationWasm";
+import { useNasaData } from "@/hooks/useNasaData";
+import { DsnTrackingStatus } from "@/components/hud/DsnTrackingStatus";
+import { SpaceWeatherWidget } from "@/components/hud/SpaceWeatherWidget";
+import { BuildItYourselfPanel } from "@/components/dashboard/BuildItYourselfPanel";
+import type { DsnTelemetryResult } from "@/lib/simulation/nasa.types";
 import { ConfigPanel } from "./ConfigPanel";
 import { mood } from "./mood";
 import { EXPLOSION_SECONDS, FLY_SECONDS } from "./SkyExplosion";
@@ -140,7 +145,23 @@ export function MissionControlScene({
   const [explodeAt, setExplodeAt] = useState<number | null>(null);
   const [boomFlash, setBoomFlash] = useState(false);
   const [serverTelemetry, setServerTelemetry] = useState<ServerLaunchTelemetry>(OFFLINE_APOLLO11_TELEMETRY);
-  const { validateLaunch: validateLaunchWasm, lastValidation: wasmValidation } = useSimulationWasm();
+  const {
+    validateLaunch: validateLaunchWasm,
+    lastValidation: wasmValidation,
+    evaluateMissionDesignBudget,
+    calculateDsnTelemetry,
+  } = useSimulationWasm();
+  const nasa = useNasaData();
+  const [dsnLink, setDsnLink] = useState<DsnTelemetryResult | null>(null);
+  useEffect(() => {
+    let alive = true;
+    calculateDsnTelemetry({ distance_km: nasa.ephemeris.distance_km })
+      .then((l) => alive && setDsnLink(l))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [nasa.ephemeris.distance_km, calculateDsnTelemetry]);
   const cinematicTimers = useRef<number[]>([]);
   const pending = useRef<Promise<LaunchResult> | null>(null);
 
@@ -597,6 +618,18 @@ export function MissionControlScene({
                   <span>TWR / MAX-Q: {(wasmValidation?.liftoff_twr ?? serverTelemetry.vehicle.liftoff_twr).toFixed(3)} / {(wasmValidation?.max_q_kpa ?? serverTelemetry.vehicle.max_q_kpa).toFixed(1)} kPa</span>
                 </div>
               </div>
+              <details className="group mb-3 rounded border border-space-blue/60 bg-space-blue/15 px-3 py-2">
+                <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-wider text-primary">
+                  NASA mission data &amp; design study
+                </summary>
+                <div className="mt-2 flex flex-col gap-3">
+                  <DsnTrackingStatus status={nasa.dsn} link={dsnLink} />
+                  <SpaceWeatherWidget data={nasa.spaceWeather} className="border-t border-space-blue/60 pt-2" />
+                  <div className="border-t border-space-blue/60 pt-2">
+                    <BuildItYourselfPanel evaluate={evaluateMissionDesignBudget} />
+                  </div>
+                </div>
+              </details>
               <ConfigPanel
                 config={config}
                 onChange={setConfig}
