@@ -455,8 +455,8 @@ export function assertEasepPayloadSchema(data: any): void {
   assert.equal(typeof data.deployment_site.longitude_deg, "number", "deployment_site.longitude_deg must be a number");
   assert.equal(typeof data.deployment_site.distance_from_lm_m, "number", "deployment_site.distance_from_lm_m must be a number");
   assert.ok(
-    ["api", "offline_fallback"].includes(data.source),
-    `source must be 'api' or 'offline_fallback', got '${data.source}'`
+    ["api", "reference", "offline_fallback"].includes(data.source),
+    `source must be 'api', 'reference' or 'offline_fallback', got '${data.source}'`
   );
 }
 
@@ -474,8 +474,8 @@ export function assertLunarEnvironmentSchema(data: any): void {
   assert.equal(typeof data.surface_temperature_c, "number", "surface_temperature_c must be a number");
   if (data.source !== undefined) {
     assert.ok(
-      ["api", "offline_fallback"].includes(data.source),
-      `source must be 'api' or 'offline_fallback', got '${data.source}'`
+      ["api", "engine", "offline_fallback"].includes(data.source),
+      `source must be 'api', 'engine' or 'offline_fallback', got '${data.source}'`
     );
   }
 }

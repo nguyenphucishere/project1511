@@ -14,6 +14,8 @@ import {
   NasaMdlService,
 } from "./services/nasa/index.js";
 import { createNasaRouter } from "./routes/nasaRoutes.js";
+import { createEngineRouter } from "./routes/engineRoutes.js";
+import { EngineInputError, EngineUnavailableError } from "./services/simEngine.js";
 import type { RoomStore } from "./services/roomStore.js";
 import { parseRequestedRoles } from "./sync/roleLocks.js";
 import type { RoomLogger } from "./sync/room.js";
@@ -124,8 +126,17 @@ export function createAppServer(deps: ServerDeps): AppServer {
     })
   );
 
+  app.use("/api/engine", createEngineRouter());
+
   // Malformed JSON bodies and similar: report as 400 rather than leaking a stack trace.
   app.use((error: Error & { status?: number }, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (error instanceof EngineUnavailableError || error instanceof EngineInputError) {
+      res.status(error.status).json({
+        error: error instanceof EngineUnavailableError ? "engine_unavailable" : "bad_request",
+        detail: error.message,
+      });
+      return;
+    }
     res.status(error.status ?? 500).json({ error: error.status && error.status < 500 ? "bad_request" : "internal_error" });
   });
 

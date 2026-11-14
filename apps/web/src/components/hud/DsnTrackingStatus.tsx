@@ -2,12 +2,12 @@
 
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { cn } from "@/lib/utils";
-import type { DsnStatusData, DsnTelemetryResult } from "@/lib/simulation/nasa.types";
+import type { DsnLinkData, DsnStatusData, DsnTelemetryResult } from "@/lib/simulation/nasa.types";
 
 export interface DsnTrackingStatusProps {
   status: DsnStatusData;
   /** Link budget from the engine (calculate_dsn_telemetry); overrides RTLT / power when present. */
-  link?: DsnTelemetryResult | null;
+  link?: DsnTelemetryResult | DsnLinkData | null;
   /** Hide the per-dish list (descent console). */
   compact?: boolean;
   className?: string;
@@ -74,6 +74,13 @@ export function DsnTrackingStatus({ status, link, compact = false, className }: 
       {link && !occulted && (
         <p className="mt-1 text-[10px] text-foreground/55">
           S-band {status.downlink_frequency_mhz} MHz · path loss {link.path_loss_db.toFixed(1)} dB
+          {"distance_km" in link && (
+            <span data-link-range>
+              {" "}
+              · range {Math.round(link.distance_km).toLocaleString()} km
+              {link.distance_source === "api" ? " (JPL Horizons)" : ""} · server engine
+            </span>
+          )}
         </p>
       )}
 

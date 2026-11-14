@@ -15,7 +15,7 @@ export class NasaHorizonsService {
 
   constructor(options?: NasaHorizonsServiceOptions) {
     this.apiUrl = options?.apiUrl ?? "https://ssd.jpl.nasa.gov/api/horizons.api";
-    this.timeoutMs = options?.timeoutMs ?? 1500;
+    this.timeoutMs = options?.timeoutMs ?? 4000;
     this.cacheTtlMs = options?.cacheTtlMs ?? 3600_000; // 3600s cache TTL
   }
 
@@ -60,22 +60,22 @@ export class NasaHorizonsService {
       });
 
       if (!res.ok) {
-        return { ...HISTORICAL_APOLLO_11_EPHEMERIS };
+        return this.fallback(cached);
       }
 
       const json = (await res.json()) as { result?: string; error?: string };
       if (json.error || !json?.result) {
-        return { ...HISTORICAL_APOLLO_11_EPHEMERIS };
+        return this.fallback(cached);
       }
 
       const parsed = this.parseHorizonsOutput(json.result, target, epoch);
       if (!parsed) {
-        return { ...HISTORICAL_APOLLO_11_EPHEMERIS };
+        return this.fallback(cached);
       }
 
       const validated = EphemerisDataSchema.safeParse(parsed);
       if (!validated.success) {
-        return { ...HISTORICAL_APOLLO_11_EPHEMERIS };
+        return this.fallback(cached);
       }
 
       this.cache.set(cacheKey, {
@@ -85,8 +85,14 @@ export class NasaHorizonsService {
 
       return validated.data;
     } catch {
-      return { ...HISTORICAL_APOLLO_11_EPHEMERIS };
+      return this.fallback(cached);
     }
+  }
+
+  /** Upstream failed: reuse the last live vector for this target/epoch, else the 1969 baseline. */
+  private fallback(stale?: { data: EphemerisData }): EphemerisData {
+    if (stale) return { ...stale.data, cached: true };
+    return { ...HISTORICAL_APOLLO_11_EPHEMERIS };
   }
 
   private parseHorizonsOutput(

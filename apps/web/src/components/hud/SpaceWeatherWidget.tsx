@@ -28,7 +28,7 @@ export function SpaceWeatherWidget({ data, className }: { data: SpaceWeatherData
     >
       <header className="flex items-center justify-between text-[10px] uppercase tracking-wider text-primary">
         <span>SPACE WEATHER · CYCLE {data.solar_cycle}</span>
-        <span className="text-foreground/55">{data.source === "api" ? "LIVE NASA DONKI" : "JULY 1969"}</span>
+        <span className="text-foreground/55">{data.source === "api" ? `LIVE ${data.provider ?? "NASA DONKI"}` : "JULY 1969"}</span>
       </header>
 
       <div className="mt-1.5 flex flex-wrap gap-1.5">

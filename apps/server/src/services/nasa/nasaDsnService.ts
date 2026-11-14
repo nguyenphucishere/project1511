@@ -15,7 +15,7 @@ export class NasaDsnService {
 
   constructor(options?: NasaDsnServiceOptions) {
     this.apiUrl = options?.apiUrl ?? "https://eyes.nasa.gov/dsn/data/dsn.xml";
-    this.timeoutMs = options?.timeoutMs ?? 1500;
+    this.timeoutMs = options?.timeoutMs ?? 4000;
     this.cacheTtlMs = options?.cacheTtlMs ?? 15_000; // 15s cache TTL
   }
 
@@ -38,18 +38,18 @@ export class NasaDsnService {
       const res = await fetch(this.apiUrl, { signal });
 
       if (!res.ok) {
-        return { ...HISTORICAL_APOLLO_11_DSN_STATUS };
+        return this.fallback();
       }
 
       const xmlText = await res.text();
       const parsed = this.parseDsnXml(xmlText);
       if (!parsed) {
-        return { ...HISTORICAL_APOLLO_11_DSN_STATUS };
+        return this.fallback();
       }
 
       const validated = DsnStatusDataSchema.safeParse(parsed);
       if (!validated.success) {
-        return { ...HISTORICAL_APOLLO_11_DSN_STATUS };
+        return this.fallback();
       }
 
       this.cache = {
@@ -59,8 +59,14 @@ export class NasaDsnService {
 
       return validated.data;
     } catch {
-      return { ...HISTORICAL_APOLLO_11_DSN_STATUS };
+      return this.fallback();
     }
+  }
+
+  /** Upstream failed: reuse the last live DSN snapshot, else the 1969 MSFN baseline. */
+  private fallback(): DsnStatusData {
+    if (this.cache) return { ...this.cache.data, cached: true };
+    return { ...HISTORICAL_APOLLO_11_DSN_STATUS };
   }
 
   private parseDsnXml(xml: string): DsnStatusData | null {
