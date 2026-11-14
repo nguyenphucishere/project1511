@@ -8,6 +8,7 @@ import { CHARACTERS } from "@/game/characters";
 import type { Consequence } from "@/game/consequences";
 import { cn } from "@/lib/utils";
 import { ParallaxCanvas } from "./ParallaxCanvas";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 
 export interface ConsequenceBeatProps {
   consequence: Consequence;
@@ -36,6 +37,7 @@ export function ConsequenceBeat({ consequence, choiceTitle, horizon, onDone }: C
   const line = consequence.lines[index];
   const isLast = index === consequence.lines.length - 1;
   const text = localize(line.text);
+  useVoiceLine(text);
   const { shown, hidden, done, complete } = useTypewriter(text, { instant: reduced });
   const tone = TONE[consequence.tone];
   const speaker = line.speaker ? CHARACTERS[line.speaker] : null;

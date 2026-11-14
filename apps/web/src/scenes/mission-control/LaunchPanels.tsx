@@ -16,6 +16,7 @@ import type { LaunchAssessment, LaunchConfig, LaunchResult } from "@/lib/simulat
 import { formatMissionTime } from "@/lib/format";
 import { NOMINAL_EVENTS, altitudeKm, missionSecondsAt, realSecondsAt, speedKms } from "./flight";
 import { EPILOGUE } from "./ascent";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 
 /* ---------------------------------------------------------------- GO / NO-GO poll */
 
@@ -52,6 +53,9 @@ export function PollPanel({
 
   const done = answered >= items.length;
   const allGo = items.every((i) => i.go);
+  // Gene Kranz opens the poll; if weather is NO-GO he calls the scrub once the poll is in.
+  useVoiceLine(format(m.pollIntro, { name: localize(CHARACTERS["flight-director"].name) }));
+  useVoiceLine(done && !allGo ? format(m.scrub, { limit: WIND_LIMIT_KMH }) : null, { queue: true });
 
   // Each station's answer is heard as it comes in; only weather (the last) can be NO-GO.
   useEffect(() => {

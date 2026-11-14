@@ -14,7 +14,9 @@
     "db:generate": "pnpm --filter @space-sim/server db:generate",
     "db:push": "pnpm --filter @space-sim/server db:push",
     "test": "turbo run test",
-    "test:e2e": "./apps/server/node_modules/.bin/tsx --test \"tests/e2e/**/*.test.ts\""
+    "test:e2e": "./apps/server/node_modules/.bin/tsx --test \"tests/e2e/**/*.test.ts\"",
+    "voice:lines": "cd apps/web && ../server/node_modules/.bin/tsx --tsconfig tsconfig.json ../../tools/voice/extract-lines.ts",
+    "voice:generate": "node tools/voice/generate.mjs"
   },
   "devDependencies": {
     "prettier": "^3.5.2",

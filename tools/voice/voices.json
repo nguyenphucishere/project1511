@@ -1,0 +1,88 @@
+{
+  "_comment": "Which AIMAX Studio (MiniMax) voice reads which role. Voices are matched by exact name; change a name and run `node tools/voice/generate.mjs` to re-record only the affected lines. `radio` roles get a NASA radio filter when played in the game.",
+  "model": "speech-2.8-hd",
+  "roles": {
+    "narrator": {
+      "label": "Dẫn truyện / phụ đề / báo cáo",
+      "radio": false,
+      "speed": 0.95,
+      "en": { "voice": "Man With Deep Voice - Deep,Resonant,Gravelly" },
+      "vi": { "voice": "Man With Deep Voice - Deep,Resonant,Gravelly" }
+    },
+    "armstrong": {
+      "label": "Neil Armstrong (phi hành gia, chỉ huy)",
+      "radio": false,
+      "en": { "voice": "Deep-voiced Gentleman - Deep,Resonant,Warm" },
+      "vi": { "voice": "Serene Man - Solemn,Cinematic,Captivating" }
+    },
+    "aldrin": {
+      "label": "Buzz Aldrin",
+      "radio": false,
+      "en": { "voice": "Determined Man - Clear,Energetic,Youthful" },
+      "vi": { "voice": "Thiện Tâm" }
+    },
+    "collins": {
+      "label": "Michael Collins",
+      "radio": false,
+      "en": { "voice": "Engaging Instructor - Distinct,Informative Friendly" },
+      "vi": { "voice": "SG - Chí Đạt" }
+    },
+    "kranz": {
+      "label": "Gene Kranz (chỉ huy bay)",
+      "radio": true,
+      "en": { "voice": "Bossy Leader - Gravelly,Deep,Resonant" },
+      "vi": { "voice": "HN - Anh Khôi" }
+    },
+    "bales": {
+      "label": "Steve Bales (sĩ quan dẫn đường)",
+      "radio": true,
+      "en": { "voice": "Diligent Man - Crisp,Balanced,Approachable" },
+      "vi": { "voice": "SG - Trung Kiên" }
+    },
+    "garman": {
+      "label": "Jack Garman (kỹ sư / phụ tá xưởng)",
+      "radio": false,
+      "en": { "voice": "Thoughtful Man - Clear,Smooth,Youthful" },
+      "vi": { "voice": "HN - Mạnh Dũng" }
+    },
+    "doctor": {
+      "label": "Bác sĩ Lin (nữ)",
+      "radio": false,
+      "en": { "voice": "Graceful Lady - Velvety,Warm,Melodious" },
+      "vi": { "voice": "HN - Mai Phương" }
+    },
+    "rudolph": {
+      "label": "Arthur Rudolph (trưởng xưởng)",
+      "radio": false,
+      "en": { "voice": "Wise Scholar - Warm,Grainy,Weathered" },
+      "vi": { "voice": "Ngạn Kể Chuyện" }
+    },
+    "capcom": {
+      "label": "Liên lạc viên (CAPCOM) và thông báo khi bay lên",
+      "radio": true,
+      "speed": 1.05,
+      "en": { "voice": "Honest Man - Resonant,Earnest,Grounded" },
+      "vi": { "voice": "Professional Narrator - Warm,Neutral,Measured" }
+    },
+    "booster": {
+      "label": "Kỹ sư động cơ đẩy (Booster)",
+      "radio": true,
+      "speed": 1.1,
+      "en": { "voice": "News Presenter - Bright,Crisp,Resonant" },
+      "vi": { "voice": "HN - Thanh Long" }
+    },
+    "pa": {
+      "label": "Loa phát thanh trong xưởng",
+      "radio": true,
+      "en": { "voice": "Lucky Robot - Deep,Steady,Robotic" },
+      "vi": { "voice": "Warm Narrator - Clean,Warm,Measured" }
+    },
+    "nixon": {
+      "label": "Tổng thống Nixon (diễn văn dự phòng)",
+      "radio": true,
+      "speed": 0.92,
+      "en": { "voice": "Resonant Storyteller - Warm,Measured,Engaging" },
+      "vi": { "voice": "Male Narrator - Resonant,Warm,Narrative" }
+    }
+  }
+}

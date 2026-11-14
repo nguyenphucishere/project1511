@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SignOffDialog } from "@/components/hud/SignOffDialog";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 import { WorldCanvas } from "@/components/viewport/WorldCanvas";
 import { useSceneViewpoints } from "@/game/sceneStore";
 import { playSfx, startRumble, startScore, type Rumble, type Score } from "@/game/sfx";
@@ -98,6 +99,9 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
 
   const phase = captionAt(PHASES, now);
   const reading = captionAt(READING, now);
+  // The narrator reads each stretch's title and the cabin reading as they appear, one after the other.
+  useVoiceLine(phase ? localize(phase.text) : null, { queue: true });
+  useVoiceLine(reading ? localize(reading.text) : null, { queue: true });
   const lost = now >= SIGNAL_LOST[0] && now < SIGNAL_LOST[1];
   const started = startAt !== null;
 

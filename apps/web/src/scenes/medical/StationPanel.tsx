@@ -11,6 +11,7 @@ import { useLocalized, useT } from "@/i18n/useT";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { CHARACTERS } from "@/game/characters";
 import { playSfx } from "@/game/sfx";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 import type { VitalStation } from "@/mocks/vitals";
 
 const MEASURE_MS = 2200;
@@ -32,6 +33,8 @@ export function StationPanel({ station, alreadyChecked, onMeasured, onClose }: S
   const localize = useLocalized();
   const reduced = useReducedMotion();
   const doctor = CHARACTERS.doctor;
+  // The doctor explains why this check matters.
+  useVoiceLine(localize(station.why));
   const [phase, setPhase] = useState<"idle" | "measuring" | "result">(alreadyChecked ? "result" : "idle");
   const [progress, setProgress] = useState(alreadyChecked ? 1 : 0);
   const primary = useRef<HTMLButtonElement>(null);

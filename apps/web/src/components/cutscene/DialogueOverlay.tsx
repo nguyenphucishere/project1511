@@ -12,6 +12,7 @@ import { BRIEFINGS, type BriefingId } from "@/game/script";
 import { CHAPTERS, chapterNumber, type ChapterId } from "@/game/flow";
 import { CharacterPortrait } from "./CharacterPortrait";
 import { ParallaxCanvas } from "./ParallaxCanvas";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 
 export interface DialogueOverlayProps {
   briefing: BriefingId;
@@ -34,6 +35,8 @@ export function DialogueOverlay({ briefing, chapter, onDone }: DialogueOverlayPr
   const pov = CHARACTERS[data.pov];
   const isLast = index === data.lines.length - 1;
   const text = localize(line.text);
+  // The speaker says the line aloud as it appears (recorded voice, or the browser voice as a fallback).
+  useVoiceLine(text);
   const { shown, hidden, done, complete } = useTypewriter(text, { instant: reduced });
   const primaryRef = useRef<HTMLButtonElement>(null);
 

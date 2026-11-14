@@ -303,6 +303,12 @@ export const vi: Dictionary = {
       lowFuel: "Sắp hết nhiên liệu. Còn {s} giây.",
       fuelOut: "Hết nhiên liệu! Động cơ đã tắt.",
     },
+    /** The same calls without the live numbers, for the recorded voice (a recording cannot say a changing number). */
+    callVoice: {
+      driftLeft: "Đang trôi trái. Dừng trôi lại.",
+      driftRight: "Đang trôi phải. Dừng trôi lại.",
+      lowFuel: "Sắp hết nhiên liệu. Chú ý nhiên liệu.",
+    },
     sideSpeed: "Tốc độ ngang",
     offsetFromSite: "Cách điểm {id}",
     rating: "Đánh giá",
