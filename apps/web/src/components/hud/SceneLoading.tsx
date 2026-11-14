@@ -4,7 +4,8 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { Progress } from "@/components/ui/progress";
 import { ParallaxCanvas } from "@/components/cutscene/ParallaxCanvas";
 import { format } from "@/i18n";
-import { useT } from "@/i18n/useT";
+import { useLocalized, useT } from "@/i18n/useT";
+import { CHAPTERS } from "@/game/flow";
 import type { SceneId } from "@/game/flow";
 import { getPreloadState, getServerPreloadState, preloadScene, subscribePreload } from "@/scenes/preload";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,7 @@ export const LOADING_FADE_MS = 400;
  */
 export function SceneLoading({ scene, fading = false }: { scene: SceneId; fading?: boolean }) {
   const t = useT();
+  const localize = useLocalized();
   const { progress, done } = usePreloadProgress(scene);
   const copy = t.sceneLoading;
   const [tip, setTip] = useState(0);
@@ -37,6 +39,8 @@ export function SceneLoading({ scene, fading = false }: { scene: SceneId; fading
   }, []);
 
   const tips = [copy.tip1, copy.tip2, copy.tip3];
+  const isHall = scene === "workshop";
+  const title = isHall ? copy.workshopTitle : localize(CHAPTERS.find((c) => c.id === scene)?.title ?? { en: "", vi: "" });
   const stage = fading || done ? copy.stageWarmup : progress < 20 ? copy.stageCode : copy.stageAssets;
   const shown = done ? 100 : progress;
 
@@ -56,15 +60,15 @@ export function SceneLoading({ scene, fading = false }: { scene: SceneId; fading
       <div className="absolute inset-x-4 top-1/2 mx-auto max-w-lg -translate-y-1/2 sm:inset-x-10">
         <div className="bezel bezel-gold bg-space-deep/95 px-6 py-6 sm:px-8">
           <p className="font-mono text-xs tracking-widest text-primary">{stage.toUpperCase()}</p>
-          <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">{copy.workshopTitle}</h1>
-          <p className="mt-1 text-sm text-foreground/75">{copy.workshopSubtitle}</p>
+          <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">{title}</h1>
+          <p className="mt-1 text-sm text-foreground/75">{isHall ? copy.workshopSubtitle : copy.genericSubtitle}</p>
 
           <div className="mt-5 flex items-center gap-3">
             <Progress value={shown} aria-label={stage} className="h-3 flex-1" />
             <span className="w-12 text-right font-mono text-sm">{format(copy.percent, { n: shown })}</span>
           </div>
 
-          <p className="mt-4 min-h-[2.5rem] text-xs italic text-foreground/60">{tips[tip]}</p>
+          <p className="mt-4 min-h-[2.5rem] text-xs italic text-foreground/60">{isHall ? tips[tip] : [copy.genericTip1, copy.genericTip2, copy.genericTip3][tip % 3]}</p>
         </div>
       </div>
     </div>

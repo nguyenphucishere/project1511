@@ -7,9 +7,12 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { LocaleToggle } from "@/components/hud/LocaleToggle";
 import { SoundToggle } from "@/components/hud/SoundToggle";
 import { BlastDoor } from "@/components/cutscene/BlastDoor";
+import { TitleSplash, titleSplashSeen } from "@/components/home/TitleSplash";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
 import { hasContinuableProgress, useGameStore } from "@/game/gameStore";
+import { FIRST_STEP_ID } from "@/game/flow";
+import { preloadUpcoming } from "@/scenes/preload";
 import { CHAPTERS, getStep, type ChapterId } from "@/game/flow";
 import { CHARACTERS } from "@/game/characters";
 
@@ -20,6 +23,8 @@ export default function StartScreen() {
   const router = useRouter();
   const { stepId, hydrated, newGame, jumpToChapter } = useGameStore();
   const [opening, setOpening] = useState(false);
+  // The splash shows first on every fresh load; the menu is mounted underneath so it is ready when it fades.
+  const [splash, setSplash] = useState(() => !titleSplashSeen());
 
   const canContinue = hydrated && hasContinuableProgress(stepId);
   const resumeStep = stepId ? getStep(stepId) : undefined;
@@ -27,6 +32,11 @@ export default function StartScreen() {
     resumeStep && resumeStep.kind !== "end" ? CHAPTERS.find((c) => c.id === resumeStep.chapter) : undefined;
 
   const enterGame = useCallback(() => router.push("/play"), [router]);
+
+  // Start fetching every scene's code and assets now, while the player is on the title.
+  useEffect(() => {
+    preloadUpcoming(FIRST_STEP_ID);
+  }, []);
 
   useEffect(() => {
     router.prefetch("/play");
@@ -107,6 +117,7 @@ export default function StartScreen() {
           <LocaleToggle className="bg-space-deep" />
         </div>
       </header>
+      {splash && <TitleSplash onStart={() => setSplash(false)} />}
     </main>
   );
 }
