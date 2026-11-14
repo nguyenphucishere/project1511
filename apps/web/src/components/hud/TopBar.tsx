@@ -10,8 +10,8 @@ import { LocaleToggle } from "./LocaleToggle";
 import { PixelToggle } from "./PixelToggle";
 import { SoundToggle } from "./SoundToggle";
 
-/** Scenes whose numbers come from the simulation engine (ascent, powered descent). */
-const CALCULATED_STEPS = new Set(["ascent-scene", "lunar-descent-scene"]);
+/** Scenes whose numbers come from the simulation engine (launch console and film, ascent, powered descent). */
+const CALCULATED_STEPS = new Set(["mission-control-scene", "ascent-scene", "lunar-descent-scene"]);
 
 /** In-game bar: back to the title screen, data label, language. Progress is kept for Continue. */
 export function TopBar() {

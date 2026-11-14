@@ -678,7 +678,6 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
         description={result && !result.success && result.reason ? d.crash[result.reason] : d.touchdownBody}
         continueLabel={result && !result.success ? d.retry : d.continue}
         onContinue={result && !result.success ? retry : onComplete}
-        demo
       >
         {result && (
           <SignOffDetails>
