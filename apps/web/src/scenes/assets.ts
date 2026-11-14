@@ -13,6 +13,7 @@ const EARTH_CLOUDS = "/assets/textures/earth_clouds_4k.jpg";
 const MILKY_WAY = "/assets/textures/milky_way_4k.jpg";
 const MOON = "/assets/textures/moon_4k.jpg";
 const CROWD = ["/assets/audio/crowd-murmur.mp3", "/assets/audio/crowd-awe.mp3", "/assets/audio/crowd-cheer.mp3"];
+const DOCTOR_FRAMES = ["/assets/characters/doctor/idle.webp", "/assets/characters/doctor/wave.webp"];
 
 export interface SceneAssets {
   files: { url: string; weight: number }[];
@@ -26,7 +27,11 @@ const studio = { url: STUDIO_HDR, weight: 2 };
 const earthPair = [EARTH_DAY, EARTH_CLOUDS];
 
 export const SCENE_ASSETS: Record<string, SceneAssets> = {
-  medical: { files: [studio], textures: [], hdr: [STUDIO_HDR] },
+  medical: {
+    files: [studio, ...DOCTOR_FRAMES.map((url) => ({ url, weight: 0.5 }))],
+    textures: [DOCTOR_FRAMES],
+    hdr: [STUDIO_HDR],
+  },
   "mission-control": {
     files: [studio, { url: SKY_HDR, weight: 6 }, ...CROWD.map((url) => ({ url, weight: 0.5 }))],
     textures: [],

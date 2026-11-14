@@ -40,10 +40,7 @@ pnpm-debug.log*
 !.vscode/settings.json
 .idea
 
-# Generated WASM files (can be rebuilt)
-apps/web/public/wasm/*
-!apps/web/public/wasm/.gitkeep
-
 #Agent Guidelines
 .agents/
 skills-lock.json
+video-director-skill/
