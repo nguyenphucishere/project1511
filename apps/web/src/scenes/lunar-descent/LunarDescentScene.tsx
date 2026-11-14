@@ -10,6 +10,7 @@ import { useGameStore } from "@/game/gameStore";
 import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
 import { playSfx, startLoop } from "@/game/sfx";
+import { useSimulationWasm } from "@/hooks/useSimulationWasm";
 import { DESCENT_STEPS, TOUCHDOWN } from "@/mocks/descent";
 import { DescentCommand, DescentTelemetry, formatVs } from "./DescentPanel";
 import { LunarWorld } from "./LunarWorld";
@@ -42,6 +43,7 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
   const [missionT, setMissionT] = useState(0);
   const [touchdownAt, setTouchdownAt] = useState<number | null>(null);
   const [dialog, setDialog] = useState(false);
+  const { stepDescent, lastDescentState } = useSimulationWasm();
   const timers = useRef<number[]>([]);
 
   useSceneViewpoints(VIEWPOINTS, "window");
@@ -74,10 +76,21 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
       const start = performance.now();
       addTrauma(PRESS_TRAUMA[index]);
       playSfx("switch");
+      const last = index === DESCENT_STEPS.length - 1;
       if (index === 0) engine.current = startLoop("engine");
+      stepDescent({
+        altitude_m: Math.max(0, 15240 - index * 3800),
+        vertical_velocity_mps: index === 0 ? 0 : -15 + index * 4,
+        horizontal_velocity_mps: Math.max(0.5, 1695 - index * 550),
+        throttle_pct: index === 0 ? 100.0 : index === 1 ? 55.0 : 27.0,
+        propellant_remaining_kg: Math.max(250, 8200 - index * 2500),
+        agc_cpu_duty_pct: index === 1 ? 85.0 : 72.0,
+        is_bingo_fuel: false,
+        is_landed: last,
+        touchdown_status: last ? "SAFE_LANDING" : "IN_FLIGHT",
+      }).catch(() => {});
       setClock({ stepsDone: index + 1, segmentStart: start });
       setPhase("playing");
-      const last = index === DESCENT_STEPS.length - 1;
       if (last) engine.current();
       timers.current.push(
         window.setTimeout(() => {
@@ -95,7 +108,7 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
         }, DESCENT_STEPS[index].playSec * 1000),
       );
     },
-    [armed, recordLanding],
+    [armed, recordLanding, stepDescent],
   );
 
   const briefing = BRIEFINGS["lunar-descent"];
@@ -135,6 +148,18 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
         </div>
         <div className="bezel bezel-sm shrink-0 bg-space-deep/85 px-3 py-2.5 backdrop-blur-sm">
           <DescentTelemetry t={missionT} contactLight={contactLight} />
+          {lastDescentState && (
+            <div className="mt-2 border-t border-space-blue/60 pt-1.5 font-mono text-[10px] text-foreground/75">
+              <div className="flex justify-between">
+                <span>LMDE THROTTLE: {lastDescentState.throttle_pct.toFixed(1)}%</span>
+                <span>AGC CPU: {lastDescentState.agc_cpu_duty_pct.toFixed(0)}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span>DPS PROP: {Math.round(lastDescentState.propellant_remaining_kg)} kg</span>
+                <span>STATUS: {lastDescentState.touchdown_status}</span>
+              </div>
+            </div>
+          )}
         </div>
       </aside>
 

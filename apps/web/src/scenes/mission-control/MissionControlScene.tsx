@@ -25,9 +25,15 @@ import { useGameStore } from "@/game/gameStore";
 import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
 import { playSfx, startLoop } from "@/game/sfx";
-import { launchSimulator } from "@/lib/simulation/launch.adapter";
+import {
+  fetchLaunchTelemetryFromServer,
+  launchSimulator,
+  OFFLINE_APOLLO11_TELEMETRY,
+  type ServerLaunchTelemetry,
+} from "@/lib/simulation/launch.adapter";
 import { TRACE_TEXT } from "@/lib/simulation/launch.mock";
 import type { LaunchConfig, LaunchResult } from "@/lib/simulation/launch.types";
+import { useSimulationWasm } from "@/hooks/useSimulationWasm";
 import { ConfigPanel } from "./ConfigPanel";
 import { mood } from "./mood";
 import { EXPLOSION_SECONDS, FLY_SECONDS } from "./SkyExplosion";
@@ -74,8 +80,27 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
   const [alarm, setAlarm] = useState(0);
   const [explodeAt, setExplodeAt] = useState<number | null>(null);
   const [boomFlash, setBoomFlash] = useState(false);
+  const [serverTelemetry, setServerTelemetry] = useState<ServerLaunchTelemetry>(OFFLINE_APOLLO11_TELEMETRY);
+  const { validateLaunch: validateLaunchWasm, lastValidation: wasmValidation } = useSimulationWasm();
   const cinematicTimers = useRef<number[]>([]);
   const pending = useRef<Promise<LaunchResult> | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchLaunchTelemetryFromServer().then((telemetry) => {
+      if (active) setServerTelemetry(telemetry);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    validateLaunchWasm({
+      target_orbit_km: config.orbitKm,
+      wind_speed_kmh: serverTelemetry.weather.wind_speed_kmh,
+    }).catch(() => {});
+  }, [config.orbitKm, serverTelemetry.weather.wind_speed_kmh, validateLaunchWasm]);
   // The liftoff roar is heard while the rocket is low; stopped early on adjust or leaving.
   const roar = useRef<() => void>(() => {});
   useEffect(() => () => roar.current(), []);
@@ -316,7 +341,21 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
             </p>
           )}
           {!collapsed && phase === "config" && (
-            <ConfigPanel config={config} onChange={setConfig} assessment={assessment} onProceed={() => setPhase("poll")} />
+            <>
+              <div className="mb-3 rounded border border-space-blue/60 bg-space-blue/25 px-3 py-2 font-mono text-[11px] text-foreground/85">
+                <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-primary">
+                  <span>{serverTelemetry.mission_id} — PAD 39A TELEMETRY</span>
+                  <span>{serverTelemetry.source === "api" ? "LIVE API" : "APOLLO 11 ARCHIVE"}</span>
+                </div>
+                <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5">
+                  <span>SITE: {serverTelemetry.launch_site.latitude_deg.toFixed(4)}°N, {Math.abs(serverTelemetry.launch_site.longitude_deg).toFixed(4)}°W</span>
+                  <span>GLOM: {(wasmValidation?.glom_kg ?? serverTelemetry.vehicle.glom_kg).toLocaleString()} kg</span>
+                  <span>WEATHER: {serverTelemetry.weather.temperature_c}°C / {serverTelemetry.weather.wind_speed_kmh} km/h ({serverTelemetry.weather.status})</span>
+                  <span>TWR / MAX-Q: {(wasmValidation?.liftoff_twr ?? serverTelemetry.vehicle.liftoff_twr).toFixed(3)} / {(wasmValidation?.max_q_kpa ?? serverTelemetry.vehicle.max_q_kpa).toFixed(1)} kPa</span>
+                </div>
+              </div>
+              <ConfigPanel config={config} onChange={setConfig} assessment={assessment} onProceed={() => setPhase("poll")} />
+            </>
           )}
           {!collapsed && phase === "poll" && (
             <PollPanel assessment={assessment} onLaunch={startCountdown} onBack={() => setPhase("config")} />
