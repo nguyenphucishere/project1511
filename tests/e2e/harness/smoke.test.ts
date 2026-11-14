@@ -35,8 +35,8 @@ describe("E2E Test Harness Scaffolding Smoke Suite", () => {
   describe("Environment Paths & Configuration", () => {
     it("resolves canonical project directories", () => {
       assert.ok(ROOT_DIR.endsWith("project1511"), `ROOT_DIR should end with project1511, got: ${ROOT_DIR}`);
-      assert.ok(SERVER_DIR.includes("apps/server"), `SERVER_DIR should include apps/server, got: ${SERVER_DIR}`);
-      assert.ok(WEB_DIR.includes("apps/web"), `WEB_DIR should include apps/web, got: ${WEB_DIR}`);
+      assert.ok(SERVER_DIR.replace(/\\/g, "/").includes("apps/server"), `SERVER_DIR should include apps/server, got: ${SERVER_DIR}`);
+      assert.ok(WEB_DIR.replace(/\\/g, "/").includes("apps/web"), `WEB_DIR should include apps/web, got: ${WEB_DIR}`);
       assert.ok(WASM_BG_PATH.endsWith("sim_wasm_bg.wasm"), `WASM_BG_PATH should end with wasm file, got: ${WASM_BG_PATH}`);
     });
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Check, LoaderCircle, OctagonX } from "lucide-react";
+import { Check, LoaderCircle, OctagonX } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -11,10 +11,10 @@ import { useLocalized, useT } from "@/i18n/useT";
 import { cn } from "@/lib/utils";
 import { DESCENT_STEPS, KEYFRAMES, SAFE_TOUCHDOWN_MS, TOUCHDOWN } from "@/mocks/descent";
 import { formatMissionTime } from "@/lib/format";
+import { Joystick, type StickValue } from "./Joystick";
 import { LandingStrip } from "./LandingStrip";
 import {
   ROD_MAX,
-  ROD_MIN,
   SITES,
   recommendedVs,
   siteById,
@@ -254,70 +254,46 @@ export function SitePicker({ siteId, onSelect }: { siteId: SiteId; onSelect: (id
 interface FlightControlsProps {
   targetVs: number;
   disabled: boolean;
-  onNudge: (dir: 1 | -1) => void;
-  onHold: (control: "left" | "right" | "null", held: boolean) => void;
+  onStick: (value: StickValue) => void;
+  onHold: (control: "null", held: boolean) => void;
 }
 
-/** On-screen versions of the flight keys, for the mouse and touch: press-and-hold for the drift thrusters. */
-export function FlightControls({ targetVs, disabled, onNudge, onHold }: FlightControlsProps) {
+/**
+ * On-screen flight controls for the mouse and touch: a joystick (left/right fires the drift
+ * thrusters in proportion, up/down slides the commanded rate of descent) and a hold button that
+ * kills the drift. The keyboard and a gamepad drive the same inputs.
+ */
+export function FlightControls({ targetVs, disabled, onStick, onHold }: FlightControlsProps) {
   const d = useT().lunarDescent;
-  const hold = (control: "left" | "right" | "null") => ({
+  const hold = {
     onPointerDown: (e: React.PointerEvent) => {
       e.currentTarget.setPointerCapture(e.pointerId);
-      onHold(control, true);
+      onHold("null", true);
     },
-    onPointerUp: () => onHold(control, false),
-    onPointerCancel: () => onHold(control, false),
-    onLostPointerCapture: () => onHold(control, false),
-  });
+    onPointerUp: () => onHold("null", false),
+    onPointerCancel: () => onHold("null", false),
+    onLostPointerCapture: () => onHold("null", false),
+  };
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5">
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] text-foreground/65">{d.rateTitle}</p>
-          <p className="font-mono text-sm tabular-nums" aria-live="off">
-            {d.rateTarget}: <span className="text-primary">{formatVs(targetVs)}</span>
-          </p>
-        </div>
-        <Button
-          variant="secondary"
-          size="icon"
-          className="h-9 w-9"
-          aria-label={d.faster}
-          title={`${d.faster} (↓ / S)`}
-          aria-disabled={disabled || targetVs <= ROD_MIN}
-          onClick={() => onNudge(-1)}
-        >
-          <ChevronDown className="h-4 w-4" aria-hidden />
-        </Button>
-        <Button
-          variant="secondary"
-          size="icon"
-          className="h-9 w-9"
-          aria-label={d.slower}
-          title={`${d.slower} (↑ / W)`}
-          aria-disabled={disabled || targetVs >= ROD_MAX}
-          onClick={() => onNudge(1)}
-        >
-          <ChevronUp className="h-4 w-4" aria-hidden />
-        </Button>
+      <div>
+        <p className="text-[11px] text-foreground/65">{d.rateTitle}</p>
+        <p className="font-mono text-sm tabular-nums" aria-live="off">
+          {d.rateTarget}: <span className="text-primary">{formatVs(targetVs)}</span>
+        </p>
       </div>
 
-      <div>
-        <p className="mb-1 text-[11px] text-foreground/65">{d.driftTitle}</p>
-        <div className="grid grid-cols-3 gap-1.5">
-          <Button variant="secondary" size="sm" className="touch-none px-1" aria-label={d.driftLeft} title={`${d.driftLeft} (← / A)`} {...hold("left")}>
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-          </Button>
-          <Button variant="secondary" size="sm" className="touch-none px-1 text-xs" title={`${d.nullDrift} (X)`} {...hold("null")}>
-            {d.nullDrift}
-          </Button>
-          <Button variant="secondary" size="sm" className="touch-none px-1" aria-label={d.driftRight} title={`${d.driftRight} (→ / D)`} {...hold("right")}>
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </Button>
-        </div>
-      </div>
+      <Joystick
+        label={d.stick}
+        disabled={disabled}
+        onChange={onStick}
+        hints={{ up: d.stickUp, down: d.stickDown, left: d.stickLeft, right: d.stickRight }}
+      />
+
+      <Button variant="secondary" size="sm" className="touch-none px-1 text-xs" title={`${d.nullDrift} (X)`} {...hold}>
+        {d.nullDrift}
+      </Button>
       <p className="hidden text-[10px] leading-snug text-foreground/55 md:block">{d.keysHint}</p>
     </div>
   );

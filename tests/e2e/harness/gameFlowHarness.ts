@@ -1,5 +1,6 @@
 import "./env.ts";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { WEB_DIR } from "./env.ts";
 
 export interface GameStep {
@@ -44,17 +45,17 @@ let cachedModulesPromise: Promise<GameModules> | null = null;
 export async function loadGameModules(): Promise<GameModules> {
   if (!cachedModulesPromise) {
     cachedModulesPromise = (async () => {
-      const gameStoreMod = await import(path.join(WEB_DIR, "src/game/gameStore.ts"));
-      const flowMod = await import(path.join(WEB_DIR, "src/game/flow.ts"));
+      const gameStoreMod = await import(pathToFileURL(path.join(WEB_DIR, "src/game/gameStore.ts")).href);
+      const flowMod = await import(pathToFileURL(path.join(WEB_DIR, "src/game/flow.ts")).href);
       let decisionsMod: any = {};
       let endingsMod: any = {};
       try {
-        decisionsMod = await import(path.join(WEB_DIR, "src/game/decisions.ts"));
+        decisionsMod = await import(pathToFileURL(path.join(WEB_DIR, "src/game/decisions.ts")).href);
       } catch {
         // optional if not yet implemented
       }
       try {
-        endingsMod = await import(path.join(WEB_DIR, "src/game/endings.ts"));
+        endingsMod = await import(pathToFileURL(path.join(WEB_DIR, "src/game/endings.ts")).href);
       } catch {
         // optional if not yet implemented
       }

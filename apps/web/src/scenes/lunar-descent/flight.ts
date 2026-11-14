@@ -16,9 +16,9 @@ export const LUNAR_G = 1.62;
 /** Vertical acceleration at full throttle for the lander's mass near touchdown, m/s². */
 export const MAX_ACCEL = 4.4;
 /** Throttle changes at most this fast (fraction per second): a real engine takes time to respond. */
-export const THROTTLE_SLEW = 1.2;
+export const THROTTLE_SLEW = 2;
 /** Sideways acceleration while an RCS translation thruster fires, m/s². */
-export const RCS_ACCEL = 0.6;
+export const RCS_ACCEL = 1;
 /** Fuel burned per second at full throttle, % of the tank. */
 export const FUEL_BURN_FULL = 0.4;
 /** Fuel burned per second while RCS fires, % of the tank. */
@@ -33,7 +33,9 @@ export const ROD_STEP = 0.5;
 export const ROD_MIN = -6;
 export const ROD_MAX = 0.5;
 /** Autopilot gain for holding the commanded rate (1/s). */
-const ROD_GAIN = 1.5;
+const ROD_GAIN = 2.2;
+/** How fast the vertical stick moves the commanded rate at full deflection, m/s per second. */
+export const ROD_STICK_RATE = 3;
 /** Integration step; longer frames are split so the result never depends on frame rate. */
 const MAX_DT = 1 / 60;
 
@@ -136,8 +138,10 @@ export interface FlightState {
 }
 
 export interface FlightInput {
-  /** Held translation command: -1 left, 1 right, 0 none. */
-  rcs: -1 | 0 | 1;
+  /** Translation command, -1 (full left) .. 1 (full right). A stick gives any value in between; keys give -1, 0 or 1. */
+  rcs: number;
+  /** Vertical stick, -1 (faster descent) .. 1 (slower descent): moves the commanded rate continuously. */
+  rod?: number;
   /** Hold: the computer fires RCS to kill the sideways drift. */
   nullDrift: boolean;
 }
@@ -212,6 +216,9 @@ export function stepFlight(s: FlightState, input: FlightInput, dt: number): void
 function integrate(s: FlightState, input: FlightInput, dt: number): void {
   s.elapsed += dt;
 
+  // Vertical stick: slides the commanded rate of descent (the keys and buttons still nudge it in notches).
+  if (input.rod && s.engineOn) s.targetVs = clamp(s.targetVs + clamp(input.rod, -1, 1) * ROD_STICK_RATE * dt, ROD_MIN, ROD_MAX);
+
   // Fuel gone: the engine flames out and cannot be restarted.
   if (s.fuelPct <= 0) {
     s.fuelPct = 0;
@@ -228,19 +235,28 @@ function integrate(s: FlightState, input: FlightInput, dt: number): void {
   }
 
   // Sideways: RCS only. Drift continues untouched until the pilot (or the null-drift hold) stops it.
+  // The thrusters push in proportion to how far the stick is pushed.
+  const cmd = clamp(input.rcs, -1, 1);
   let rcs: -1 | 0 | 1 = 0;
+  let push = 0;
   if (s.fuelPct > 0) {
-    if (input.rcs !== 0) rcs = input.rcs;
-    else if (input.nullDrift && Math.abs(s.hsMs) > 1e-6) rcs = s.hsMs > 0 ? -1 : 1;
+    if (Math.abs(cmd) > 1e-3) {
+      rcs = cmd > 0 ? 1 : -1;
+      push = Math.abs(cmd);
+    } else if (input.nullDrift && Math.abs(s.hsMs) > 1e-6) {
+      rcs = s.hsMs > 0 ? -1 : 1;
+      push = 1;
+    }
   }
   s.rcs = rcs;
   if (rcs !== 0) {
-    const dv = RCS_ACCEL * dt;
-    if (input.rcs === 0 && Math.abs(s.hsMs) <= dv) s.hsMs = 0;
+    const dv = RCS_ACCEL * push * dt;
+    // The small tolerance keeps float rounding from leaving a 1e-16 drift that re-fires the thruster forever.
+    if (Math.abs(cmd) <= 1e-3 && Math.abs(s.hsMs) <= dv + 1e-9) s.hsMs = 0;
     else s.hsMs += rcs * dv;
   }
 
-  s.fuelPct = Math.max(0, s.fuelPct - (FUEL_BURN_FULL * s.throttle + (rcs !== 0 ? FUEL_BURN_RCS : 0)) * dt);
+  s.fuelPct = Math.max(0, s.fuelPct - (FUEL_BURN_FULL * s.throttle + FUEL_BURN_RCS * push) * dt);
 
   // Vertical: thrust against gravity.
   // Trapezoid rule: exact for the constant acceleration inside one step.
