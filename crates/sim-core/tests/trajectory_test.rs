@@ -21,6 +21,12 @@ fn apollo_11_ascent_matches_the_flight_record() {
 }
 
 #[test]
+fn launch_plan_insertion_time_is_the_ascent_simulation_s() {
+    let p = simulate_ascent(&AscentProfileRequest::default());
+    assert!((p.events.insertion_s.unwrap() - NOMINAL_ORBIT_INSERTION_S).abs() < 0.05);
+}
+
+#[test]
 fn ascent_samples_are_continuous_and_feel_like_a_saturn_v() {
     let p = simulate_ascent(&AscentProfileRequest::default());
     let peak_g = p.samples.iter().map(|s| s.sensed_accel_g).fold(0.0, f64::max);

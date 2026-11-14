@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PAYLOADS, WINDOWS } from "@/mocks/launch-options";
-import { assessLaunch, planRequestFor, resultFromPlan, ORBIT_INSERTION_SEC } from "./launch.engine";
+import { assessLaunch, planRequestFor, resultFromPlan, NOMINAL_FLIGHT_END_SEC } from "./launch.engine";
 import { planLaunch } from "./launch.physics";
 import type { LaunchConfig, LaunchWindow } from "./launch.types";
 
@@ -43,7 +43,7 @@ describe("engine verdict → flight", () => {
   const run = (config: LaunchConfig, w: LaunchWindow) => resultFromPlan(planLaunch(planRequestFor(config, w)), 0, "browser-engine");
 
   it("a good configuration reaches orbit", () => {
-    expect(run(GOOD, CALM)).toMatchObject({ isSuccess: true, endSec: ORBIT_INSERTION_SEC, failureTrace: [] });
+    expect(run(GOOD, CALM)).toMatchObject({ isSuccess: true, endSec: NOMINAL_FLIGHT_END_SEC, failureTrace: [] });
   });
 
   it("too little fuel runs stage 2 dry, earlier the shorter the load", () => {

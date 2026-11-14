@@ -82,7 +82,8 @@ export const DELTA_V_LEO_185_MPS = 9_200.0;
 export const DELTA_V_TLI_MPS = 3_051.0;
 const DELTA_V_PER_ORBIT_KM = 1.0;
 const TLI_SAVING_PER_ORBIT_KM = 0.35;
-export const NOMINAL_ORBIT_INSERTION_S = 540.0;
+/** sim-core NOMINAL_ORBIT_INSERTION_S: the engine ascent's S-IVB first cutoff to 185 km. */
+export const NOMINAL_ORBIT_INSERTION_S = 713.66;
 export const APOLLO_11_STACK_KG = 43_904.0;
 
 export const LAUNCH_COMMIT_CRITERIA: LaunchCommitCriteria = {

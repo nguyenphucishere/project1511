@@ -18,8 +18,9 @@ pub const DELTA_V_TLI_MPS: f64 = 3_051.0;
 pub const DELTA_V_PER_ORBIT_KM: f64 = 1.0;
 /// TLI Δv saved per km of higher parking orbit (m/s per km).
 pub const TLI_SAVING_PER_ORBIT_KM: f64 = 0.35;
-/// Game timeline: mission seconds at which a nominal flight reaches orbit.
-pub const NOMINAL_ORBIT_INSERTION_S: f64 = 540.0;
+/// Mission seconds at which the nominal Saturn V flight reaches the 185 km parking orbit
+/// (`simulate_ascent` S-IVB first cutoff; a test keeps the two in step).
+pub const NOMINAL_ORBIT_INSERTION_S: f64 = 713.66;
 /// Apollo 11 spacecraft at TLI: CSM-107 (28,801 kg) + LM-5 (15,103 kg).
 pub const APOLLO_11_STACK_KG: f64 = 43_904.0;
 

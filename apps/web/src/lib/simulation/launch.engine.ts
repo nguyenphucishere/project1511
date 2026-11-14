@@ -1,6 +1,12 @@
 import { BUDGET_M, PAYLOADS, VEHICLES } from "@/mocks/launch-options";
 import type { LocalizedText } from "@/i18n";
-import { planLaunch, type LaunchFailureMode, type LaunchPlan, type LaunchPlanRequest } from "./launch.physics";
+import {
+  NOMINAL_ORBIT_INSERTION_S,
+  planLaunch,
+  type LaunchFailureMode,
+  type LaunchPlan,
+  type LaunchPlanRequest,
+} from "./launch.physics";
 import type {
   LaunchAssessment,
   LaunchConfig,
@@ -18,7 +24,9 @@ import type {
  */
 
 /** Mission time (s) of orbit insertion on a nominal flight (sim-core NOMINAL_ORBIT_INSERTION_S). */
-export const ORBIT_INSERTION_SEC = 540;
+export const ORBIT_INSERTION_SEC = NOMINAL_ORBIT_INSERTION_S;
+/** A successful flight's film keeps rolling in orbit for the docking (Scene 3 FILM_END_SEC). */
+export const NOMINAL_FLIGHT_END_SEC = ORBIT_INSERTION_SEC + 40;
 
 export function planRequestFor(config: LaunchConfig, window: LaunchWindow): LaunchPlanRequest {
   const vehicle = VEHICLES.find((v) => v.id === config.vehicle);
@@ -97,7 +105,7 @@ const WEATHER_MODES: LaunchFailureMode[] = ["wind_shear", "lightning_strike"];
 /** The engine's verdict as the flight the scene plays (trace steps, end time, weather loss). */
 export function resultFromPlan(plan: LaunchPlan, costM: number, source: LaunchResult["source"]): LaunchResult {
   if (plan.is_go || !plan.failure_mode) {
-    return { isSuccess: true, budgetCostMillions: costM, failureTrace: [], endSec: ORBIT_INSERTION_SEC, source };
+    return { isSuccess: true, budgetCostMillions: costM, failureTrace: [], endSec: NOMINAL_FLIGHT_END_SEC, source };
   }
   const at = plan.failure_time_s ?? ORBIT_INSERTION_SEC;
   const trace: LaunchTraceStep[] = (() => {
