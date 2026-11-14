@@ -3,7 +3,7 @@ import type { VideoId } from "@/lib/assets";
 import type { BriefingId } from "./script";
 import type { CharacterId } from "./characters";
 
-export type ChapterId = "medical" | "workshop" | "mission-control" | "ascent" | "lunar-descent";
+export type ChapterId = "medical" | "workshop" | "mission-control" | "ascent" | "translunar" | "lunar-descent" | "return";
 export type SceneId = ChapterId;
 
 /** How the screen changes when this step starts. */
@@ -26,7 +26,9 @@ export const CHAPTERS: Chapter[] = [
   { id: "workshop", title: { en: "Assembly hall", vi: "Xưởng lắp ráp" }, pov: "engineer" },
   { id: "mission-control", title: { en: "Mission Control", vi: "Trung tâm điều khiển" }, pov: "flight-director" },
   { id: "ascent", title: { en: "Ascent to orbit", vi: "Bay lên quỹ đạo" }, pov: "astronaut" },
+  { id: "translunar", title: { en: "The road to the Moon", vi: "Đường tới Mặt Trăng" }, pov: "astronaut" },
   { id: "lunar-descent", title: { en: "Lunar descent", vi: "Hạ cánh Mặt Trăng" }, pov: "astronaut" },
+  { id: "return", title: { en: "Homeward", vi: "Trở về Trái Đất" }, pov: "astronaut" },
 ];
 
 /**
@@ -44,10 +46,14 @@ export const FLOW: Step[] = [
   { id: "launch-video", kind: "cutscene", video: "launch", chapter: "mission-control", enter: "fade" },
   { id: "ascent-briefing", kind: "briefing", briefing: "ascent", chapter: "ascent", enter: "black-hold" },
   { id: "ascent-scene", kind: "scene", scene: "ascent", chapter: "ascent", enter: "fade" },
+  { id: "translunar-briefing", kind: "briefing", briefing: "translunar", chapter: "translunar", enter: "black-hold" },
+  { id: "translunar-scene", kind: "scene", scene: "translunar", chapter: "translunar", enter: "fade" },
   { id: "lunar-descent-briefing", kind: "briefing", briefing: "lunar-descent", chapter: "lunar-descent", enter: "black-hold" },
   { id: "lunar-descent-scene", kind: "scene", scene: "lunar-descent", chapter: "lunar-descent", enter: "fade" },
   { id: "flag-video", kind: "cutscene", video: "flagPlanting", chapter: "lunar-descent", enter: "fade" },
   { id: "epilogue", kind: "briefing", briefing: "epilogue", chapter: "epilogue", enter: "black-hold" },
+  { id: "return-briefing", kind: "briefing", briefing: "return", chapter: "return", enter: "fade" },
+  { id: "return-scene", kind: "scene", scene: "return", chapter: "return", enter: "fade" },
   { id: "end", kind: "end", enter: "fade" },
 ];
 
