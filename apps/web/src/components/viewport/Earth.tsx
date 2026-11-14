@@ -31,7 +31,7 @@ const atmosphereFragment = /* glsl */ `
  * The real Earth from NASA Blue Marble imagery: day map, drifting cloud layer and a glowing
  * blue atmosphere. `radius` is in scene metres; position it with the parent group.
  */
-export function Earth({ radius = 7, spin = 0.01 }: { radius?: number; spin?: number }) {
+export function Earth({ radius = 7, spin = 0.01, nightGlow = 0.35 }: { radius?: number; spin?: number; nightGlow?: number }) {
   const [day, clouds] = useTexture(["/assets/textures/earth_day_6k.jpg", "/assets/textures/earth_clouds_4k.jpg"], (t) => {
     for (const tex of t) {
       tex.colorSpace = SRGBColorSpace;
@@ -52,7 +52,7 @@ export function Earth({ radius = 7, spin = 0.01 }: { radius?: number; spin?: num
       <group ref={group} rotation={[0.1, 2.2, 0]}>
         <mesh>
           <sphereGeometry args={[radius, 96, 64]} />
-          <meshStandardMaterial map={day} roughness={0.9} metalness={0} emissiveMap={day} emissive="#183A6B" emissiveIntensity={0.35} />
+          <meshStandardMaterial map={day} roughness={0.9} metalness={0} emissiveMap={day} emissive="#183A6B" emissiveIntensity={nightGlow} />
         </mesh>
         <group ref={cloudRef}>
           <mesh>

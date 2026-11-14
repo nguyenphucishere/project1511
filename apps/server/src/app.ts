@@ -6,10 +6,12 @@ import { WebSocketServer } from "ws";
 import type { Config } from "./config.js";
 import { MemoryPresenceStore, type PresenceStore } from "./handlers/presence.js";
 import { AuthService, GuestLoginSchema } from "./services/authService.js";
+import { LaunchDataService } from "./services/launchDataService.js";
 import type { RoomStore } from "./services/roomStore.js";
 import { parseRequestedRoles } from "./sync/roleLocks.js";
 import type { RoomLogger } from "./sync/room.js";
 import { RoomManager, RoomOwnershipError } from "./sync/roomManager.js";
+import { SimulationValidatorBridge } from "./validator/simBridge.js";
 
 const SYNC_PATH = /^\/sync\/([A-Za-z0-9_-]{3,64})$/;
 
@@ -18,12 +20,16 @@ export interface ServerDeps {
   store: RoomStore;
   log: RoomLogger;
   presence?: PresenceStore;
+  launchData?: LaunchDataService;
+  simBridge?: SimulationValidatorBridge;
 }
 
 export interface AppServer {
   server: http.Server;
   rooms: RoomManager;
   auth: AuthService;
+  launchData: LaunchDataService;
+  simBridge: SimulationValidatorBridge;
   listen(port?: number): Promise<number>;
   shutdown(): Promise<void>;
 }
@@ -32,6 +38,8 @@ export function createAppServer(deps: ServerDeps): AppServer {
   const { config, store, log } = deps;
   const presence = deps.presence ?? new MemoryPresenceStore();
   const auth = new AuthService(config.JWT_SECRET, config.JWT_TTL_SECONDS);
+  const launchData = deps.launchData ?? new LaunchDataService();
+  const simBridge = deps.simBridge ?? new SimulationValidatorBridge();
   const rooms = new RoomManager(store, {
     snapshotDebounceMs: config.SNAPSHOT_DEBOUNCE_MS,
     idleTtlMs: config.ROOM_IDLE_TTL_MS,
@@ -40,7 +48,7 @@ export function createAppServer(deps: ServerDeps): AppServer {
 
   const app = express();
   app.use(cors());
-  app.use(express.json({ limit: "8kb" }));
+  app.use(express.json({ limit: "64kb" }));
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok", rooms: rooms.size });
@@ -54,6 +62,37 @@ export function createAppServer(deps: ServerDeps): AppServer {
     }
     const { token, session } = auth.issueGuestToken(parsed.data.username);
     res.status(201).json({ token, userId: session.userId, username: session.username });
+  });
+
+  app.get("/api/weather/ksc", async (req, res, next) => {
+    try {
+      const forceFallback =
+        req.query.force_fallback === "true" || req.query.fallback === "true";
+      const weather = await launchData.getKscWeather({ forceFallback });
+      res.json(weather);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get("/api/launch/telemetry", async (req, res, next) => {
+    try {
+      const forceFallback =
+        req.query.force_fallback === "true" || req.query.fallback === "true";
+      const telemetry = await launchData.getLaunchTelemetry({ forceFallback });
+      res.json(telemetry);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/simulation/validate", async (req, res, next) => {
+    try {
+      const result = await simBridge.validateSimulation(req.body ?? {});
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
   });
 
   // Malformed JSON bodies and similar: report as 400 rather than leaking a stack trace.
@@ -115,6 +154,8 @@ export function createAppServer(deps: ServerDeps): AppServer {
     server,
     rooms,
     auth,
+    launchData,
+    simBridge,
     listen: (port = config.PORT) =>
       new Promise((resolve, reject) => {
         server.once("error", reject);

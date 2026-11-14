@@ -18,7 +18,7 @@ export interface Briefing {
   objectives: LocalizedText[];
 }
 
-export type BriefingId = "medical" | "workshop" | "mission-control" | "ascent" | "lunar-descent" | "epilogue";
+export type BriefingId = "medical" | "workshop" | "mission-control" | "ascent" | "translunar" | "lunar-descent" | "epilogue" | "return";
 
 export const BRIEFINGS: Record<BriefingId, Briefing> = {
   medical: {
@@ -119,6 +119,26 @@ export const BRIEFINGS: Record<BriefingId, Briefing> = {
       { en: "Float to the window and look at Earth", vi: "Bơi tới cửa sổ và ngắm Trái Đất" },
     ],
   },
+  translunar: {
+    pov: "astronaut",
+    lines: [
+      {
+        speaker: "astronaut",
+        text: {
+          en: "Orbit confirmed. In a few minutes the third stage lights again, and after that there is no turning back.",
+          vi: "Đã xác nhận quỹ đạo. Vài phút nữa tầng ba sẽ nổ máy lần nữa, và sau đó không còn đường quay lại.",
+        },
+      },
+      {
+        speaker: "astronaut",
+        text: {
+          en: "Three days to the Moon. Sit back and watch; this part flies itself.",
+          vi: "Ba ngày tới Mặt Trăng. Cứ ngồi xem nhé, đoạn này tự bay.",
+        },
+      },
+    ],
+    objectives: [{ en: "Watch the flight to the Moon", vi: "Xem chuyến bay tới Mặt Trăng" }],
+  },
   "lunar-descent": {
     pov: "astronaut",
     lines: [
@@ -158,5 +178,25 @@ export const BRIEFINGS: Record<BriefingId, Briefing> = {
       },
     ],
     objectives: [],
+  },
+  return: {
+    pov: "astronaut",
+    lines: [
+      {
+        speaker: "astronaut",
+        text: {
+          en: "Flag planted, samples stowed. Time to go home.",
+          vi: "Cờ đã cắm, mẫu đã cất. Đến lúc về nhà.",
+        },
+      },
+      {
+        speaker: "astronaut",
+        text: {
+          en: "The engine has to burn once more, behind the Moon where no one can hear us. If it fails, nobody is coming.",
+          vi: "Động cơ phải nổ thêm một lần nữa, sau lưng Mặt Trăng, nơi không ai nghe thấy chúng ta. Nếu nó hỏng, sẽ không ai tới đón.",
+        },
+      },
+    ],
+    objectives: [{ en: "Ride home", vi: "Bay về nhà" }],
   },
 };
