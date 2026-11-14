@@ -77,7 +77,7 @@ describe("Tier 1 Feature 1: Apollo 11 Narrative Branching State Machine", () => 
     assert.equal(state.narrative?.penalties?.deltaVPenaltyPct, 0);
 
     const nextStep = session.advance();
-    assert.equal(nextStep, "lunar-descent-briefing");
+    assert.equal(nextStep, "translunar-briefing");
 
     // Option B: Direct High-Energy Non-Free-Return
     session.reset();

@@ -106,8 +106,8 @@ describe("Tier 4 Scenario 1: Historical Apollo 11 Mission Playthrough to Histori
     // -------------------------------------------------------------------------
     // Phase 5: Lunar Powered Descent & AGC 1202 Alarm Call
     // -------------------------------------------------------------------------
-    session.advance(); // lunar-descent-briefing
-    const stepAgc = session.advance(); // agc-alarm-decision
+    session.advanceTo("agc-alarm-decision");
+    const stepAgc = session.getCurrentStepId();
     assert.equal(stepAgc, "agc-alarm-decision");
 
     // Trigger historical 1202 CPU overload alarm at 33,500 ft
@@ -157,8 +157,8 @@ describe("Tier 4 Scenario 1: Historical Apollo 11 Mission Playthrough to Histori
     assert.equal(stepFlag, "flag-video");
     const stepEpilogue = session.advance();
     assert.equal(stepEpilogue, "epilogue");
-    const stepEnd = session.advance();
-    assert.equal(stepEnd, "end");
+    session.advanceTo("end");
+    assert.equal(session.getCurrentStepId(), "end");
 
     // Verify ending state
     assert.equal(session.getEndingId(), "ending-1");

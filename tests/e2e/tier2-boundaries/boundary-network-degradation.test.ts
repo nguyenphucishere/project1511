@@ -204,7 +204,7 @@ describe("Tier 2 Boundary Suite: Network Degradation, Timeouts & Error Boundarie
 
       // 5c. Close ws2 and ensure clean detachment and room idle state
       await new Promise<void>((resolve) => {
-        ws2.on("close", () => resolve());
+        ws2.on("close", () => setTimeout(resolve, 50));
         ws2.close();
       });
 

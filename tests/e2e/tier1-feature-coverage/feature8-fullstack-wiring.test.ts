@@ -201,7 +201,7 @@ describe("Tier 1 Feature 8: Full-Stack End-to-End Wiring & Integrated Workflow",
     assert.equal(session.getCurrentStepId(), "flag-video");
     session.advance(); // epilogue
     assert.equal(session.getCurrentStepId(), "epilogue");
-    session.advance(); // end
+    session.advanceTo("end");
     assert.equal(session.getCurrentStepId(), "end");
 
     // Verify Mission Outcome

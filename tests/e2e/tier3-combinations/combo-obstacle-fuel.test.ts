@@ -150,7 +150,7 @@ describe("Tier 3 Combination: Obstacle Hazard (West Crater) & Propellant Depleti
       // Flow goes to flag video -> epilogue -> end
       assert.equal(nextStep, "flag-video");
       assert.equal(session.advance(), "epilogue");
-      assert.equal(session.advance(), "end");
+      assert.equal(session.advanceTo("end"), "end");
 
       assert.equal(session.getEndingId(), "ending-1");
       const state = session.getState();

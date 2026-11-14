@@ -186,18 +186,73 @@ export function Stage() {
 
 /* ---------------------------------------------------------------- the ship itself */
 
+const LM_SKIN = { color: "#d9dce1", roughness: 0.4, metalness: 0.5 } as const;
+
+/**
+ * The lunar module Eagle, docked nose to nose with the command module (the transposition and
+ * docking were done in Earth orbit, before this film). Origin: the docking ring, +Z away from the CSM.
+ */
+function Eagle() {
+  return (
+    <group position={[0, 0, 1.08]}>
+      {/* Docking collar */}
+      <Tube r0={0.11} r1={0.12} h={0.07} z={0.02} mat={GREY} seg={16} />
+      {/* Ascent stage: a faceted drum with the crew windows */}
+      <mesh position={[0, 0, 0.2]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.2, 0.22, 0.3, 8]} />
+        <meshStandardMaterial {...LM_SKIN} flatShading />
+      </mesh>
+      <mesh position={[0.1, 0.1, 0.27]} rotation={[0, 0, 0.78]}>
+        <boxGeometry args={[0.06, 0.02, 0.05]} />
+        <meshStandardMaterial color="#0b1118" roughness={0.1} metalness={0.8} />
+      </mesh>
+      {/* Descent stage wrapped in gold foil */}
+      <mesh position={[0, 0, 0.5]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.27, 0.27, 0.26, 8]} />
+        <meshStandardMaterial {...FOIL} flatShading />
+      </mesh>
+      {/* Four folded landing legs with their footpads, and the descent engine bell */}
+      {[0, 1, 2, 3].map((i) => {
+        const a = (i * Math.PI) / 2 + Math.PI / 4;
+        return (
+          <group key={i} rotation={[0, 0, a]}>
+            <mesh position={[0.3, 0, 0.55]} rotation={[0, 0.3, 0]}>
+              <boxGeometry args={[0.02, 0.02, 0.32]} />
+              <meshStandardMaterial {...GREY} />
+            </mesh>
+            <mesh position={[0.34, 0, 0.7]}>
+              <cylinderGeometry args={[0.045, 0.045, 0.012, 12]} />
+              <meshStandardMaterial {...GREY} />
+            </mesh>
+          </group>
+        );
+      })}
+      <mesh position={[0, 0, 0.68]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.05, 0.1, 0.14, 16, 1, true]} />
+        <meshStandardMaterial {...DARK} side={DoubleSide} />
+      </mesh>
+    </group>
+  );
+}
+
 /** The command and service module. Origin: the aft end of the service module; the nose is +Z. */
 export function Ship() {
   const group = useRef<Group>(null);
+  const eagle = useRef<Group>(null);
   useFrame(() => {
     const t = filmClock.t;
     const g = group.current;
     if (!g) return;
     g.visible = t < T.REENTRY && viewKind(t) !== "cabin";
     if (g.visible) orient(g, shipPose(t));
+    // Eagle rides on the nose until the descent (the way home is flown by the command module alone).
+    if (eagle.current) eagle.current.visible = t < T.OUTBOUND_END;
   });
   return (
     <group ref={group}>
+      <group ref={eagle}>
+        <Eagle />
+      </group>
       <Tube r0={0.28} r1={0.28} h={0.62} z={0.31} mat={WHITE} />
       <Tube r0={0.283} r1={0.283} h={0.1} z={0.1} mat={DARK} />
       <Tube r0={0.283} r1={0.283} h={0.05} z={0.5} mat={GREY} />
