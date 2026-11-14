@@ -3,11 +3,14 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { AdditiveBlending, BackSide, BufferGeometry, Float32BufferAttribute, type Mesh, type Points, type PointsMaterial, type ShaderMaterial } from "three";
-import { ADAPTER_T } from "./ascent";
+import { nominalAltitudeKm } from "./flight";
 
-/** The sky gives way to space between these two moments (seconds after ignition). */
-export const SPACE_FROM = ADAPTER_T + 2;
-export const SPACE_TO = ADAPTER_T + 16;
+/**
+ * The sky gives way to space with height, as it does in life: the blue thins from about 25 km
+ * (clouds and haze are long gone), the stars start to show, and by 65 km it is black.
+ */
+export const SPACE_FROM_KM = 25;
+export const SPACE_TO_KM = 65;
 
 const RADIUS = 620;
 const smooth = (x: number) => x * x * (3 - 2 * x);
@@ -104,7 +107,7 @@ export function SpaceDome({ ignitionAt }: { ignitionAt: number | null }) {
 
   useFrame(({ camera }) => {
     const t = ignitionAt === null ? -1 : (performance.now() - ignitionAt) / 1000;
-    const k = t < 0 ? 0 : smooth(Math.min(1, Math.max(0, (t - SPACE_FROM) / (SPACE_TO - SPACE_FROM))));
+    const k = t < 0 ? 0 : smooth(Math.min(1, Math.max(0, (nominalAltitudeKm(t) - SPACE_FROM_KM) / (SPACE_TO_KM - SPACE_FROM_KM))));
     const on = k > 0.003;
     if (dome.current) {
       dome.current.visible = on;
