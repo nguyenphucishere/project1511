@@ -22,7 +22,8 @@ export const PHASES: Caption[] = [
   { from: T.TEI_END, to: T.SM_SEP, text: { en: "Two and a half days home", vi: "Hai ngày rưỡi trên đường về" } },
   { from: T.SM_SEP, to: T.REENTRY, text: { en: "Service module jettisoned", vi: "Thả mô-đun phục vụ" } },
   { from: T.REENTRY, to: T.CHUTES, text: { en: "Reentry: three and a half minutes of radio blackout", vi: "Tái nhập khí quyển: ba phút rưỡi mất liên lạc" } },
-  { from: T.CHUTES, to: T.FILM_END, text: { en: "Splashdown in the Pacific", vi: "Hạ xuống Thái Bình Dương" } },
+  { from: T.CHUTES, to: T.TOUCHDOWN, text: { en: "Splashdown in the Pacific", vi: "Hạ xuống Thái Bình Dương" } },
+  { from: T.TOUCHDOWN, to: T.FILM_END, text: { en: "Recovery: swimmers and the carrier Hornet", vi: "Vớt tàu: thợ lặn và tàu sân bay Hornet" } },
 ];
 
 /** The reading from the cabin on Christmas Eve (Genesis 1:1–4, King James Version, public domain). */

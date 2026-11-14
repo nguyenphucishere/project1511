@@ -21,6 +21,7 @@ import {
   T,
   capsuleAltitude,
   homePosition,
+  landedTilt,
   norm,
   sub,
   petals,
@@ -435,7 +436,7 @@ export function ReentryCapsule() {
       const alt = capsuleAltitude(t);
       const bob = alt < 1 ? Math.sin(clock.elapsedTime * 1.3) * 0.12 : 0;
       g.position.set(SEA[0], alt + bob, SEA[2]);
-      g.quaternion.setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2 + (alt < 1 ? Math.sin(clock.elapsedTime * 0.9) * 0.06 : 0.0));
+      g.quaternion.setFromAxisAngle(new Vector3(1, 0, 0), landedTilt(t) + (alt < 1 ? Math.sin(clock.elapsedTime * 0.9) * 0.05 : 0.0));
       if (wake.current) wake.current.visible = false;
     }
   });

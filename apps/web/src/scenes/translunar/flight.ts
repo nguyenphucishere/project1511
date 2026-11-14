@@ -300,6 +300,19 @@ export function cutDip(t: number, cuts: number[] = HOME_CUTS): number {
   return dip;
 }
 
+/**
+ * The capsule's tilt about X after touchdown (radians; -pi/2 is nose up, +pi/2 nose down). It topples onto
+ * its nose (Apollo 11 came to rest apex down, "Stable 2"), and the uprighting bags then right it.
+ */
+export function landedTilt(t: number): number {
+  const up = -Math.PI / 2;
+  const down = Math.PI / 2;
+  if (t < T.TOUCHDOWN) return up;
+  const over = smooth((t - T.TOUCHDOWN) / 1.8);
+  const righted = smooth((t - (T.TOUCHDOWN + 5)) / 10);
+  return up + (down - up) * over * (1 - righted);
+}
+
 /** Parachute descent at the splashdown set. */
 export function capsuleAltitude(t: number) {
   const k = clamp01((t - T.CHUTES) / (T.TOUCHDOWN - T.CHUTES));
@@ -351,13 +364,14 @@ export const SHOT_STARTS: [number, string][] = [
   [T.CHUTES, "chutes"],
   [T.CHUTES + 22, "heli"],
   [T.CHUTES + 38, "splash"],
+  [T.TOUCHDOWN + 2, "recovery"],
 ];
 
 /** Which set the camera is in: out in space, inside the cabin looking out, or at the sea. */
 export function viewKind(t: number): ViewKind {
   const id = shotIdAt(t);
   if (id === "earthrise" || id === "cabin-window" || id === "cabin-crew" || id === "tei-cabin" || id === "entry-cabin") return "cabin";
-  if (id === "chutes" || id === "heli" || id === "splash") return "sea";
+  if (id === "chutes" || id === "heli" || id === "splash" || id === "recovery") return "sea";
   return "space";
 }
 
@@ -506,6 +520,12 @@ export function frameAt(t: number): Shot {
       const alt = capsuleAltitude(t);
       const q = t - (T.CHUTES + 22);
       return { ...base, kind: "sea", pos: add(SEA, [-70 + q * 1.4, 36 - q * 0.6, 90 - q * 1.8]), aim: add(SEA, [0, Math.max(alt, 2) * 0.8 + 1, 0]), fov: 40, shake: 0.03 };
+    }
+    case "recovery": {
+      // Close on the capsule as it is righted and the swimmers reach it, the helicopters overhead.
+      const q = t - (T.TOUCHDOWN + 2);
+      const a = 0.9 + q * 0.04;
+      return { ...base, kind: "sea", pos: add(SEA, [Math.sin(a) * 15, 2.6 + q * 0.04, Math.cos(a) * 15]), aim: add(SEA, [0, 2.2, 0]), fov: 40, shake: 0.012 };
     }
     default: {
       // "splash": wide over the water as the capsule settles.

@@ -22,6 +22,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { Warmup } from "../mission-control/Warmup";
 import { Cabin, WINDOW_Z } from "./Cabin";
 import { MoonBody } from "./MoonBody";
+import { Recovery } from "./Recovery";
 import { SEA_SUN, SeaSet } from "./SeaSet";
 import { ReentryCapsule, Ship, Stage } from "./Spacecraft";
 import { filmClock } from "./clock";
@@ -204,6 +205,7 @@ export function TranslunarWorld({ startAt, from, to, onReady }: TranslunarWorldP
       <ReentryCapsule />
       <Cabin ref={cabinRef} />
       <SeaSet />
+      <Recovery />
       <Warmup />
     </>
   );
