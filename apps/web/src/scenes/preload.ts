@@ -187,27 +187,41 @@ export function warmUpcoming(stepId: string): void {
         const total = files.reduce((n, f) => n + f.weight, 0) || 1;
         let got = 0;
         warmed.set(scene, 0);
-        for (const f of files) {
-          try {
-            const r = await fetch(f.url);
-            await r.blob();
-          } catch {
-            /* a missing file never blocks the title */
+        // A few downloads at a time: one-by-one pays the full round trip per file (slow on a CDN far
+        // away), while all at once would starve the title's own images.
+        const queue = [...files];
+        const worker = async () => {
+          for (let f = queue.shift(); f; f = queue.shift()) {
+            try {
+              const r = await fetch(f.url);
+              await r.blob();
+            } catch {
+              /* a missing file never blocks the title */
+            }
+            got += f.weight;
+            warmed.set(scene, Math.min(99, Math.round((got / total) * 100)));
+            for (const l of listeners) l();
           }
-          got += f.weight;
-          warmed.set(scene, Math.round((got / total) * 100));
-          for (const l of listeners) l();
-        }
+        };
+        await Promise.all(Array.from({ length: WARM_CONCURRENCY }, worker));
         warmed.set(scene, 100);
         for (const l of listeners) l();
       });
   }
 }
 
-/** 0..100 across every scene, for the title screen's loading bar (files downloaded so far). */
+/** Parallel downloads per scene during the title warm-up. */
+const WARM_CONCURRENCY = 4;
+
+/**
+ * 0..100 for the title screen's loading bar: the files downloaded so far, across the scenes the
+ * title warms (warmUpcoming only fetches the first couple). Averaging over every scene in the game
+ * instead would cap the bar at 2/7 = 29% and leave it stuck there.
+ */
 export function warmProgress(): number {
-  const all = Object.keys(JOBS) as SceneId[];
-  return Math.round(all.reduce((n, s) => n + (warmed.get(s) ?? 0), 0) / all.length);
+  const scenes = [...warmQueued];
+  if (scenes.length === 0) return 0;
+  return Math.round(scenes.reduce((n, s) => n + (warmed.get(s) ?? 0), 0) / scenes.length);
 }
 
 /** Overall progress (0..100) across every scene that will be played, for the title screen. */
