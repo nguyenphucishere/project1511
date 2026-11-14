@@ -2,7 +2,21 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { AdditiveBlending, BoxGeometry, CylinderGeometry, DoubleSide, LatheGeometry, Matrix4, MeshBasicMaterial, Quaternion, Vector2, Vector3, type BufferGeometry, type Group, type Mesh } from "three";
+import {
+  AdditiveBlending,
+  BoxGeometry,
+  CylinderGeometry,
+  DoubleSide,
+  LatheGeometry,
+  Matrix4,
+  MeshBasicMaterial,
+  Quaternion,
+  Vector2,
+  Vector3,
+  type BufferGeometry,
+  type Group,
+  type Mesh,
+} from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { addTrauma } from "@/game/shake";
 import { playSfx, type SfxId } from "@/game/sfx";
@@ -24,10 +38,33 @@ import { bake, type BakePart } from "./bake";
 export const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const ease = (k: number) => k * k * (3 - 2 * k);
 /** 0 before `a`, 1 after `b`, eased in between. */
-export const span = (t: number, a: number, b: number) => ease(clamp01((t - a) / (b - a)));
-export const since = (ignitionAt: number | null) => (ignitionAt === null ? -1 : (performance.now() - ignitionAt) / 1000);
+export const span = (t: number, a: number, b: number) =>
+  ease(clamp01((t - a) / (b - a)));
+export const since = (ignitionAt: number | null) =>
+  ignitionAt === null ? -1 : (performance.now() - ignitionAt) / 1000;
 
 export type Cue = [offset: number, id: SfxId, trauma?: number];
+
+/**
+ * The hardware recipes are tuned quiet for a close mic; under the roar and the score they vanish,
+ * so each is lifted (the master limiter catches the peaks).
+ */
+const HARDWARE_GAIN: Partial<Record<SfxId, number>> = {
+  relay: 3.2,
+  clank: 3,
+  ratchet: 3.2,
+  hydraulic: 3.5,
+  gas: 3,
+  pyro: 1.8,
+  thud: 1.6,
+  sputter: 1.4,
+  retro: 1.6,
+  servo: 3.5,
+  clunk: 3,
+  hiss: 3,
+  unlatch: 2.5,
+  bang: 1.5,
+};
 
 /** Plays each sound once as the film passes its time (`base` + offset). */
 export function useCues(base: number, cues: Cue[]) {
@@ -36,7 +73,7 @@ export function useCues(base: number, cues: Cue[]) {
     for (const [o, id, trauma] of cues) {
       const c = base + o;
       if (prev.current < c && t >= c && t < c + 1) {
-        playSfx(id);
+        playSfx(id, HARDWARE_GAIN[id] ?? 1);
         if (trauma) addTrauma(trauma);
       }
     }
@@ -45,14 +82,30 @@ export function useCues(base: number, cues: Cue[]) {
 }
 
 const STEEL = { color: "#9aa5b1", metalness: 0.85, roughness: 0.3 } as const;
-const DARK = { color: SCENE_COLORS.steelDark, metalness: 0.7, roughness: 0.45 } as const;
+const DARK = {
+  color: SCENE_COLORS.steelDark,
+  metalness: 0.7,
+  roughness: 0.45,
+} as const;
 const BRASS = { color: "#b0823f", metalness: 0.9, roughness: 0.28 } as const;
-const FLASH = new MeshBasicMaterial({ color: "#fff4d8", toneMapped: false, blending: AdditiveBlending, transparent: true, depthWrite: false });
+const FLASH = new MeshBasicMaterial({
+  color: "#fff4d8",
+  toneMapped: false,
+  blending: AdditiveBlending,
+  transparent: true,
+  depthWrite: false,
+});
 
 /* ---------------------------------------------------------------- tower arms and clamps */
 
 /** A service arm: it swings back from the stack and stops against the tower with a clank. */
-export function SwingArm({ ignitionAt, delay = 0 }: { ignitionAt: number | null; delay?: number }) {
+export function SwingArm({
+  ignitionAt,
+  delay = 0,
+}: {
+  ignitionAt: number | null;
+  delay?: number;
+}) {
   const pivot = useRef<Group>(null);
   const ram = useRef<Mesh>(null);
   const cues = useCues(HOLD_DOWN - 2 + delay, [
@@ -80,7 +133,10 @@ export function SwingArm({ ignitionAt, delay = 0 }: { ignitionAt: number | null;
       </mesh>
       <mesh position={[3.55, 0, 0]}>
         <boxGeometry args={[0.32, 0.4, 0.5]} />
-        <meshStandardMaterial color={SCENE_COLORS.safetyYellow} roughness={0.5} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.safetyYellow}
+          roughness={0.5}
+        />
       </mesh>
       {[-0.12, 0.12].map((z) => (
         <mesh key={z} position={[2.2, -0.12, z]} rotation={[0, 0, Math.PI / 2]}>
@@ -129,7 +185,10 @@ export function HoldDownClamps({ ignitionAt }: { ignitionAt: number | null }) {
             </mesh>
             <mesh position={[-1.1, 0.1, 0]}>
               <boxGeometry args={[0.22, 0.5, 0.4]} />
-              <meshStandardMaterial color={SCENE_COLORS.safetyYellow} roughness={0.5} />
+              <meshStandardMaterial
+                color={SCENE_COLORS.safetyYellow}
+                roughness={0.5}
+              />
             </mesh>
             {/* The pivot pin and its retaining plate */}
             <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.22]}>
@@ -137,7 +196,11 @@ export function HoldDownClamps({ ignitionAt }: { ignitionAt: number | null }) {
               <meshStandardMaterial {...BRASS} />
             </mesh>
           </group>
-          <mesh ref={(el) => (pistons.current[i] = el)} position={[2.45, 0.35, 0]} rotation={[0, 0, 0.6]}>
+          <mesh
+            ref={(el) => (pistons.current[i] = el)}
+            position={[2.45, 0.35, 0]}
+            rotation={[0, 0, 0.6]}
+          >
             <cylinderGeometry args={[0.06, 0.06, 0.8, 8]} />
             <meshStandardMaterial {...STEEL} />
           </mesh>
@@ -153,11 +216,31 @@ export function HoldDownClamps({ ignitionAt }: { ignitionAt: number | null }) {
  * A linear shaped charge cutting the skin: a flash that races round the ring in a few hundredths
  * of a second, a shock ring, and chips of skin thrown outward.
  */
-export function CutFlash({ ignitionAt, at, y, r, sound = true }: { ignitionAt: number | null; at: number; y: number; r: number; sound?: boolean }) {
+export function CutFlash({
+  ignitionAt,
+  at,
+  y,
+  r,
+  sound = true,
+}: {
+  ignitionAt: number | null;
+  at: number;
+  y: number;
+  r: number;
+  sound?: boolean;
+}) {
   const sparks = useRef<(Mesh | null)[]>([]);
   const chips = useRef<(Mesh | null)[]>([]);
   const shock = useRef<Mesh>(null);
-  const cues = useCues(at, sound ? [[0, "pyro", 0.6], [0.02, "thud"]] : []);
+  const cues = useCues(
+    at,
+    sound
+      ? [
+          [0, "pyro", 0.6],
+          [0.02, "thud"],
+        ]
+      : [],
+  );
   useFrame(() => {
     const t = since(ignitionAt);
     const s = t - at;
@@ -175,7 +258,11 @@ export function CutFlash({ ignitionAt, at, y, r, sound = true }: { ignitionAt: n
       const a = (i / 10) * Math.PI * 2 + i * 0.7;
       const v = 1.8 + (i % 4) * 1.1;
       const up = ((i % 3) - 1) * 1.6;
-      m.position.set(Math.sin(a) * (r + v * tau), up * tau, Math.cos(a) * (r + v * tau));
+      m.position.set(
+        Math.sin(a) * (r + v * tau),
+        up * tau,
+        Math.cos(a) * (r + v * tau),
+      );
       m.rotation.set(tau * (3 + i), tau * (2 + i * 0.5), 0);
     });
     if (shock.current) {
@@ -191,7 +278,13 @@ export function CutFlash({ ignitionAt, at, y, r, sound = true }: { ignitionAt: n
       {Array.from({ length: 16 }, (_, i) => {
         const a = (i / 16) * Math.PI * 2;
         return (
-          <mesh key={i} ref={(el) => (sparks.current[i] = el)} position={[Math.sin(a) * r, 0, Math.cos(a) * r]} visible={false} material={FLASH}>
+          <mesh
+            key={i}
+            ref={(el) => (sparks.current[i] = el)}
+            position={[Math.sin(a) * r, 0, Math.cos(a) * r]}
+            visible={false}
+            material={FLASH}
+          >
             <sphereGeometry args={[1, 8, 6]} />
           </mesh>
         );
@@ -204,7 +297,13 @@ export function CutFlash({ ignitionAt, at, y, r, sound = true }: { ignitionAt: n
       ))}
       <mesh ref={shock} rotation={[Math.PI / 2, 0, 0]} visible={false}>
         <torusGeometry args={[r, 0.05, 6, 40]} />
-        <meshBasicMaterial color="#ffcf8a" toneMapped={false} blending={AdditiveBlending} transparent depthWrite={false} />
+        <meshBasicMaterial
+          color="#ffcf8a"
+          toneMapped={false}
+          blending={AdditiveBlending}
+          transparent
+          depthWrite={false}
+        />
       </mesh>
     </group>
   );
@@ -238,7 +337,12 @@ export function RetroRockets({
     const on = s > 0 && s < dur;
     if (group.current) {
       group.current.visible = on;
-      if (on) group.current.scale.set(1, (1 - (s / dur) * 0.4) * (0.8 + Math.abs(Math.sin(s * 80)) * 0.3), 1);
+      if (on)
+        group.current.scale.set(
+          1,
+          (1 - (s / dur) * 0.4) * (0.8 + Math.abs(Math.sin(s * 80)) * 0.3),
+          1,
+        );
     }
     cues(t);
   });
@@ -247,9 +351,21 @@ export function RetroRockets({
       {Array.from({ length: count }, (_, i) => {
         const a = (i / count) * Math.PI * 2 + rotate;
         return (
-          <mesh key={i} position={[Math.sin(a) * r, length * 0.5, Math.cos(a) * r]} rotation={[Math.PI, 0, 0]}>
+          <mesh
+            key={i}
+            position={[Math.sin(a) * r, length * 0.5, Math.cos(a) * r]}
+            rotation={[Math.PI, 0, 0]}
+          >
             <coneGeometry args={[0.2, length, 8, 1, true]} />
-            <meshBasicMaterial color={SCENE_COLORS.flameCore} toneMapped={false} blending={AdditiveBlending} transparent opacity={0.9} depthWrite={false} side={DoubleSide} />
+            <meshBasicMaterial
+              color={SCENE_COLORS.flameCore}
+              toneMapped={false}
+              blending={AdditiveBlending}
+              transparent
+              opacity={0.9}
+              depthWrite={false}
+              side={DoubleSide}
+            />
           </mesh>
         );
       })}
@@ -301,7 +417,15 @@ export function UllageMotors({
           return (
             <mesh key={i} position={[Math.sin(a) * r, -0.35, Math.cos(a) * r]}>
               <coneGeometry args={[0.13, 0.9, 8, 1, true]} />
-              <meshBasicMaterial color={SCENE_COLORS.flameCore} toneMapped={false} blending={AdditiveBlending} transparent opacity={0.85} depthWrite={false} side={DoubleSide} />
+              <meshBasicMaterial
+                color={SCENE_COLORS.flameCore}
+                toneMapped={false}
+                blending={AdditiveBlending}
+                transparent
+                opacity={0.85}
+                depthWrite={false}
+                side={DoubleSide}
+              />
             </mesh>
           );
         })}
@@ -311,7 +435,13 @@ export function UllageMotors({
 }
 
 /** The four engine fairings of stage 1 (each hides a pair of retros) blow off at separation. */
-export function Fairings({ ignitionAt, at }: { ignitionAt: number | null; at: number }) {
+export function Fairings({
+  ignitionAt,
+  at,
+}: {
+  ignitionAt: number | null;
+  at: number;
+}) {
   const parts = useRef<(Mesh | null)[]>([]);
   useFrame(() => {
     const t = since(ignitionAt);
@@ -321,16 +451,33 @@ export function Fairings({ ignitionAt, at }: { ignitionAt: number | null; at: nu
       const a = (i * Math.PI) / 2;
       m.visible = go < 2.2;
       const rad = 1.78 + 4.5 * go;
-      m.position.set(Math.sin(a) * rad, 3.2 - 0.5 * 3 * go * go, Math.cos(a) * rad);
+      m.position.set(
+        Math.sin(a) * rad,
+        3.2 - 0.5 * 3 * go * go,
+        Math.cos(a) * rad,
+      );
       m.rotation.set(go * (2 + i), a + go * 1.5, go * 3);
     });
   });
   return (
     <>
       {[0, 1, 2, 3].map((i) => (
-        <mesh key={i} ref={(el) => (parts.current[i] = el)} position={[Math.sin((i * Math.PI) / 2) * 1.78, 3.2, Math.cos((i * Math.PI) / 2) * 1.78]} rotation={[0, (i * Math.PI) / 2, 0]}>
+        <mesh
+          key={i}
+          ref={(el) => (parts.current[i] = el)}
+          position={[
+            Math.sin((i * Math.PI) / 2) * 1.78,
+            3.2,
+            Math.cos((i * Math.PI) / 2) * 1.78,
+          ]}
+          rotation={[0, (i * Math.PI) / 2, 0]}
+        >
           <boxGeometry args={[0.55, 1.5, 0.45]} />
-          <meshStandardMaterial color={SCENE_COLORS.steelDark} metalness={0.4} roughness={0.5} />
+          <meshStandardMaterial
+            color={SCENE_COLORS.steelDark}
+            metalness={0.4}
+            roughness={0.5}
+          />
         </mesh>
       ))}
     </>
@@ -340,7 +487,15 @@ export function Fairings({ ignitionAt, at }: { ignitionAt: number | null; at: nu
 /* ---------------------------------------------------------------- shells and details */
 
 /** A ring of bolt heads along a stage joint. */
-export function FlangeBolts({ y, r, n = 36 }: { y: number; r: number; n?: number }) {
+export function FlangeBolts({
+  y,
+  r,
+  n = 36,
+}: {
+  y: number;
+  r: number;
+  n?: number;
+}) {
   const geometry = useMemo(() => {
     const list: BufferGeometry[] = [];
     for (let i = 0; i < n; i++) {
@@ -361,19 +516,40 @@ export function FlangeBolts({ y, r, n = 36 }: { y: number; r: number; n?: number
 }
 
 /** The interstage: a skirt that stays with stage 2 until the second cut, with its stiffening ribs and hatches. */
-export function InterstageShell({ y0, h, r0, r1, color }: { y0: number; h: number; r0: number; r1: number; color: string }) {
+export function InterstageShell({
+  y0,
+  h,
+  r0,
+  r1,
+  color,
+}: {
+  y0: number;
+  h: number;
+  r0: number;
+  r1: number;
+  color: string;
+}) {
   return (
     <group>
       <mesh position={[0, y0 + h / 2, 0]}>
         <cylinderGeometry args={[r1, r0, h, 24, 1, true]} />
-        <meshStandardMaterial color={color} metalness={0.2} roughness={0.45} side={DoubleSide} />
+        <meshStandardMaterial
+          color={color}
+          metalness={0.2}
+          roughness={0.45}
+          side={DoubleSide}
+        />
       </mesh>
       {/* Bands carrying the shaped-charge cut */}
       {[
         [0.06, r0 + 0.01],
         [h - 0.06, r1 + 0.01],
       ].map(([dy, rr]) => (
-        <mesh key={dy} position={[0, y0 + dy!, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh
+          key={dy}
+          position={[0, y0 + dy!, 0]}
+          rotation={[Math.PI / 2, 0, 0]}
+        >
           <torusGeometry args={[rr!, 0.035, 6, 32]} />
           <meshStandardMaterial color={SCENE_COLORS.nasaRed} roughness={0.5} />
         </mesh>
@@ -382,14 +558,26 @@ export function InterstageShell({ y0, h, r0, r1, color }: { y0: number; h: numbe
         const a = (i / 12) * Math.PI * 2;
         const rr = r0 + (r1 - r0) * 0.5 + 0.02;
         return (
-          <mesh key={i} position={[Math.sin(a) * rr, y0 + h / 2, Math.cos(a) * rr]} rotation={[0, a, 0]}>
+          <mesh
+            key={i}
+            position={[Math.sin(a) * rr, y0 + h / 2, Math.cos(a) * rr]}
+            rotation={[0, a, 0]}
+          >
             <boxGeometry args={[0.05, h - 0.3, 0.04]} />
             <meshStandardMaterial {...STEEL} />
           </mesh>
         );
       })}
       {[0.4, 2.0, 3.6, 5.2].map((a) => (
-        <mesh key={a} position={[Math.sin(a) * (r0 + 0.03), y0 + h * 0.5, Math.cos(a) * (r0 + 0.03)]} rotation={[0, a, 0]}>
+        <mesh
+          key={a}
+          position={[
+            Math.sin(a) * (r0 + 0.03),
+            y0 + h * 0.5,
+            Math.cos(a) * (r0 + 0.03),
+          ]}
+          rotation={[0, a, 0]}
+        >
           <boxGeometry args={[0.5, 0.45, 0.04]} />
           <meshStandardMaterial color="#cbd5e1" roughness={0.5} />
         </mesh>
@@ -405,7 +593,13 @@ export function InterstageShell({ y0, h, r0, r1, color }: { y0: number; h: numbe
  * (inertial platform, flight computer, data adapter, flight control computer), with its access
  * panels, coolant lines and a scatter of status lights blinking out of step.
  */
-export function InstrumentUnit({ ignitionAt, y0 }: { ignitionAt: number | null; y0: number }) {
+export function InstrumentUnit({
+  ignitionAt,
+  y0,
+}: {
+  ignitionAt: number | null;
+  y0: number;
+}) {
   const leds = useRef<(Mesh | null)[]>([]);
   const mats = useMemo(
     () => ({
@@ -420,8 +614,15 @@ export function InstrumentUnit({ ignitionAt, y0 }: { ignitionAt: number | null; 
     const t = since(ignitionAt);
     leds.current.forEach((m, i) => {
       if (!m) return;
-      const on = Math.sin(t * (2.1 + i * 0.43) + i * 1.9) > (i % 3 === 0 ? -0.3 : 0.15);
-      const want = !on ? mats.off : i % 7 === 0 ? mats.red : i % 3 === 0 ? mats.amber : mats.green;
+      const on =
+        Math.sin(t * (2.1 + i * 0.43) + i * 1.9) > (i % 3 === 0 ? -0.3 : 0.15);
+      const want = !on
+        ? mats.off
+        : i % 7 === 0
+          ? mats.red
+          : i % 3 === 0
+            ? mats.amber
+            : mats.green;
       if (m.material !== want) m.material = want;
     });
   });
@@ -434,10 +635,18 @@ export function InstrumentUnit({ ignitionAt, y0 }: { ignitionAt: number | null; 
       {Array.from({ length: 16 }, (_, i) => {
         const a = (i / 16) * Math.PI * 2;
         return (
-          <group key={i} position={[Math.sin(a) * 1.215, 0.2, Math.cos(a) * 1.215]} rotation={[0, a, 0]}>
+          <group
+            key={i}
+            position={[Math.sin(a) * 1.215, 0.2, Math.cos(a) * 1.215]}
+            rotation={[0, a, 0]}
+          >
             <mesh>
               <boxGeometry args={[0.34, 0.3, 0.03]} />
-              <meshStandardMaterial color={i % 2 ? "#aab3c0" : "#e5e7eb"} metalness={0.4} roughness={0.5} />
+              <meshStandardMaterial
+                color={i % 2 ? "#aab3c0" : "#e5e7eb"}
+                metalness={0.4}
+                roughness={0.5}
+              />
             </mesh>
             {i % 4 === 0 && (
               <mesh position={[0.12, 0.08, 0.03]}>
@@ -451,7 +660,13 @@ export function InstrumentUnit({ ignitionAt, y0 }: { ignitionAt: number | null; 
       {Array.from({ length: 14 }, (_, i) => {
         const a = ((i + 0.5) / 14) * Math.PI * 2;
         return (
-          <mesh key={i} ref={(el) => (leds.current[i] = el)} material={mats.off} position={[Math.sin(a) * 1.235, 0.34, Math.cos(a) * 1.235]} rotation={[0, a, 0]}>
+          <mesh
+            key={i}
+            ref={(el) => (leds.current[i] = el)}
+            material={mats.off}
+            position={[Math.sin(a) * 1.235, 0.34, Math.cos(a) * 1.235]}
+            rotation={[0, a, 0]}
+          >
             <boxGeometry args={[0.05, 0.03, 0.025]} />
           </mesh>
         );
@@ -471,13 +686,25 @@ export function InstrumentUnit({ ignitionAt, y0 }: { ignitionAt: number | null; 
 /* ---------------------------------------------------------------- the adapter */
 
 /** Where a point given in a hinged panel's own frame ends up in the ring's frame (x out, y up). */
-const place = (hx: number, hy: number, angle: number, lx: number, ly: number): [number, number] => [
+const place = (
+  hx: number,
+  hy: number,
+  angle: number,
+  lx: number,
+  ly: number,
+): [number, number] => [
   hx + lx * Math.cos(angle) - ly * Math.sin(angle),
   hy + lx * Math.sin(angle) + ly * Math.cos(angle),
 ];
 
 /** A piston between two points: a fixed barrel and a rod that slides out of it. */
-function setPiston(barrel: Mesh | null, rod: Mesh | null, a: [number, number], b: [number, number], barrelLen: number) {
+function setPiston(
+  barrel: Mesh | null,
+  rod: Mesh | null,
+  a: [number, number],
+  b: [number, number],
+  barrelLen: number,
+) {
   if (!barrel || !rod) return;
   const dx = b[0] - a[0];
   const dy = b[1] - a[1];
@@ -516,7 +743,15 @@ export interface AdapterPanelsProps {
  * ring; pyrotechnic thrusters push each panel out on a piston; at 45 degrees the hinge lets go and
  * springs push the panel away, leaving the lander in the open.
  */
-export function AdapterPanels({ ignitionAt, at, y0, h, r0, r1, stackAccel }: AdapterPanelsProps) {
+export function AdapterPanels({
+  ignitionAt,
+  at,
+  y0,
+  h,
+  r0,
+  r1,
+  stackAccel,
+}: AdapterPanelsProps) {
   const arc = (Math.PI * 2) / PANELS - 0.05;
   const center = Math.PI / 2 - arc / 2;
   const fly = useRef<(Group | null)[]>([]);
@@ -549,9 +784,16 @@ export function AdapterPanels({ ignitionAt, at, y0, h, r0, r1, stackAccel }: Ada
       }
       // The thruster piston pushes on the panel's outer edge until the hinge lets go.
       const b = place(r0, y0, -ang, -0.2, h * 0.3);
-      setPiston(barrels.current[i] ?? null, rods.current[i] ?? null, [r0 - 0.45, y0 + 0.25], b, 0.5);
+      setPiston(
+        barrels.current[i] ?? null,
+        rods.current[i] ?? null,
+        [r0 - 0.45, y0 + 0.25],
+        b,
+        0.5,
+      );
       const seam = seams.current[i];
-      if (seam) seam.visible = s > -0.03 && s < 0.18 && Math.sin(s * 300) > -0.4;
+      if (seam)
+        seam.visible = s > -0.03 && s < 0.18 && Math.sin(s * 300) > -0.4;
     }
     cues(t);
   });
@@ -563,14 +805,39 @@ export function AdapterPanels({ ignitionAt, at, y0, h, r0, r1, stackAccel }: Ada
         return (
           <group key={i} rotation={[0, az, 0]}>
             <group ref={(el) => (fly.current[i] = el)}>
-              <group ref={(el) => (hinge.current[i] = el)} position={[r0, y0, 0]}>
+              <group
+                ref={(el) => (hinge.current[i] = el)}
+                position={[r0, y0, 0]}
+              >
                 <mesh position={[-r0, h / 2, 0]}>
-                  <cylinderGeometry args={[r1, r0, h, 8, 1, true, center, arc]} />
-                  <meshStandardMaterial color={SCENE_COLORS.spaceWhite} metalness={0.15} roughness={0.45} side={DoubleSide} />
+                  <cylinderGeometry
+                    args={[r1, r0, h, 8, 1, true, center, arc]}
+                  />
+                  <meshStandardMaterial
+                    color={SCENE_COLORS.spaceWhite}
+                    metalness={0.15}
+                    roughness={0.45}
+                    side={DoubleSide}
+                  />
                 </mesh>
                 <mesh position={[-r0 + 0.01, h * 0.5, 0]}>
-                  <cylinderGeometry args={[(r0 + r1) / 2 + 0.01, (r0 + r1) / 2 + 0.01, 0.16, 8, 1, true, center, arc]} />
-                  <meshStandardMaterial color={SCENE_COLORS.nasaRed} roughness={0.5} side={DoubleSide} />
+                  <cylinderGeometry
+                    args={[
+                      (r0 + r1) / 2 + 0.01,
+                      (r0 + r1) / 2 + 0.01,
+                      0.16,
+                      8,
+                      1,
+                      true,
+                      center,
+                      arc,
+                    ]}
+                  />
+                  <meshStandardMaterial
+                    color={SCENE_COLORS.nasaRed}
+                    roughness={0.5}
+                    side={DoubleSide}
+                  />
                 </mesh>
                 {/* The spring hinge: a barrel with its disengaging pin */}
                 <mesh position={[0.05, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
@@ -580,16 +847,30 @@ export function AdapterPanels({ ignitionAt, at, y0, h, r0, r1, stackAccel }: Ada
               </group>
             </group>
             {/* Pyrotechnic thruster: barrel and piston inside the intact ring */}
-            <mesh ref={(el) => (barrels.current[i] = el)} position={[r0 - 0.4, y0 + 0.2, 0]}>
+            <mesh
+              ref={(el) => (barrels.current[i] = el)}
+              position={[r0 - 0.4, y0 + 0.2, 0]}
+            >
               <cylinderGeometry args={[0.08, 0.08, 1, 8]} />
               <meshStandardMaterial {...DARK} />
             </mesh>
-            <mesh ref={(el) => (rods.current[i] = el)} position={[r0 - 0.3, y0 + 0.4, 0]}>
+            <mesh
+              ref={(el) => (rods.current[i] = el)}
+              position={[r0 - 0.3, y0 + 0.4, 0]}
+            >
               <cylinderGeometry args={[0.05, 0.05, 1, 8]} />
               <meshStandardMaterial {...STEEL} />
             </mesh>
             {/* The seam where the shaped charge cuts, between this panel and the next */}
-            <mesh ref={(el) => (seams.current[i] = el)} position={[r0 * Math.cos(Math.PI / PANELS), y0 + h / 2, r0 * Math.sin(Math.PI / PANELS)]} visible={false}>
+            <mesh
+              ref={(el) => (seams.current[i] = el)}
+              position={[
+                r0 * Math.cos(Math.PI / PANELS),
+                y0 + h / 2,
+                r0 * Math.sin(Math.PI / PANELS),
+              ]}
+              visible={false}
+            >
               <boxGeometry args={[0.05, h, 0.05]} />
               <meshBasicMaterial color="#fff2cc" toneMapped={false} />
             </mesh>
@@ -604,18 +885,40 @@ export function AdapterPanels({ ignitionAt, at, y0, h, r0, r1, stackAccel }: Ada
 /* ---------------------------------------------------------------- the escape tower */
 
 /** A thin strut between two points, as a part for `bake`. */
-function strut(a: [number, number, number], b: [number, number, number], r: number, color: string): BakePart {
+function strut(
+  a: [number, number, number],
+  b: [number, number, number],
+  r: number,
+  color: string,
+): BakePart {
   const va = new Vector3(...a);
   const vb = new Vector3(...b);
   const dir = vb.clone().sub(va);
   const len = dir.length();
-  const q = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), dir.normalize());
-  const m = new Matrix4().compose(va.clone().add(vb).multiplyScalar(0.5), q, new Vector3(1, 1, 1));
-  return { g: new CylinderGeometry(r, r, len, 5), color, at: [0, 0, 0], matrix: m };
+  const q = new Quaternion().setFromUnitVectors(
+    new Vector3(0, 1, 0),
+    dir.normalize(),
+  );
+  const m = new Matrix4().compose(
+    va.clone().add(vb).multiplyScalar(0.5),
+    q,
+    new Vector3(1, 1, 1),
+  );
+  return {
+    g: new CylinderGeometry(r, r, len, 5),
+    color,
+    at: [0, 0, 0],
+    matrix: m,
+  };
 }
 
 /** The tower's lattice: four legs, ring struts and X-bracing on every face, between two heights. */
-function trussGeometry(y0: number, y1: number, r0: number, r1: number): BufferGeometry {
+function trussGeometry(
+  y0: number,
+  y1: number,
+  r0: number,
+  r1: number,
+): BufferGeometry {
   const parts: BakePart[] = [];
   const levels = 4;
   const at = (leg: number, k: number): [number, number, number] => {
@@ -623,9 +926,11 @@ function trussGeometry(y0: number, y1: number, r0: number, r1: number): BufferGe
     const r = r0 + (r1 - r0) * (k / levels);
     return [Math.sin(a) * r, y0 + ((y1 - y0) * k) / levels, Math.cos(a) * r];
   };
-  for (let leg = 0; leg < 4; leg++) parts.push(strut(at(leg, 0), at(leg, levels), 0.034, "#dfe3e8"));
+  for (let leg = 0; leg < 4; leg++)
+    parts.push(strut(at(leg, 0), at(leg, levels), 0.034, "#dfe3e8"));
   for (let k = 0; k <= levels; k++) {
-    for (let leg = 0; leg < 4; leg++) parts.push(strut(at(leg, k), at((leg + 1) % 4, k), 0.016, "#c4cbd4"));
+    for (let leg = 0; leg < 4; leg++)
+      parts.push(strut(at(leg, k), at((leg + 1) % 4, k), 0.016, "#c4cbd4"));
   }
   for (let k = 0; k < levels; k++) {
     for (let leg = 0; leg < 4; leg++) {
@@ -668,7 +973,13 @@ function noseGeometry(): BufferGeometry {
  * motor with its ring of small ports, an ogive nose and a thin probe. At LES_T the tower is cut
  * loose and the motor carries tower and cover away to the side, uncovering the capsule.
  */
-export function EscapeTower({ ignitionAt, y0 }: { ignitionAt: number | null; y0: number }) {
+export function EscapeTower({
+  ignitionAt,
+  y0,
+}: {
+  ignitionAt: number | null;
+  y0: number;
+}) {
   const body = useRef<Group>(null);
   const flame = useRef<Group>(null);
   const cues = useCues(LES_T, [
@@ -679,7 +990,10 @@ export function EscapeTower({ ignitionAt, y0 }: { ignitionAt: number | null; y0:
   ]);
   const cover = useMemo(() => coverGeometry(), []);
   const nose = useMemo(() => noseGeometry(), []);
-  const truss = useMemo(() => trussGeometry(y0 + 0.6, y0 + 4.0, 0.34, 0.5), [y0]);
+  const truss = useMemo(
+    () => trussGeometry(y0 + 0.6, y0 + 4.0, 0.34, 0.5),
+    [y0],
+  );
   const ports = useMemo(() => {
     const parts: BakePart[] = [];
     const port = new BoxGeometry(0.05, 0.06, 0.03);
@@ -707,7 +1021,12 @@ export function EscapeTower({ ignitionAt, y0 }: { ignitionAt: number | null; y0:
     if (flame.current) {
       const on = tau >= 0 && tau < 3.2;
       flame.current.visible = on;
-      if (on) flame.current.scale.set(1, (1 + Math.sin(tau * 50) * 0.12) * (tau < 0.4 ? tau / 0.4 : 1), 1);
+      if (on)
+        flame.current.scale.set(
+          1,
+          (1 + Math.sin(tau * 50) * 0.12) * (tau < 0.4 ? tau / 0.4 : 1),
+          1,
+        );
     }
     cues(t);
   });
@@ -720,7 +1039,11 @@ export function EscapeTower({ ignitionAt, y0 }: { ignitionAt: number | null; y0:
       <group ref={body}>
         {/* Boost protective cover, with its seam ring and the tower's mounting collar */}
         <mesh geometry={cover} position={[0, base, 0]}>
-          <meshStandardMaterial color="#eef1f5" roughness={0.42} metalness={0.15} />
+          <meshStandardMaterial
+            color="#eef1f5"
+            roughness={0.42}
+            metalness={0.15}
+          />
         </mesh>
         <mesh position={[0, base + 0.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[0.99, 0.022, 6, 40]} />
@@ -747,7 +1070,11 @@ export function EscapeTower({ ignitionAt, y0 }: { ignitionAt: number | null; y0:
         {[0, 1, 2, 3].map((i) => {
           const a = (i * Math.PI) / 2;
           return (
-            <mesh key={i} position={[Math.sin(a) * 0.34, y0 + 4.15, Math.cos(a) * 0.34]} rotation={[Math.cos(a) * 0.55, 0, -Math.sin(a) * 0.55]}>
+            <mesh
+              key={i}
+              position={[Math.sin(a) * 0.34, y0 + 4.15, Math.cos(a) * 0.34]}
+              rotation={[Math.cos(a) * 0.55, 0, -Math.sin(a) * 0.55]}
+            >
               <cylinderGeometry args={[0.07, 0.13, 0.42, 10, 1, true]} />
               <meshStandardMaterial {...BRASS} side={DoubleSide} />
             </mesh>
@@ -757,7 +1084,11 @@ export function EscapeTower({ ignitionAt, y0 }: { ignitionAt: number | null; y0:
         {/* The escape motor: white case, black bands and a red tracking stripe */}
         <mesh position={[0, (motorBot + motorTop) / 2, 0]}>
           <cylinderGeometry args={[0.33, 0.33, motorTop - motorBot, 20]} />
-          <meshStandardMaterial color="#f3f5f8" roughness={0.4} metalness={0.1} />
+          <meshStandardMaterial
+            color="#f3f5f8"
+            roughness={0.4}
+            metalness={0.1}
+          />
         </mesh>
         {[0.25, 1.35, 2.5].map((d) => (
           <mesh key={d} position={[0, motorBot + d, 0]}>
@@ -773,7 +1104,11 @@ export function EscapeTower({ ignitionAt, y0 }: { ignitionAt: number | null; y0:
         {/* Canard section: a collar, two fins folded flat against it */}
         <mesh position={[0, motorTop + 0.25, 0]}>
           <cylinderGeometry args={[0.3, 0.34, 0.5, 16]} />
-          <meshStandardMaterial color="#d7dce2" metalness={0.4} roughness={0.45} />
+          <meshStandardMaterial
+            color="#d7dce2"
+            metalness={0.4}
+            roughness={0.45}
+          />
         </mesh>
         {[1, -1].map((s) => (
           <mesh key={s} position={[s * 0.31, motorTop + 0.25, 0]}>
@@ -806,15 +1141,28 @@ export function EscapeTower({ ignitionAt, y0 }: { ignitionAt: number | null; y0:
         <group ref={flame} position={[0, y0 + 3.9, 0]} visible={false}>
           <mesh position={[0, -1.1, 0]} rotation={[Math.PI, 0, 0]}>
             <coneGeometry args={[0.55, 2.8, 12, 1, true]} />
-            <meshBasicMaterial color={SCENE_COLORS.flameOuter} side={DoubleSide} toneMapped={false} />
+            <meshBasicMaterial
+              color={SCENE_COLORS.flameOuter}
+              side={DoubleSide}
+              toneMapped={false}
+            />
           </mesh>
           <mesh position={[0, -0.8, 0]} rotation={[Math.PI, 0, 0]}>
             <coneGeometry args={[0.3, 1.8, 12]} />
-            <meshBasicMaterial color={SCENE_COLORS.flameCore} toneMapped={false} />
+            <meshBasicMaterial
+              color={SCENE_COLORS.flameCore}
+              toneMapped={false}
+            />
           </mesh>
         </group>
       </group>
-      <CutFlash ignitionAt={ignitionAt} at={LES_T} y={y0 + 0.55} r={0.45} sound={false} />
+      <CutFlash
+        ignitionAt={ignitionAt}
+        at={LES_T}
+        y={y0 + 0.55}
+        r={0.45}
+        sound={false}
+      />
     </group>
   );
 }

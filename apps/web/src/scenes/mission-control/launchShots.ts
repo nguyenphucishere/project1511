@@ -371,7 +371,9 @@ export const SHOTS: Shot[] = [
     from: INTER_T + 0.3,
     frame: ({ pad, rise, t }) => {
       const a = (t - INTER_T) * 0.8;
-      return { pos: at(pad, Math.sin(a) * 1.0, rise + 11.6, Math.cos(a) * 1.0), aim: at(pad, 0, rise + 14.2, 0), rate: 30, zoom: 2.4, shake: 0.03 };
+      // Beside the exhaust, never in it: the engines are burning, and a camera inside the opaque
+      // flame cone sees one flat wash of yellow. The orbit stays outside the widest plume.
+      return { pos: at(pad, Math.sin(a) * 4.6, rise + 11.8, Math.cos(a) * 4.6), aim: at(pad, 0, rise + 13.2, 0), rate: 30, zoom: 1.7, shake: 0.03 };
     },
   },
 

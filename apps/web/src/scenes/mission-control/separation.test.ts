@@ -24,8 +24,14 @@ describe("stage separation", () => {
     expect(Math.abs(gearAngle(3, th))).toBeCloseTo((th * GEARS[0]!.teeth * GEARS[2]!.teeth) / (GEARS[1]!.teeth * GEARS[3]!.teeth), 6);
   });
 
-  it("holds the drive still until the pump starts", () => {
-    expect(driveAngle(opTime("pump-spin") - 1)).toBe(0);
+  it("keeps the drive turning from the start, and faster once the pump spins up", () => {
+    const pump = opTime("pump-spin");
+    // Idling before the pump: never still while in view.
+    expect(driveAngle(pump - 1)).toBeGreaterThan(driveAngle(pump - 2));
+    // Faster after the pump starts than during the idle.
+    const idleRate = driveAngle(pump - 0.5) - driveAngle(pump - 1.0);
+    const spunRate = driveAngle(pump + 2.0) - driveAngle(pump + 1.5);
+    expect(spunRate).toBeGreaterThan(idleRate * 5);
     expect(driveAngle(0)).toBeGreaterThan(driveAngle(-5));
   });
 });

@@ -112,10 +112,13 @@ export function gearAngle(i: number, theta: number): number {
  * 0.7 s from the pump operation and runs until just before the cut.
  */
 export function driveAngle(t: number): number {
+  // The train never stands still while it is in view: it idles at 2 rad/s from the start, the pump
+  // spins it up to 22 rad/s over 0.9 s, and it runs flat out until just after the cut.
   const t0 = opTime("pump-spin");
-  const t1 = 0.4;
-  const x = Math.min(Math.max(t, t0), t1) - t0;
-  const ramp = 0.7;
-  const s = x < ramp ? (x * x) / (2 * ramp) : x - ramp / 2;
-  return 16 * s;
+  const clamped = Math.min(Math.max(t, -9.5), 0.4);
+  const idle = 2 * (Math.min(clamped, t0) + 9.5);
+  const y = Math.max(0, clamped - t0);
+  const ramp = 0.9;
+  const spun = y < ramp ? 2 * y + (20 * y * y) / (2 * ramp) : 2 * ramp + 10 * ramp + 22 * (y - ramp);
+  return idle + spun;
 }

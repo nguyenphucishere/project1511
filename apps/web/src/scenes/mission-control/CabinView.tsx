@@ -45,25 +45,52 @@ export function CabinView({ ignitionAt }: { ignitionAt: number | null }) {
       for (let i = 0; i < 18; i++) {
         const x = -0.8 + i * 0.094;
         const z = row * 0.1;
-        const lean = ((i * 7 + row * 3) % 5 - 2) * 0.12;
+        const lean = (((i * 7 + row * 3) % 5) - 2) * 0.12;
         parts.push({ g: base, color: "#0f1217", at: [x, 0.012, z] });
-        parts.push({ g: sw, color: METAL, at: [x, 0.05, z], rot: [lean, 0, 0] });
+        parts.push({
+          g: sw,
+          color: METAL,
+          at: [x, 0.05, z],
+          rot: [lean, 0, 0],
+        });
       }
     }
     // Gauges
     for (let i = 0; i < 4; i++) {
       const x = -0.55 + i * 0.37;
-      parts.push({ g: gauge, color: "#0b0d11", at: [x, 0.02, 0.5], rot: [0, 0, 0] });
-      parts.push({ g: needle, color: "#ff8a3d", at: [x, 0.04, 0.5], rot: [0, i * 0.7 - 0.8, Math.PI / 2] });
+      parts.push({
+        g: gauge,
+        color: "#0b0d11",
+        at: [x, 0.02, 0.5],
+        rot: [0, 0, 0],
+      });
+      parts.push({
+        g: needle,
+        color: "#ff8a3d",
+        at: [x, 0.04, 0.5],
+        rot: [0, i * 0.7 - 0.8, Math.PI / 2],
+      });
     }
     // Rotary knobs
     for (let i = 0; i < 6; i++) {
-      parts.push({ g: knob, color: "#c4cbd4", at: [-0.9 + i * 0.36, 0.03, 0.32] });
+      parts.push({
+        g: knob,
+        color: "#c4cbd4",
+        at: [-0.9 + i * 0.36, 0.03, 0.32],
+      });
     }
     // Panel screws
     for (let i = 0; i < 22; i++) {
-      parts.push({ g: bolt, color: METAL, at: [-1.02 + i * 0.094, 0.004, 0.61] });
-      parts.push({ g: bolt, color: METAL, at: [-1.02 + i * 0.094, 0.004, -0.06] });
+      parts.push({
+        g: bolt,
+        color: METAL,
+        at: [-1.02 + i * 0.094, 0.004, 0.61],
+      });
+      parts.push({
+        g: bolt,
+        color: METAL,
+        at: [-1.02 + i * 0.094, 0.004, -0.06],
+      });
     }
     return bake(parts);
   }, []);
@@ -76,11 +103,17 @@ export function CabinView({ ignitionAt }: { ignitionAt: number | null }) {
     const h = OPEN_H + 0.09;
     for (let i = 0; i <= 22; i++) {
       const x = -w + (i / 22) * 2 * w;
-      parts.push({ g, color: METAL, at: [x, h, 0] }, { g, color: METAL, at: [x, -h, 0] });
+      parts.push(
+        { g, color: METAL, at: [x, h, 0] },
+        { g, color: METAL, at: [x, -h, 0] },
+      );
     }
     for (let i = 1; i < 14; i++) {
       const y = -h + (i / 14) * 2 * h;
-      parts.push({ g, color: METAL, at: [w, y, 0] }, { g, color: METAL, at: [-w, y, 0] });
+      parts.push(
+        { g, color: METAL, at: [w, y, 0] },
+        { g, color: METAL, at: [-w, y, 0] },
+      );
     }
     return bake(parts);
   }, []);
@@ -90,23 +123,31 @@ export function CabinView({ ignitionAt }: { ignitionAt: number | null }) {
     const parts: BakePart[] = [];
     const rib = new BoxGeometry(0.035, 1.7, 0.03);
     const rail = new BoxGeometry(2.6, 0.03, 0.03);
-    for (const x of [-1.0, -0.78, 0.78, 1.0]) parts.push({ g: rib, color: WALL_LIGHT, at: [x, 0, 0] });
-    for (const y of [-0.65, 0.5, 0.62]) parts.push({ g: rail, color: WALL_LIGHT, at: [0, y, 0] });
+    for (const x of [-1.0, -0.78, 0.78, 1.0])
+      parts.push({ g: rib, color: WALL_LIGHT, at: [x, 0, 0] });
+    for (const y of [-0.65, 0.5, 0.62])
+      parts.push({ g: rail, color: WALL_LIGHT, at: [0, y, 0] });
     return bake(parts);
   }, []);
 
   useFrame(({ clock }) => {
-    const t = ignitionAt === null ? -1 : (performance.now() - ignitionAt) / 1000;
+    const t =
+      ignitionAt === null ? -1 : (performance.now() - ignitionAt) / 1000;
     const on = t >= CABIN_FROM;
     if (root.current) {
       root.current.visible = on;
       if (on) root.current.position.set(0, cabinEyeY(t), 0);
     }
-    if (glow.current) glow.current.intensity = on ? 1.1 : 0;
+    if (glow.current) {
+      glow.current.intensity = on ? 1.1 : 0;
+      if (on) glow.current.position.set(0, cabinEyeY(t) + 0.1, 0.8);
+    }
     // The panel's indicator lamps breathe slowly
     if (lights.current && on) {
       lights.current.children.forEach((c, i) => {
-        c.scale.setScalar(0.8 + 0.2 * Math.sin(clock.elapsedTime * (1.2 + i * 0.37) + i));
+        c.scale.setScalar(
+          0.8 + 0.2 * Math.sin(clock.elapsedTime * (1.2 + i * 0.37) + i),
+        );
       });
     }
   });
@@ -123,98 +164,148 @@ export function CabinView({ ignitionAt }: { ignitionAt: number | null }) {
   ];
 
   return (
-    <group ref={root} visible={false}>
-      {/* Earthshine through the glass, and a warm lamp over the panel */}
-      <pointLight ref={glow} position={[0, 0.1, 0.8]} color="#7aa8ff" intensity={0} distance={4} decay={1.5} />
-
-      {/* The wall the window is cut in: four slabs round the opening */}
-      <mesh position={[0, OPEN_H + 0.45, WINDOW_Z + 0.03]}>
-        <boxGeometry args={[3.2, 0.9, 0.06]} />
-        <meshStandardMaterial color={WALL} metalness={0.4} roughness={0.55} />
-      </mesh>
-      <mesh position={[0, -OPEN_H - 0.45, WINDOW_Z + 0.03]}>
-        <boxGeometry args={[3.2, 0.9, 0.06]} />
-        <meshStandardMaterial color={WALL} metalness={0.4} roughness={0.55} />
-      </mesh>
-      {[-1, 1].map((s) => (
-        <mesh key={s} position={[s * (OPEN_W + 0.9), 0, WINDOW_Z + 0.03]}>
-          <boxGeometry args={[1.8, OPEN_H * 2, 0.06]} />
+    <>
+      {/* Earthshine through the glass. Kept outside the hidden group: the renderer counts only visible
+        lights, and a light appearing mid-film recompiles every material in the scene (a freeze). */}
+      <pointLight
+        ref={glow}
+        position={[0, 0.1, 0.8]}
+        color="#7aa8ff"
+        intensity={0}
+        distance={4}
+        decay={1.5}
+      />
+      <group ref={root} visible={false}>
+        {/* The wall the window is cut in: four slabs round the opening */}
+        <mesh position={[0, OPEN_H + 0.45, WINDOW_Z + 0.03]}>
+          <boxGeometry args={[3.2, 0.9, 0.06]} />
           <meshStandardMaterial color={WALL} metalness={0.4} roughness={0.55} />
         </mesh>
-      ))}
-      <mesh position={[0, 0, WINDOW_Z - 0.01]} geometry={ribs}>
-        <meshStandardMaterial vertexColors metalness={0.5} roughness={0.5} />
-      </mesh>
+        <mesh position={[0, -OPEN_H - 0.45, WINDOW_Z + 0.03]}>
+          <boxGeometry args={[3.2, 0.9, 0.06]} />
+          <meshStandardMaterial color={WALL} metalness={0.4} roughness={0.55} />
+        </mesh>
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[s * (OPEN_W + 0.9), 0, WINDOW_Z + 0.03]}>
+            <boxGeometry args={[1.8, OPEN_H * 2, 0.06]} />
+            <meshStandardMaterial
+              color={WALL}
+              metalness={0.4}
+              roughness={0.55}
+            />
+          </mesh>
+        ))}
+        <mesh position={[0, 0, WINDOW_Z - 0.01]} geometry={ribs}>
+          <meshStandardMaterial vertexColors metalness={0.5} roughness={0.5} />
+        </mesh>
 
-      {/* A thick bezel round the opening, rivets along it */}
-      {[
-        [0, OPEN_H + 0.03, OPEN_W * 2 + 0.12, 0.06],
-        [0, -OPEN_H - 0.03, OPEN_W * 2 + 0.12, 0.06],
-      ].map(([x, y, w, h]) => (
-        <mesh key={`${y}`} position={[x!, y!, WINDOW_Z - 0.04]}>
-          <boxGeometry args={[w!, h!, 0.09]} />
-          <meshStandardMaterial color={METAL} metalness={0.85} roughness={0.32} />
+        {/* A thick bezel round the opening, rivets along it */}
+        {[
+          [0, OPEN_H + 0.03, OPEN_W * 2 + 0.12, 0.06],
+          [0, -OPEN_H - 0.03, OPEN_W * 2 + 0.12, 0.06],
+        ].map(([x, y, w, h]) => (
+          <mesh key={`${y}`} position={[x!, y!, WINDOW_Z - 0.04]}>
+            <boxGeometry args={[w!, h!, 0.09]} />
+            <meshStandardMaterial
+              color={METAL}
+              metalness={0.85}
+              roughness={0.32}
+            />
+          </mesh>
+        ))}
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[s * (OPEN_W + 0.03), 0, WINDOW_Z - 0.04]}>
+            <boxGeometry args={[0.06, OPEN_H * 2, 0.09]} />
+            <meshStandardMaterial
+              color={METAL}
+              metalness={0.85}
+              roughness={0.32}
+            />
+          </mesh>
+        ))}
+        <mesh position={[0, 0, WINDOW_Z - 0.09]} geometry={rivets}>
+          <meshStandardMaterial vertexColors metalness={0.9} roughness={0.3} />
         </mesh>
-      ))}
-      {[-1, 1].map((s) => (
-        <mesh key={s} position={[s * (OPEN_W + 0.03), 0, WINDOW_Z - 0.04]}>
-          <boxGeometry args={[0.06, OPEN_H * 2, 0.09]} />
-          <meshStandardMaterial color={METAL} metalness={0.85} roughness={0.32} />
+        {/* The glass: a faint sheen, so the window reads as a window */}
+        <mesh position={[0, 0, WINDOW_Z + 0.04]}>
+          <planeGeometry args={[OPEN_W * 2, OPEN_H * 2]} />
+          <meshBasicMaterial
+            color="#9bc2ff"
+            transparent
+            opacity={0.06}
+            depthWrite={false}
+          />
         </mesh>
-      ))}
-      <mesh position={[0, 0, WINDOW_Z - 0.09]} geometry={rivets}>
-        <meshStandardMaterial vertexColors metalness={0.9} roughness={0.3} />
-      </mesh>
-      {/* The glass: a faint sheen, so the window reads as a window */}
-      <mesh position={[0, 0, WINDOW_Z + 0.04]}>
-        <planeGeometry args={[OPEN_W * 2, OPEN_H * 2]} />
-        <meshBasicMaterial color="#9bc2ff" transparent opacity={0.06} depthWrite={false} />
-      </mesh>
 
-      {/* Side walls, floor and ceiling, so the eye is inside a room */}
-      {[-1, 1].map((s) => (
-        <mesh key={s} position={[s * 1.55, 0, 0.5]}>
-          <boxGeometry args={[0.06, 2, 2.4]} />
-          <meshStandardMaterial color={WALL_LIGHT} metalness={0.3} roughness={0.6} />
+        {/* Side walls, floor and ceiling, so the eye is inside a room */}
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[s * 1.55, 0, 0.5]}>
+            <boxGeometry args={[0.06, 2, 2.4]} />
+            <meshStandardMaterial
+              color={WALL_LIGHT}
+              metalness={0.3}
+              roughness={0.6}
+            />
+          </mesh>
+        ))}
+        <mesh position={[0, 0.85, 0.5]}>
+          <boxGeometry args={[3.2, 0.06, 2.4]} />
+          <meshStandardMaterial color={WALL} roughness={0.6} />
         </mesh>
-      ))}
-      <mesh position={[0, 0.85, 0.5]}>
-        <boxGeometry args={[3.2, 0.06, 2.4]} />
-        <meshStandardMaterial color={WALL} roughness={0.6} />
-      </mesh>
-      <mesh position={[0, -0.85, 0.5]}>
-        <boxGeometry args={[3.2, 0.06, 2.4]} />
-        <meshStandardMaterial color={WALL} roughness={0.6} />
-      </mesh>
+        <mesh position={[0, -0.85, 0.5]}>
+          <boxGeometry args={[3.2, 0.06, 2.4]} />
+          <meshStandardMaterial color={WALL} roughness={0.6} />
+        </mesh>
 
-      {/* The switch panel under the window, tilted toward the crew */}
-      <group position={[0, -0.66, 0.55]} rotation={[-0.5, 0, 0]}>
-        <mesh position={[0, -0.005, 0.28]}>
-          <boxGeometry args={[2.3, 0.025, 0.72]} />
-          <meshStandardMaterial color="#1c2028" metalness={0.5} roughness={0.5} />
-        </mesh>
-        <mesh geometry={panel} position={[0.02, 0.01, 0.05]}>
-          <meshStandardMaterial vertexColors metalness={0.35} roughness={0.5} />
-        </mesh>
-        <group ref={lights} position={[0, 0.02, 0.05]}>
-          {lamps.map(([x, z, c], i) => (
-            <mesh key={i} position={[x, 0.01, z]}>
-              <sphereGeometry args={[0.016, 8, 6]} />
-              <meshBasicMaterial color={c} toneMapped={false} />
-            </mesh>
-          ))}
+        {/* The switch panel under the window, tilted toward the crew */}
+        <group position={[0, -0.66, 0.55]} rotation={[-0.5, 0, 0]}>
+          <mesh position={[0, -0.005, 0.28]}>
+            <boxGeometry args={[2.3, 0.025, 0.72]} />
+            <meshStandardMaterial
+              color="#1c2028"
+              metalness={0.5}
+              roughness={0.5}
+            />
+          </mesh>
+          <mesh geometry={panel} position={[0.02, 0.01, 0.05]}>
+            <meshStandardMaterial
+              vertexColors
+              metalness={0.35}
+              roughness={0.5}
+            />
+          </mesh>
+          <group ref={lights} position={[0, 0.02, 0.05]}>
+            {lamps.map(([x, z, c], i) => (
+              <mesh key={i} position={[x, 0.01, z]}>
+                <sphereGeometry args={[0.016, 8, 6]} />
+                <meshBasicMaterial color={c} toneMapped={false} />
+              </mesh>
+            ))}
+          </group>
         </group>
-      </group>
 
-      {/* Two crew, seen from behind: white suits, helmets, the cloth caps under them */}
-      <Crewman x={-0.9} y={-0.4} z={0.42} lean={0.18} scale={0.8} />
-      <Crewman x={0.86} y={-0.46} z={0.4} lean={-0.14} scale={0.8} />
-    </group>
+        {/* Two crew, seen from behind: white suits, helmets, the cloth caps under them */}
+        <Crewman x={-0.9} y={-0.4} z={0.42} lean={0.18} scale={0.8} />
+        <Crewman x={0.86} y={-0.46} z={0.4} lean={-0.14} scale={0.8} />
+      </group>
+    </>
   );
 }
 
 /** The back and shoulders of a suited crewman looking out at the window, helmet on. */
-function Crewman({ x, y, z, lean, scale = 1 }: { x: number; y: number; z: number; lean: number; scale?: number }) {
+function Crewman({
+  x,
+  y,
+  z,
+  lean,
+  scale = 1,
+}: {
+  x: number;
+  y: number;
+  z: number;
+  lean: number;
+  scale?: number;
+}) {
   return (
     <group position={[x, y, z]} rotation={[0, lean, 0]} scale={scale}>
       {/* Torso and shoulders */}
@@ -240,7 +331,11 @@ function Crewman({ x, y, z, lean, scale = 1 }: { x: number; y: number; z: number
       {/* Neck ring, helmet and the gold visor beyond it */}
       <mesh position={[0, 0.03, 0]}>
         <cylinderGeometry args={[0.095, 0.11, 0.06, 14]} />
-        <meshStandardMaterial color="#b9c0c9" metalness={0.7} roughness={0.35} />
+        <meshStandardMaterial
+          color="#b9c0c9"
+          metalness={0.7}
+          roughness={0.35}
+        />
       </mesh>
       <mesh position={[0, 0.17, 0.02]}>
         <sphereGeometry args={[0.15, 18, 14]} />
@@ -248,7 +343,11 @@ function Crewman({ x, y, z, lean, scale = 1 }: { x: number; y: number; z: number
       </mesh>
       <mesh position={[0, 0.17, 0.09]} scale={[0.95, 0.8, 0.9]}>
         <sphereGeometry args={[0.15, 18, 14, 0, Math.PI * 2, 0, Math.PI]} />
-        <meshStandardMaterial color="#d9a441" metalness={0.95} roughness={0.12} />
+        <meshStandardMaterial
+          color="#d9a441"
+          metalness={0.95}
+          roughness={0.12}
+        />
       </mesh>
       {/* Communications headset lines on the helmet's rear */}
       <mesh position={[0, 0.2, -0.13]}>

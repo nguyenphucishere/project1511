@@ -15,6 +15,7 @@ import {
   type Mesh,
   type PointLight,
 } from "three";
+import { rocketRise } from "./ascent";
 import { bake, type BakePart } from "./bake";
 import { span, since, useCues, type Cue } from "./Mechanics";
 import {
@@ -135,6 +136,45 @@ function gearGeometry(
 const LAMP_OFF = 0x3a1612;
 const LAMP_RED = 0xff3b2f;
 
+/**
+ * A work lamp inside the skirt, so the gears read in the dark of the upper atmosphere. It is NOT part
+ * of the rig's own group: the renderer counts only visible lights, and every time that count changed
+ * (a spent stage hidden, the rig appearing) every material in the scene recompiled, a 100+ ms freeze.
+ * Mounted at the top of the vehicle and always visible, it just goes to intensity 0 when idle.
+ */
+export function SeparationLamp({
+  ignitionAt,
+  at,
+  y,
+  side,
+}: {
+  ignitionAt: number | null;
+  at: number;
+  y: number;
+  side: 1 | -1;
+}) {
+  const lamp = useRef<PointLight>(null);
+  useFrame(() => {
+    const t = since(ignitionAt);
+    const T = t - at;
+    const l = lamp.current;
+    if (!l) return;
+    const on = ignitionAt !== null && T > -9.5 && T < 5;
+    l.intensity = on ? 4 : 0;
+    if (on) l.position.set(0, rocketRise(t) + y + side * 0.5, 0);
+  });
+  return (
+    <pointLight
+      ref={lamp}
+      position={[0, y + side * 0.5, 0]}
+      color="#ffe2b0"
+      intensity={0}
+      distance={4.5}
+      decay={1.6}
+    />
+  );
+}
+
 export function SeparationRig({
   ignitionAt,
   at,
@@ -149,7 +189,6 @@ export function SeparationRig({
   side: 1 | -1;
 }) {
   const root = useRef<Group>(null);
-  const lamp = useRef<PointLight>(null);
   const cues = useCues(at, OPS_CUES);
 
   const gearGeos = useMemo(
@@ -219,7 +258,6 @@ export function SeparationRig({
     const T = since(ignitionAt) - at;
     const on = T > -9.5 && T < 5;
     if (root.current) root.current.visible = on;
-    if (lamp.current) lamp.current.intensity = on ? 4 : 0;
     if (!on) {
       cues(since(ignitionAt));
       return;
@@ -362,16 +400,6 @@ export function SeparationRig({
 
   return (
     <>
-      {/* A work lamp inside the skirt, so the gears read in the dark of the upper atmosphere. It stays
-        mounted (intensity 0 when idle) so switching it on never recompiles the scene's shaders. */}
-      <pointLight
-        ref={lamp}
-        position={[0, y + yIn, 0]}
-        color="#ffe2b0"
-        intensity={0}
-        distance={4.5}
-        decay={1.6}
-      />
       <group ref={root} position={[0, y, 0]} visible={false}>
         {/* ---- inside: the sequencer drives, one at each of four stations ---- */}
         {gearStation.map((a, c) => (
