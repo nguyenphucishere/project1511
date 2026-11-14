@@ -7,6 +7,8 @@ import { useLocalized, useT } from "@/i18n/useT";
 import { useGameStore } from "@/game/gameStore";
 import { ENDINGS, getEnding } from "@/game/endings";
 import { DECISIONS, type DecisionId } from "@/game/decisions";
+import { causeChain } from "@/game/consequences";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { ROCKET_PARTS } from "@/mocks/rocket-parts";
 import { PAYLOADS, VEHICLES } from "@/mocks/launch-options";
 import { ParallaxCanvas } from "./ParallaxCanvas";
@@ -27,6 +29,15 @@ export function EndScreen() {
   const endingId = useGameStore((s) => s.endingId) ?? narrative.ending ?? (log.landing ? "ending-1" : "ending-1");
 
   const ending = getEnding(endingId) ?? ENDINGS["ending-1"];
+  const reduced = useReducedMotion();
+  // Staged reveal: heading first, then scene, quote, and finally the report and audit panels.
+  const reveal = (delayMs: number): React.CSSProperties =>
+    reduced ? {} : { animation: "fade-in 700ms ease-out both", animationDelay: `${delayMs}ms` };
+  const chain = causeChain(narrative);
+  const hoverMargin =
+    ending.normalizedId === "ending-1" && narrative.hoverMarginS !== undefined
+      ? narrative.hoverMarginS
+      : ending.telemetry.fuelHoverMarginSeconds;
 
   const cfg = log.launchConfig;
   const vehicle = cfg && VEHICLES.find((v) => v.id === cfg.vehicle);
@@ -73,10 +84,12 @@ export function EndScreen() {
           </div>
 
           {/* Dedicated per-ending scene */}
-          <EndingScene ending={ending} />
+          <div className="w-full" style={reveal(500)}>
+            <EndingScene ending={ending} />
+          </div>
 
           {/* Historical Transmission Quote */}
-          <div className="bezel bezel-gold w-full bg-space-deep/95 p-4 sm:p-5 text-left">
+          <div className="bezel bezel-gold w-full bg-space-deep/95 p-4 sm:p-5 text-left" style={reveal(1200)}>
             <p className="font-mono text-xs text-primary mb-1">HISTORICAL TRANSMISSION ARCHIVE:</p>
             <blockquote className="border-l-2 border-primary pl-3.5 italic text-base sm:text-lg text-foreground/95">
               &ldquo;{ending.quote}&rdquo;
@@ -87,7 +100,7 @@ export function EndScreen() {
           </div>
 
           {/* Mission Debrief Report */}
-          <div className="bezel w-full bg-space-deep/90 p-4 sm:p-5 text-left">
+          <div className="bezel w-full bg-space-deep/90 p-4 sm:p-5 text-left" style={reveal(2000)}>
             <h2 className="text-sm font-mono uppercase tracking-wider text-primary mb-2 flex items-center justify-between">
               <span>MISSION DEBRIEF REPORT</span>
               <span className="text-[11px] text-foreground/60 font-normal">CLASSIFIED // NASA SP-238</span>
@@ -112,10 +125,44 @@ export function EndScreen() {
           </div>
 
           {/* Failure / abort diagnostics (non-nominal endings only) */}
-          <EndingDiagnostics ending={ending} />
+          <div className="w-full" style={reveal(2600)}>
+            <EndingDiagnostics ending={ending} />
+          </div>
+
+          {/* Why this ending: each call and what it cost or bought */}
+          {chain.length > 0 && (
+            <div className="bezel w-full bg-space-deep/90 p-4 text-left sm:p-5" style={reveal(3000)} data-cause-chain>
+              <h2 className="mb-3 font-mono text-sm uppercase tracking-wider text-primary">{t.consequence.whyTitle}</h2>
+              <ol className="flex flex-col gap-1.5 text-xs">
+                {chain.map((c) => (
+                  <li
+                    key={c.id}
+                    className="flex items-start gap-3 rounded border border-space-blue/50 bg-space-blue/30 px-3 py-1.5"
+                  >
+                    <span
+                      aria-hidden
+                      className={
+                        c.impact === "positive"
+                          ? "text-emerald-400"
+                          : c.impact === "negative"
+                            ? "text-red-400"
+                            : "text-amber-300"
+                      }
+                    >
+                      {c.impact === "positive" ? "▲" : c.impact === "negative" ? "▼" : "■"}
+                    </span>
+                    <span>
+                      <span className="font-semibold text-foreground">{localize(c.title)}</span>
+                      <span className="text-foreground/70"> — {localize(c.effect)}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
 
           {/* Decision Log Audit Trail */}
-          <div className="bezel w-full bg-space-deep/90 p-4 sm:p-5 text-left">
+          <div className="bezel w-full bg-space-deep/90 p-4 sm:p-5 text-left" style={reveal(3400)}>
             <h2 className="text-sm font-mono uppercase tracking-wider text-primary mb-3">
               NARRATIVE BRANCH AUDIT TRAIL
             </h2>
@@ -174,7 +221,7 @@ export function EndScreen() {
               <div className="bg-space-blue/20 p-2 rounded">
                 <dt className="text-foreground/60 text-[11px]">HOVER MARGIN</dt>
                 <dd className="text-sm font-bold text-foreground mt-0.5">
-                  {ending.telemetry.fuelHoverMarginSeconds ? `${ending.telemetry.fuelHoverMarginSeconds}s` : "25.0s"}
+                  {hoverMargin ? `${hoverMargin}s` : "0s"}
                 </dd>
               </div>
             </dl>

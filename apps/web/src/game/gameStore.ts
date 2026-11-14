@@ -6,6 +6,7 @@ import type { LaunchConfig } from "@/lib/simulation/launch.types";
 import { ORBITS, PAYLOADS, VEHICLES, WINDOWS } from "@/mocks/launch-options";
 import { isLoadout, type Loadout } from "@/scenes/workshop/loadout";
 import { FIRST_STEP_ID, FLOW, chapterStartId, getNextStepId, getStep, type ChapterId } from "./flow";
+import { hoverMarginSeconds, resolveLanding } from "./consequences";
 import { ENDINGS, getEnding, type EndingDefinition, type EndingId } from "./endings";
 import type { DecisionPointId } from "./decisions";
 
@@ -66,6 +67,8 @@ export interface NarrativeState {
   ending: EndingId | string | null;
   score: number;
   failureReason?: string;
+  /** Seconds of hover fuel left at the final approach, after earlier shortcuts. Absent in old saves. */
+  hoverMarginS?: number;
   debrief: NarrativeDebrief;
 }
 
@@ -270,23 +273,17 @@ export const useGameStore = create<GameState>()(
 
         // Decision 5: Final Approach & Landing Call
         else if (point === "landing_approach" || point === "landing") {
-          if (choice === "p66_redesignation" || choice === "p66-redesignate") {
-            narrative.ending = "ending-1";
-            const def = ENDINGS["ending-1"];
-            narrative.score = def.score;
-            narrative.debrief = toDebriefPayload(def);
-          } else if (choice === "boulder_field" || choice === "west-crater") {
-            narrative.ending = "ending-3";
-            const def = ENDINGS["ending-3"];
-            narrative.score = def.score;
-            narrative.debrief = toDebriefPayload(def);
-          } else if (choice === "bingo_abort" || choice === "bingo-abort") {
-            narrative.ending = "ending-4";
-            const def = ENDINGS["ending-4"];
+          // Earlier shortcuts can turn the historic P66 landing into a forced wave-off.
+          const endingId = resolveLanding(narrative, choice);
+          if (endingId) {
+            narrative.ending = endingId;
+            const def = ENDINGS[endingId];
             narrative.score = def.score;
             narrative.debrief = toDebriefPayload(def);
           }
         }
+
+        narrative.hoverMarginS = hoverMarginSeconds(narrative);
 
         set({
           narrative,

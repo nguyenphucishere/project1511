@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
 import { CHARACTERS } from "@/game/characters";
 import { DECISIONS, type DecisionId } from "@/game/decisions";
+import { ADVICE, getCallbackLines, getConsequence, normalizePoint, type Consequence } from "@/game/consequences";
 import { CHAPTERS, chapterNumber, type ChapterId } from "@/game/flow";
 import { useGameStore } from "@/game/gameStore";
 import { CharacterPortrait } from "./CharacterPortrait";
+import { ConsequenceBeat } from "./ConsequenceBeat";
 import { ParallaxCanvas } from "./ParallaxCanvas";
 
 export interface DecisionOverlayProps {
@@ -30,13 +32,28 @@ export function DecisionOverlay({ decisionId, chapter, onDone }: DecisionOverlay
   const speaker = CHARACTERS[decision.speaker];
   const chapterInfo = CHAPTERS.find((c) => c.id === chapter);
 
+  const narrative = useGameStore((s) => s.narrative);
+  // After the call is committed the consequence beat covers the screen, then onDone runs.
+  const [beat, setBeat] = useState<{ consequence: Consequence; title: string } | null>(null);
+
   const handleSelect = useCallback(
     (optionId: string) => {
-      makeDecision(decision.pointId, optionId);
-      onDone();
+      if (beat) return;
+      const committed = makeDecision(decision.pointId, optionId);
+      if (!committed) return onDone();
+      const option = decision.options.find((o) => o.id === optionId);
+      setBeat({
+        consequence: getConsequence(decision.pointId, optionId, useGameStore.getState().narrative),
+        title: option ? localize(option.title) : optionId,
+      });
     },
-    [decision.pointId, makeDecision, onDone],
+    [beat, decision.options, decision.pointId, localize, makeDecision, onDone],
   );
+
+  const pointKey = normalizePoint(decision.pointId);
+  const advice = pointKey ? ADVICE[pointKey] : undefined;
+  const adviceSpeaker = advice ? CHARACTERS[advice.speaker] : null;
+  const callbacks = getCallbackLines(decision.pointId, narrative);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -84,6 +101,11 @@ export function DecisionOverlay({ decisionId, chapter, onDone }: DecisionOverlay
         <p className="text-xs text-foreground/75 font-mono sm:text-sm">
           {localize(decision.context)}
         </p>
+        {callbacks.map((line, i) => (
+          <p key={i} className="font-mono text-xs italic text-amber-300/80 sm:text-sm">
+            {localize(line)}
+          </p>
+        ))}
       </header>
 
       <div className="absolute inset-x-3 bottom-3 z-30 sm:inset-x-10 sm:bottom-6">
@@ -107,6 +129,15 @@ export function DecisionOverlay({ decisionId, chapter, onDone }: DecisionOverlay
             </p>
           </div>
 
+          {advice && adviceSpeaker && (
+            <p className="border-l-2 border-primary/50 pl-3 text-xs italic text-foreground/70 sm:text-sm">
+              <span className="font-mono not-italic text-primary/80">
+                {t.consequence.advisor} — {localize(adviceSpeaker.name)}:
+              </span>{" "}
+              &ldquo;{localize(advice.text)}&rdquo;
+            </p>
+          )}
+
           {/* Decision Choice Cards */}
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {decision.options.map((opt, idx) => {
@@ -122,11 +153,6 @@ export function DecisionOverlay({ decisionId, chapter, onDone }: DecisionOverlay
                       <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-primary/20 text-primary border border-primary/40 group-hover:bg-primary group-hover:text-space-deep transition-colors">
                         KEY [{hotkey}]
                       </span>
-                      {opt.historical && (
-                        <span className="font-mono text-[10px] tracking-wider text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-1.5 py-0.5 rounded">
-                          HISTORICAL
-                        </span>
-                      )}
                     </div>
                     <h2 className="text-sm sm:text-base font-semibold text-foreground group-hover:text-primary transition-colors">
                       {localize(opt.title)}
@@ -155,6 +181,15 @@ export function DecisionOverlay({ decisionId, chapter, onDone }: DecisionOverlay
           </div>
         </div>
       </div>
+
+      {beat && (
+        <ConsequenceBeat
+          consequence={beat.consequence}
+          choiceTitle={beat.title}
+          horizon={chapter === "lunar-descent"}
+          onDone={onDone}
+        />
+      )}
     </section>
   );
 }

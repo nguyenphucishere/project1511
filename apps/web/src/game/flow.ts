@@ -61,7 +61,7 @@ export const FLOW: Step[] = [
   { id: "epilogue", kind: "briefing", briefing: "epilogue", chapter: "epilogue", enter: "black-hold" },
   { id: "return-briefing", kind: "briefing", briefing: "return", chapter: "return", enter: "fade" },
   { id: "return-scene", kind: "scene", scene: "return", chapter: "return", enter: "fade" },
-  { id: "end", kind: "end", enter: "fade" },
+  { id: "end", kind: "end", enter: "black-hold" },
 ];
 
 export const FIRST_STEP_ID = FLOW[0].id;
@@ -137,6 +137,10 @@ export function getNextStepId(currentStepId: string, state?: any): string | null
       return "landing-decision";
     case "landing-decision": {
       const landing = decisions.landing_approach ?? decisions.landing;
+      // Earlier shortcuts can leave too little fuel for the P66 landing (see consequences.resolveLanding).
+      if (state?.narrative?.ending === "ending-4") {
+        return "end"; // Triggers ENDING-4
+      }
       if (landing === "p66_redesignation" || landing === "p66-redesignate") {
         return "flag-video"; // Nominal touchdown -> Flag video -> Epilogue -> ENDING-1
       }

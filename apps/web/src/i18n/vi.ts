@@ -254,6 +254,15 @@ export const vi: Dictionary = {
     soft: "Đáp nhẹ nhàng",
     continue: "Bước ra ngoài",
   },
+  consequence: {
+    yourCall: "Quyết định của bạn",
+    hint: "Nhấn Enter hoặc bấm để tiếp tục",
+    continue: "Tiếp tục",
+    advisor: "Nghe trên kênh liên lạc",
+    whyTitle: "Vì sao lại như vậy",
+    marginLabel: "Dự trữ nhiên liệu lơ lửng",
+    marginValue: "{n} giây",
+  },
   portrait: {
     placeholderAlt: "Chân dung {name} (ảnh tạm)",
   },

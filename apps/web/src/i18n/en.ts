@@ -257,6 +257,15 @@ export const en = {
     soft: "Soft landing",
     continue: "Step outside",
   },
+  consequence: {
+    yourCall: "Your call",
+    hint: "Enter or click to continue",
+    continue: "Continue",
+    advisor: "Heard on the loop",
+    whyTitle: "Why this happened",
+    marginLabel: "Hover fuel margin",
+    marginValue: "{n} s",
+  },
   portrait: {
     placeholderAlt: "Portrait of {name} (placeholder art)",
   },

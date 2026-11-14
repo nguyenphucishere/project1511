@@ -59,8 +59,8 @@ export const DECISIONS: Record<DecisionId, DecisionDefinition> = {
         id: "thorough",
         keyLabel: "A",
         title: {
-          en: "Option A: Full Pneumatic & Torque Inspection (Historical)",
-          vi: "Lựa chọn A: Đo áp suất & siết lực toàn diện (Lịch sử)",
+          en: "Option A: Full Pneumatic & Torque Inspection",
+          vi: "Lựa chọn A: Đo áp suất & siết lực toàn diện",
         },
         description: {
           en: "Execute full 145 ft-lb star-pattern torque verification and helium leak decay test. Zero risk of cryogenic blowby at Max-Q.",
@@ -113,12 +113,12 @@ export const DECISIONS: Record<DecisionId, DecisionDefinition> = {
         id: "go",
         keyLabel: "A",
         title: {
-          en: "Option A: GO for Terminal Countdown (Historical — Wind 18.5 km/h)",
-          vi: "Lựa chọn A: GO cho đếm ngược chót (Lịch sử — Gió 18,5 km/h)",
+          en: "Option A: GO for Terminal Countdown (Wind 18.5 km/h)",
+          vi: "Lựa chọn A: GO cho đếm ngược chót (Gió 18,5 km/h)",
         },
         description: {
-          en: "Historical Cape weather: Winds 10 kts (18.5 km/h) @ 100°, clear of shear. Nominal tower clearance and ascent trajectory.",
-          vi: "Thời tiết Cape lịch sử: Gió 10 hải lý (18,5 km/h) hướng 100°, không có gió đứt. Rời tháp an toàn và bay đúng quỹ đạo.",
+          en: "Cape weather: Winds 10 kts (18.5 km/h) @ 100°, clear of shear. Nominal tower clearance and ascent trajectory.",
+          vi: "Thời tiết Cape: Gió 10 hải lý (18,5 km/h) hướng 100°, không có gió đứt. Rời tháp an toàn và bay đúng quỹ đạo.",
         },
         tacticalBadge: {
           en: "Nominal Ascent (Weather GO)",
@@ -151,12 +151,12 @@ export const DECISIONS: Record<DecisionId, DecisionDefinition> = {
           vi: "Lựa chọn C: Cưỡng bức phóng trong gió mạnh (>40 km/h)",
         },
         description: {
-          en: "Launch directly into 48 km/h wind gusts. Extreme aerodynamic shear at Max-Q exceeds structural gimbal margin (Triggers ENDING-5).",
-          vi: "Phóng thẳng vào luồng gió giật 48 km/h. Lực cản khí động cực đại tại Max-Q vượt quá giới hạn chịu lực kết cấu (Kích hoạt KẾT THÚC 5).",
+          en: "Launch directly into 48 km/h wind gusts, overriding the commit criteria to hold the schedule.",
+          vi: "Phóng thẳng vào luồng gió giật 48 km/h, bỏ qua tiêu chuẩn cam kết để giữ đúng lịch.",
         },
         tacticalBadge: {
-          en: "Catastrophic Risk (Max-Q Structural Breakup)",
-          vi: "Nguy cơ thảm hoạ (Vỡ kết cấu Max-Q)",
+          en: "Schedule Held (Wind Above Limits)",
+          vi: "Giữ đúng lịch (Gió vượt giới hạn)",
         },
         historical: false,
       },
@@ -184,8 +184,8 @@ export const DECISIONS: Record<DecisionId, DecisionDefinition> = {
         id: "free_return",
         keyLabel: "A",
         title: {
-          en: "Option A: Circumlunar Free-Return Trajectory (Historical)",
-          vi: "Lựa chọn A: Quỹ đạo tự do quay về Free-Return (Lịch sử)",
+          en: "Option A: Circumlunar Free-Return Trajectory",
+          vi: "Lựa chọn A: Quỹ đạo tự do quay về Free-Return",
         },
         description: {
           en: "Passive safety corridor targeting Mare Tranquillitatis. Complete passive abort return capability even under total propulsion loss.",
@@ -238,8 +238,8 @@ export const DECISIONS: Record<DecisionId, DecisionDefinition> = {
         id: "go",
         keyLabel: "A",
         title: {
-          en: "Option A: Accept Bales/Garman Call — GO on Alarm (Historical)",
-          vi: "Lựa chọn A: Theo lệnh Bales/Garman — GO vượt báo động (Lịch sử)",
+          en: "Option A: Accept Bales/Garman Call — GO on Alarm",
+          vi: "Lựa chọn A: Theo lệnh Bales/Garman — GO vượt báo động",
         },
         description: {
           en: "Jack Garman / Steve Bales rule: 'The alarm is intermittent; guidance equations are running uninterrupted. We are GO!' Powered descent continues.",
@@ -259,8 +259,8 @@ export const DECISIONS: Record<DecisionId, DecisionDefinition> = {
           vi: "Lựa chọn B: Bấm ABORT STAGE (Theo quy tắc an toàn nghiêm ngặt)",
         },
         description: {
-          en: "Pyrotechnic bolts sever descent stage; Bell Ascent Engine ignites to climb back to Columbia in lunar orbit (Triggers ENDING-2).",
-          vi: "Bu-lông nổ cắt rời tầng đổ bộ; động cơ bay lên khai hoả đưa tàu trở lại kết nối với Columbia trên quỹ đạo (Kích hoạt KẾT THÚC 2).",
+          en: "Pyrotechnic bolts sever descent stage; Bell Ascent Engine ignites to climb back to Columbia in lunar orbit.",
+          vi: "Bu-lông nổ cắt rời tầng đổ bộ; động cơ bay lên khai hoả đưa tàu trở lại kết nối với Columbia trên quỹ đạo.",
         },
         tacticalBadge: {
           en: "Emergency Staging (Safe Abort to Orbit)",
@@ -292,16 +292,16 @@ export const DECISIONS: Record<DecisionId, DecisionDefinition> = {
         id: "p66_redesignation",
         keyLabel: "A",
         title: {
-          en: "Option A: Engage P66 Manual Redesignation past West Crater (Historical)",
-          vi: "Lựa chọn A: Bật P66 bay lướt thủ công vượt hố West Crater (Lịch sử)",
+          en: "Option A: Engage P66 Manual Redesignation past West Crater",
+          vi: "Lựa chọn A: Bật P66 bay lướt thủ công vượt hố West Crater",
         },
         description: {
-          en: "Take manual control, pitch forward to fly long over boulder field, kick up surface dust, and touch down smoothly at Tranquility Base with 25s fuel margin (Triggers ENDING-1).",
-          vi: "Lấy quyền điều khiển thủ công, bay lướt qua bãi đá, thổi tung bụi cát và tiếp đất êm ái tại Căn cứ Yên Bình với 25 giây nhiên liệu (Kích hoạt KẾT THÚC 1).",
+          en: "Take manual control and pitch forward to fly long over the boulder field, spending hover fuel to find a clear landing site.",
+          vi: "Lấy quyền điều khiển thủ công, bay lướt qua bãi đá, tiêu tốn nhiên liệu lơ lửng để tìm một bãi đáp trống.",
         },
         tacticalBadge: {
-          en: "Historic Lunar Landing (Tranquility Base)",
-          vi: "Đổ bộ lịch sử (Căn cứ Yên Bình)",
+          en: "Manual Flight (Burns Hover Fuel)",
+          vi: "Bay thủ công (Tốn nhiên liệu lơ lửng)",
         },
         historical: true,
       },
@@ -313,12 +313,12 @@ export const DECISIONS: Record<DecisionId, DecisionDefinition> = {
           vi: "Lựa chọn B: Tiếp đất khẩn cấp ngay trên bãi đá hố West Crater",
         },
         description: {
-          en: "Drop straight down to conserve fuel. Eagle strikes an 18-degree boulder slope; landing strut shears off, ascent engine crushed (Triggers ENDING-3).",
-          vi: "Hạ thẳng xuống để tiết kiệm nhiên liệu. Tàu đập vào dốc đá 18 độ; chân đế gãy, động cơ bay lên bẹp nát (Kích hoạt KẾT THÚC 3).",
+          en: "Drop straight down on the computer's target to conserve fuel, accepting whatever the slope below turns out to be.",
+          vi: "Hạ thẳng xuống điểm máy tính chọn để tiết kiệm nhiên liệu, chấp nhận mọi thứ mà triền dốc bên dưới có thể mang lại.",
         },
         tacticalBadge: {
-          en: "Catastrophic Impact (Crew Stranded / Safire Contingency)",
-          vi: "Va chạm thảm hoạ (Mắc kẹt / Kế hoạch Safire)",
+          en: "Saves Fuel (Unscouted Slope)",
+          vi: "Tiết kiệm nhiên liệu (Triền dốc chưa khảo sát)",
         },
         historical: false,
       },
@@ -330,12 +330,12 @@ export const DECISIONS: Record<DecisionId, DecisionDefinition> = {
           vi: "Lựa chọn C: Hủy hạ cánh do chạm ngưỡng Bingo Fuel ở 40 feet",
         },
         description: {
-          en: "Low-fuel clock expires. Armstrong hits Abort Stage at 40 feet, staging away from descent stage to rendezvous safely with Columbia (Triggers ENDING-4).",
-          vi: "Hết đồng hồ nhiên liệu an toàn. Armstrong bấm Abort Stage ở độ cao 12m, tách tầng đáp bay lên hội quân an toàn với Columbia (Kích hoạt KẾT THÚC 4).",
+          en: "Honor the Bingo fuel rule: hit Abort Stage at 40 feet, stage away from the descent stage and rendezvous with Columbia.",
+          vi: "Tuân thủ quy tắc Bingo fuel: bấm Abort Stage ở độ cao 12 m, tách tầng đáp và hội quân với Columbia.",
         },
         tacticalBadge: {
-          en: "Wave-Off Abort (Safe Orbital Recovery)",
-          vi: "Kéo tàu lên hủy đáp (Cứu hộ an toàn trên quỹ đạo)",
+          en: "Crew Safety First (No Landing Attempt)",
+          vi: "An toàn phi hành đoàn trên hết (Không đáp)",
         },
         historical: false,
       },
