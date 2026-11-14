@@ -14,6 +14,7 @@ import {
 import { hallTextureUrls } from "./assets";
 
 type PbrSet = { map: Texture; normalMap: Texture; roughnessMap: Texture };
+type PbrTuple = [Texture, Texture, Texture];
 
 /** A copy of `src` that repeats (rx, ry) times; copies share the image data, so it costs no memory. */
 function tiled(src: Texture, rx: number, ry: number, srgb: boolean): Texture {
@@ -26,25 +27,21 @@ function tiled(src: Texture, rx: number, ry: number, srgb: boolean): Texture {
   return t;
 }
 
-function pbr(set: PbrSet, rx: number, ry: number): PbrSet {
+function pbr(set: PbrTuple, rx: number, ry: number): PbrSet {
+  const [map, normalMap, roughnessMap] = set;
   return {
-    map: tiled(set.map, rx, ry, true),
-    normalMap: tiled(set.normalMap, rx, ry, false),
-    roughnessMap: tiled(set.roughnessMap, rx, ry, false),
+    map: tiled(map, rx, ry, true),
+    normalMap: tiled(normalMap, rx, ry, false),
+    roughnessMap: tiled(roughnessMap, rx, ry, false),
   };
-}
-
-function load(name: string) {
-  const [map, normalMap, roughnessMap] = hallTextureUrls(name);
-  return { map, normalMap, roughnessMap };
 }
 
 /** The real PBR texture sets of the hall (Poly Haven, CC0), tiled to suit each surface. */
 export function useHallTextures() {
-  const floor = useTexture(load("concrete_floor_02")) as unknown as PbrSet;
-  const wall = useTexture(load("concrete_wall_008")) as unknown as PbrSet;
-  const metal = useTexture(load("metal_plate_02")) as unknown as PbrSet;
-  const iron = useTexture(load("corrugated_iron")) as unknown as PbrSet;
+  const floor = useTexture(hallTextureUrls("concrete_floor_02")) as unknown as PbrTuple;
+  const wall = useTexture(hallTextureUrls("concrete_wall_008")) as unknown as PbrTuple;
+  const metal = useTexture(hallTextureUrls("metal_plate_02")) as unknown as PbrTuple;
+  const iron = useTexture(hallTextureUrls("corrugated_iron")) as unknown as PbrTuple;
   return useMemo(
     () => ({
       floor: pbr(floor, 9, 8),

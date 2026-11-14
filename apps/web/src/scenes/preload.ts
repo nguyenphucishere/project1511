@@ -177,7 +177,7 @@ export function preloadUpcoming(stepId: string): void {
   if (typeof window === "undefined") return;
   const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
   if (saveData) return;
-  const scenes = scenesToPreload(stepId).filter((s) => !queued.has(s));
+  const scenes = scenesToPreload(stepId).slice(0, 2).filter((s) => !queued.has(s));
   if (scenes.length === 0) return;
   for (const s of scenes) queued.add(s);
   const start = () => {
@@ -205,7 +205,7 @@ export function warmUpcoming(stepId: string): void {
   const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
   if (saveData) return;
   void ensureVoicesWarm();
-  const scenes = scenesToPreload(stepId).filter((s) => !warmQueued.has(s));
+  const scenes = scenesToPreload(stepId).slice(0, 2).filter((s) => !warmQueued.has(s));
   for (const s of scenes) warmQueued.add(s);
   let chainWarm: Promise<void> = Promise.resolve();
   for (const scene of scenes) {
@@ -219,7 +219,7 @@ export function warmUpcoming(stepId: string): void {
         for (const f of files) {
           try {
             const r = await fetch(f.url);
-            await r.arrayBuffer();
+            await r.blob();
           } catch {
             /* a missing file never blocks the title */
           }

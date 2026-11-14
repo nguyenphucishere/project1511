@@ -1,0 +1,19 @@
+{
+  "name": "sim-wasm",
+  "type": "module",
+  "collaborators": [
+    "Space Mission Team"
+  ],
+  "version": "0.1.0",
+  "license": "MIT OR Apache-2.0",
+  "files": [
+    "sim_wasm_bg.wasm",
+    "sim_wasm.js",
+    "sim_wasm.d.ts"
+  ],
+  "main": "sim_wasm.js",
+  "types": "sim_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
