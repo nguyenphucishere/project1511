@@ -53,8 +53,8 @@ describe("engine verdict → flight", () => {
     expect(run({ ...GOOD, fuelPct: 70 }, CALM).endSec).toBeLessThan(short.endSec);
   });
 
-  it("Saturn IB with an Apollo stack climbs slowly then runs dry", () => {
-    expect(run({ ...GOOD, vehicle: "kestrel" }, CALM).failureTrace.map((s) => s.code)).toEqual(["slow-climb", "fuel-depleted"]);
+  it("Saturn IB with an Apollo stack cannot climb and is lost on the way up", () => {
+    expect(run({ ...GOOD, vehicle: "kestrel" }, CALM).failureTrace.map((s) => s.code)).toEqual(["slow-climb"]);
   });
 
   it("wind or lightning outside the criteria is a weather loss", () => {

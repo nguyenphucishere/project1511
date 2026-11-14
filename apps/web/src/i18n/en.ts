@@ -98,6 +98,9 @@ export const en = {
     clearedBody: "All three checks are within range. {name} has signed your flight card.",
     continue: "Continue to the assembly hall",
     sceneLabel: "Medical bay seen through the astronaut's eyes",
+    doorPrompt: "Come on in, I've been expecting you. Just click the door to open it.",
+    greeting: "Hello, and welcome to the medical bay! I'm {name}, your flight surgeon. Let's get you checked before launch.",
+    guide: "Click each glowing station: the heart rate monitor, the blood pressure cuff and the vision chart. Drag to look around, and use W A S D to walk.",
   },
   workshop: {
     chiefSays: "{name} explains",

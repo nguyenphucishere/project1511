@@ -20,6 +20,20 @@ export interface Callout {
 const c = (t: number, voice: RadioVoice, keyword: LocalizedText, line: LocalizedText): Callout => ({ t, voice, keyword, line });
 const l = (en: string, vi: string): LocalizedText => ({ en, vi });
 
+/** The final countdown, read out loud one number a second: index 0 is "one", index 9 is "ten". */
+export const COUNT_VOICE: LocalizedText[] = [
+  l("One.", "Một."),
+  l("Two.", "Hai."),
+  l("Three.", "Ba."),
+  l("Four.", "Bốn."),
+  l("Five.", "Năm."),
+  l("Six.", "Sáu."),
+  l("Seven.", "Bảy."),
+  l("Eight.", "Tám."),
+  l("Nine.", "Chín."),
+  l("Ten.", "Mười."),
+];
+
 export const MAX_Q_T = realSecondsAt(MAX_Q_SEC);
 
 export const CALLOUTS: Callout[] = [

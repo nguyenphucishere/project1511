@@ -16,6 +16,7 @@ import { formatMissionTime } from "@/lib/format";
 import { NOMINAL_EVENTS, altitudeKm, missionSecondsAt, realSecondsAt, speedKms } from "./flight";
 import { EPILOGUE } from "./ascent";
 import { useVoiceLine } from "@/hooks/useVoiceLine";
+import { COUNT_VOICE } from "./callouts";
 
 /* ---------------------------------------------------------------- GO / NO-GO poll */
 
@@ -132,6 +133,9 @@ export function CountdownPanel({ onIgnition, onHold }: { onIgnition: () => void;
   const ignitionRef = useRef(onIgnition);
   ignitionRef.current = onIgnition;
   const holdRef = useRef<HTMLButtonElement>(null);
+  const localize = useLocalized();
+  // Launch control reads the count aloud, a number a second.
+  useVoiceLine(left >= 1 && left <= COUNT_VOICE.length ? localize(COUNT_VOICE[left - 1]!) : null);
 
   useEffect(() => {
     holdRef.current?.focus({ preventScroll: true });

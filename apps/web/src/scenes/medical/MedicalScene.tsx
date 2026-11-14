@@ -8,6 +8,7 @@ import { SignOffDialog, SignOffDetails } from "@/components/hud/SignOffDialog";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 import { cn } from "@/lib/utils";
 import { CHARACTERS } from "@/game/characters";
 import { playSfx } from "@/game/sfx";
@@ -31,6 +32,7 @@ export function MedicalScene({ onComplete }: { onComplete: () => void }) {
   const localize = useLocalized();
   const reduced = useReducedMotion();
   const goTo = useSceneStore((s) => s.goTo);
+  const viewpointId = useSceneStore((s) => s.viewpointId);
 
   const [doorOpen, setDoorOpen] = useState(false);
   const [checked, setChecked] = useState<Set<StationId>>(new Set());
@@ -59,11 +61,37 @@ export function MedicalScene({ onComplete }: { onComplete: () => void }) {
   const station = VITAL_STATIONS.find((s) => s.id === active);
   const doctorName = localize(CHARACTERS.doctor.name);
 
+  // The doctor talks you through the room: an invitation at the door, then a hello and how it works.
+  const inside = viewpointId === "inside";
+  const doorPrompt = t.medical.doorPrompt;
+  const greeting = format(t.medical.greeting, { name: doctorName });
+  const guide = t.medical.guide;
+  useVoiceLine(!inside ? doorPrompt : null, { delayMs: 800 });
+  useVoiceLine(inside ? greeting : null, { delayMs: reduced ? 0 : 500 });
+  useVoiceLine(inside ? guide : null, { queue: true, delayMs: reduced ? 0 : 500 });
+  const [captionOff, setCaptionOff] = useState(false);
+  useEffect(() => {
+    setCaptionOff(false);
+    if (!inside) return;
+    const id = window.setTimeout(() => setCaptionOff(true), 16000);
+    return () => window.clearTimeout(id);
+  }, [inside]);
+
   return (
     <section className="relative h-dvh w-full overflow-hidden" aria-label={t.medical.sceneLabel}>
       <WorldCanvas label={t.medical.sceneLabel}>
         <MedicalWorld doorOpen={doorOpen} checked={checked} onOpenDoor={openDoor} onInspect={setActive} />
       </WorldCanvas>
+
+      {!captionOff && !station && !cleared && (
+        <div
+          role="status"
+          className="pointer-events-none absolute inset-x-3 top-40 z-10 max-w-xl border border-primary/50 bg-space-deep/90 px-4 py-3 shadow-[0_0_24px_rgb(0_0_0/0.5)] sm:left-[24rem] sm:right-44 sm:top-20"
+        >
+          <p className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-primary">{doctorName}</p>
+          <p className="mt-1 text-sm leading-snug text-foreground sm:text-base">{inside ? `${greeting} ${guide}` : doorPrompt}</p>
+        </div>
+      )}
 
       <div className="pointer-events-none absolute left-3 top-16 sm:left-8 sm:top-20">
         <ObjectivePanel

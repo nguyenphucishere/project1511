@@ -111,7 +111,7 @@ export function resultFromPlan(plan: LaunchPlan, costM: number, source: LaunchRe
   const trace: LaunchTraceStep[] = (() => {
     switch (plan.failure_mode) {
       case "over_capacity":
-        return [step("slow-climb", 38), step("fuel-depleted", at)];
+        return [step("slow-climb", 38)];
       case "no_liftoff":
         return [step("slow-climb", at)];
       case "propellant_depletion":

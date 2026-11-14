@@ -29,7 +29,9 @@ export function lookupVoice(manifest: VoiceManifest | null, locale: VoiceLocale,
 }
 
 export interface VoiceDeps {
-  audio: () => { c: AudioContext; out: AudioNode } | null;
+  audio: () => { c: AudioContext; out: AudioNode; voice?: AudioNode } | null;
+  /** Called with true while a voice is speaking and false once none is: the rest of the mix ducks. */
+  duck?: (on: boolean) => void;
   enabled: () => boolean;
   noise: (c: AudioContext) => AudioBuffer;
 }
@@ -50,6 +52,10 @@ export interface PlayOptions {
   queue?: boolean;
   /** Called when the recording ends (not when it is cut off). */
   onEnd?: () => void;
+  /** Playback speed, 1 = as recorded (the pitch is kept): the crew in a crisis talk fast. */
+  rate?: number;
+  /** 0 to 1: a voice in panic. Higher and faster, shaking, strained and distorted; on the radio, rougher and hissing. */
+  panic?: number;
 }
 
 const BASE = "/assets/voice/";
@@ -72,6 +78,7 @@ export function createVoicePlayer(deps: VoiceDeps) {
   let token = 0;
   let current: { stop: () => void } | null = null;
   let waiting: Array<() => void> = [];
+  let activeVoices = 0;
 
   function load(): Promise<VoiceManifest | null> {
     if (manifest) return Promise.resolve(manifest);
@@ -93,16 +100,29 @@ export function createVoicePlayer(deps: VoiceDeps) {
   function begin(entry: VoiceEntry, opts: PlayOptions, my: number): Promise<PlayResult> {
     const a = deps.audio();
     if (!a) return Promise.resolve("unavailable");
-    const { c, out } = a;
+    const { c } = a;
+    const out = a.voice ?? a.out;
     const el = new Audio(`${BASE}${entry.file}`);
     el.preload = "auto";
+    const panic = Math.min(1, Math.max(0, opts.panic ?? 0));
+    if (opts.rate || panic > 0) {
+      el.playbackRate = (opts.rate ?? 1) * (1 + 0.2 * panic);
+      // Faster and higher: the pitch rises with the speed, as a voice does when the throat tightens.
+      if (panic > 0) el.preservesPitch = false;
+    }
     const nodes: AudioNode[] = [];
     let hiss: AudioBufferSourceNode | null = null;
     let finished = false;
 
+    activeVoices++;
+    deps.duck?.(true);
     const cleanup = () => {
       if (finished) return;
       finished = true;
+      if (--activeVoices <= 0) {
+        activeVoices = 0;
+        deps.duck?.(false);
+      }
       try { hiss?.stop(); } catch { /* already stopped */ }
       for (const n of nodes) n.disconnect();
       el.pause();
@@ -123,10 +143,27 @@ export function createVoicePlayer(deps: VoiceDeps) {
     };
 
     try {
-      const src = c.createMediaElementSource(el);
+      const raw = c.createMediaElementSource(el);
+      let src: AudioNode = raw;
+      if (panic > 0) {
+        // Strained: pushed into soft clipping, with a tremble in the level like a shaking voice.
+        const drive = c.createWaveShaper();
+        drive.curve = radioCurve(2 + panic * 14);
+        const tremble = c.createGain();
+        tremble.gain.value = 1 - 0.22 * panic;
+        const lfo = c.createOscillator();
+        lfo.frequency.value = 6 + panic * 4;
+        const depth = c.createGain();
+        depth.gain.value = 0.22 * panic;
+        lfo.connect(depth).connect(tremble.gain);
+        lfo.start();
+        raw.connect(drive).connect(tremble);
+        src = tremble;
+        nodes.push(drive, tremble, lfo, depth);
+      }
       const gain = c.createGain();
       gain.gain.value = VOICE_GAIN;
-      nodes.push(src, gain);
+      nodes.push(raw, gain);
       const radio = opts.radio ?? entry.radio;
       if (radio) {
         // Band-limited like a transmitter: a narrow band, a presence bump, a touch of saturation.
@@ -138,7 +175,7 @@ export function createVoicePlayer(deps: VoiceDeps) {
         mid.frequency.value = 1500;
         mid.gain.value = 5;
         const ws = c.createWaveShaper();
-        ws.curve = radioCurve(10);
+        ws.curve = radioCurve(10 + panic * 14);
         ws.oversample = "2x";
         src.connect(hp).connect(lp).connect(mid).connect(ws).connect(gain).connect(out);
         nodes.push(hp, lp, mid, ws);
@@ -150,7 +187,7 @@ export function createVoicePlayer(deps: VoiceDeps) {
           band.frequency.value = 1900;
           band.Q.value = 0.7;
           const hg = c.createGain();
-          hg.gain.value = 0.01;
+          hg.gain.value = 0.01 + 0.05 * panic;
           hiss.connect(band).connect(hg).connect(out);
           hiss.start();
           nodes.push(band, hg);
@@ -158,7 +195,8 @@ export function createVoicePlayer(deps: VoiceDeps) {
       } else {
         src.connect(gain).connect(out);
       }
-    } catch {
+    } catch (e) {
+      console.warn("[voice] could not build the audio chain", e);
       cleanup();
       return Promise.resolve("unavailable");
     }

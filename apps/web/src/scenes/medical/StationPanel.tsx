@@ -36,6 +36,10 @@ export function StationPanel({ station, alreadyChecked, onMeasured, onClose }: S
   // The doctor explains why this check matters.
   useVoiceLine(localize(station.why));
   const [phase, setPhase] = useState<"idle" | "measuring" | "result">(alreadyChecked ? "result" : "idle");
+  // Set only when this panel took the measurement, so reopening a finished station does not praise it again.
+  const [measuredHere, setMeasuredHere] = useState(false);
+  // Once the reading is in she comments on it.
+  useVoiceLine(measuredHere ? localize(station.verdict) : null);
   const [progress, setProgress] = useState(alreadyChecked ? 1 : 0);
   const primary = useRef<HTMLButtonElement>(null);
   const measuredRef = useRef(onMeasured);
@@ -64,6 +68,7 @@ export function StationPanel({ station, alreadyChecked, onMeasured, onClose }: S
       if (p < 1) raf = requestAnimationFrame(tick);
       else {
         setPhase("result");
+        setMeasuredHere(true);
         playSfx("go");
         measuredRef.current();
       }
@@ -130,6 +135,8 @@ export function StationPanel({ station, alreadyChecked, onMeasured, onClose }: S
           </span>
         </div>
       )}
+
+      {measuredHere && phase === "result" && <p className="mt-3 border-l-2 border-primary pl-3 text-sm italic text-foreground/90">{localize(station.verdict)}</p>}
 
       <div className="mt-5 flex justify-end">
         {phase === "result" ? (

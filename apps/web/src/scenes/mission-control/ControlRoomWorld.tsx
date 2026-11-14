@@ -49,6 +49,8 @@ interface ControlRoomWorldProps {
   burnEndT: number;
   /** performance.now() when the vehicle is lost in the sky (failure cutscene), or null. */
   explodeAt?: number | null;
+  /** What brought the vehicle down: shapes how it is lost. */
+  explodeCause?: string;
 }
 
 /**
@@ -60,6 +62,7 @@ export function ControlRoomWorld({
   launchView,
   burnEndT,
   explodeAt = null,
+  explodeCause,
 }: ControlRoomWorldProps) {
   // The pad is remounted for every replacement vehicle (smoke and positions reset), but NOT for the
   // first launch: the vehicle already stands there with its shaders compiled and geometry uploaded,
@@ -97,7 +100,7 @@ export function ControlRoomWorld({
         ignitionAt={ignitionAt}
         burnEndT={burnEndT}
       />
-      {explodeAt !== null && <SkyExplosion explodeAt={explodeAt} />}
+      {explodeAt !== null && <SkyExplosion explodeAt={explodeAt} cause={explodeCause} />}
     </>
   );
 }

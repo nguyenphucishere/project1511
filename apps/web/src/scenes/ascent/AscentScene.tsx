@@ -23,6 +23,7 @@ import { BRIEFINGS } from "@/game/script";
 import { useSettingsStore } from "@/game/settingsStore";
 import { addTrauma } from "@/game/shake";
 import {
+  playExplosion,
   playSfx,
   speak,
   startAlarm,
@@ -35,6 +36,8 @@ import {
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
 import { cn } from "@/lib/utils";
+import { FailureCinema } from "./FailureCinema";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { AscentWorld, createFlight, type AscentFlight, type SunScreen } from "./AscentWorld";
 
 type Phase = "ride" | "orbit" | "float" | "done";
@@ -75,6 +78,7 @@ export function AscentScene({ onComplete, failure, orbitKm: orbitOverride }: Asc
   const configuredKm = useGameStore((s) => s.log.launchConfig?.orbitKm);
   const orbitKm = orbitOverride ?? configuredKm ?? DEFAULT_ORBIT_KM;
 
+  const reduced = useReducedMotion();
   const flight = useRef<AscentFlight>(createFlight());
   // Dev-only handle for jumping around the timeline from the console (window.__ascent.current.met = 300).
   if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
@@ -85,6 +89,7 @@ export function AscentScene({ onComplete, failure, orbitKm: orbitOverride }: Asc
   const stopAlarm = useRef<() => void>(() => {});
   const timers = useRef<number[]>([]);
   const section = useRef<HTMLElement>(null);
+  const calloutSeq = useRef(0);
   const flareRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const [phase, setPhase] = useState<Phase>("ride");
@@ -130,7 +135,11 @@ export function AscentScene({ onComplete, failure, orbitKm: orbitOverride }: Asc
       const f = flight.current;
       setHud({
         met: f.met,
-        alt: altitudeKm(f.met, orbitKm),
+        // A vehicle too heavy to climb falls back towards the ground instead of gaining height.
+        alt:
+          failure?.code === "slow-climb" && f.mode === "failing"
+            ? altitudeKm(f.met, orbitKm) * Math.max(0, 1 - Math.pow(Math.min(1, f.failT / 16), 1.5))
+            : altitudeKm(f.met, orbitKm),
         speed: speedKms(f.met, orbitKm),
         g: f.mode === "failing" ? 0.2 : gForce(f.met, orbitKm),
         alarm: f.alarm,
@@ -158,11 +167,15 @@ export function AscentScene({ onComplete, failure, orbitKm: orbitOverride }: Asc
 
   const announce = useCallback(
     (id: AscentEventId, caution: boolean) => {
-      setCallout((c) => ({ id, n: (c?.n ?? 0) + 1 }));
+      // A call is on screen for a few seconds, not until the next one: the cabin never shows a stale line.
+      const n = ++calloutSeq.current;
+      setCallout({ id, n });
+      timers.current.push(window.setTimeout(() => calloutSeq.current === n && setCallout(null), 5500));
       playSfx(caution ? "caution" : "chime");
-      speak(textFor(id), localeRef.current);
+      // In a crisis the crew and the computer talk over each other: the computer waits its turn.
+      speak(textFor(id), localeRef.current, { queue: !!failure });
     },
-    [textFor],
+    [textFor, failure],
   );
 
   const later = useCallback((ms: number, fn: () => void) => {
@@ -196,7 +209,7 @@ export function AscentScene({ onComplete, failure, orbitKm: orbitOverride }: Asc
         case "boom":
           stopAlarm.current();
           rumble.current?.setLevel(0);
-          playSfx("boom");
+          playExplosion("close");
           score.current?.setMood("hush");
           stopSpeaking();
           setBoom(true);
@@ -287,6 +300,8 @@ export function AscentScene({ onComplete, failure, orbitKm: orbitOverride }: Asc
         />
       </WorldCanvas>
 
+      {failure && !black && <FailureCinema flight={flight} failure={failure} reduced={reduced} />}
+
       {/* Lens flare from the sun, only while it shines through the window. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden mix-blend-screen">
         {[0, 1, 2, 3, 4].map((i) => (
@@ -376,6 +391,14 @@ export function AscentScene({ onComplete, failure, orbitKm: orbitOverride }: Asc
         <Readout label={a.load} value={`${hud.g.toFixed(1)} g`} />
       </div>
 
+      {failure && !black && !boom && (
+        <div className="absolute right-3 top-16 z-10 sm:right-8 sm:top-20">
+          <Button variant="secondary" size="sm" onClick={onComplete}>
+            {t.missionControl.skipCinematic}
+          </Button>
+        </div>
+      )}
+
       {phase === "ride" && !failure && (
         <div className="absolute right-3 top-16 sm:right-8 sm:top-20">
           <Button variant="secondary" size="sm" onClick={skip}>
@@ -387,7 +410,7 @@ export function AscentScene({ onComplete, failure, orbitKm: orbitOverride }: Asc
       {/* Ship's computer / CAPCOM call-out */}
       {callout && !black && (
         <div
-          key={callout.n}
+          key={`callout-${callout.n}`}
           role="status"
           className={cn(
             "bezel pointer-events-none absolute bottom-24 left-1/2 w-[min(92vw,34rem)] -translate-x-1/2 animate-in fade-in slide-in-from-bottom-2 bg-space-deep/90 px-5 py-3 text-center text-sm text-white backdrop-blur-sm sm:bottom-28 sm:text-base",

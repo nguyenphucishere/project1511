@@ -53,6 +53,7 @@ let masterVolume = MASTER_VOLUME;
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
+let voiceBus: GainNode | null = null;
 let noiseBuffer: AudioBuffer | null = null;
 export const liveLoops = new Set<() => void>();
 
@@ -60,7 +61,7 @@ export function enabled() {
   return useSettingsStore.getState().sound;
 }
 
-export function audio(): { c: AudioContext; out: GainNode } | null {
+export function audio(): { c: AudioContext; out: GainNode; voice: GainNode } | null {
   if (typeof window === "undefined") return null;
   if (!ctx) {
     const Ctor =
@@ -79,9 +80,13 @@ export function audio(): { c: AudioContext; out: GainNode } | null {
     limiter.attack.value = 0.003;
     limiter.release.value = 0.2;
     master.connect(limiter).connect(ctx.destination);
+    // Voices have their own way in, past the master level, so that everything else can be ducked under them.
+    voiceBus = ctx.createGain();
+    voiceBus.gain.value = 0.5;
+    voiceBus.connect(limiter);
   }
   if (ctx.state === "suspended") void ctx.resume();
-  return { c: ctx, out: master! };
+  return { c: ctx, out: master!, voice: voiceBus! };
 }
 
 /**
@@ -703,7 +708,13 @@ export function startRumble(): Rumble {
   };
 }
 
-const voicePlayer = createVoicePlayer({ audio, enabled, noise });
+/** While a voice speaks, everything else drops under it, so a line is heard over the roar, the score and the alarm. */
+function duckForVoice(on: boolean) {
+  if (!ctx || !master) return;
+  master.gain.setTargetAtTime(on ? masterVolume * 0.35 : masterVolume, ctx.currentTime, on ? 0.05 : 0.6);
+}
+
+const voicePlayer = createVoicePlayer({ audio, enabled, noise, duck: duckForVoice });
 let speakToken = 0;
 
 export interface SpeakOptions {
@@ -713,6 +724,10 @@ export interface SpeakOptions {
   onEnd?: () => void;
   /** Force the radio filter on or off; by default it follows the speaker. */
   radio?: boolean;
+  /** Playback speed of a recorded line, 1 = as recorded. */
+  rate?: number;
+  /** 0 to 1: a voice in panic (see PlayOptions). */
+  panic?: number;
 }
 
 /** The fallback: the browser's speech synthesis, for a line with no recording. */
@@ -903,4 +918,379 @@ export function startAlarm(): () => void {
   };
   liveLoops.add(stop);
   return stop;
+}
+
+export interface Pulse {
+  /** Beats (or breaths) per minute. */
+  setRate: (perMinute: number) => void;
+  /** How loud, 0 to 1. */
+  setLevel: (level: number) => void;
+  stop: () => void;
+}
+
+/** One soft thump: a short low sine that falls in pitch, the sound of a pulse in the ears. */
+function thump(c: AudioContext, out: AudioNode, when: number, level: number) {
+  const o = c.createOscillator();
+  o.type = "sine";
+  o.frequency.setValueAtTime(70, when);
+  o.frequency.exponentialRampToValueAtTime(38, when + 0.14);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), when + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, when + 0.2);
+  o.connect(g).connect(out);
+  o.start(when);
+  o.stop(when + 0.24);
+}
+
+/**
+ * A heartbeat in the ears (lub-dub), for the moments when everything else goes quiet. The rate
+ * can climb as the danger does. Scheduled a beat at a time, so a rate change takes effect at once.
+ */
+export function startHeartbeat(): Pulse {
+  const none: Pulse = { setRate: () => {}, setLevel: () => {}, stop: () => {} };
+  if (!enabled()) return none;
+  const a = audio();
+  if (!a) return none;
+  const { c, out } = a;
+  const bus = c.createGain();
+  bus.gain.value = 0.0001;
+  bus.connect(out);
+  let bpm = 70;
+  let stopped = false;
+  let timer = 0;
+  const beat = () => {
+    if (stopped) return;
+    const now = c.currentTime;
+    thump(c, bus, now, 0.9);
+    thump(c, bus, now + 0.17, 0.6);
+    timer = window.setTimeout(beat, (60 / bpm) * 1000);
+  };
+  beat();
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    liveLoops.delete(stop);
+    window.clearTimeout(timer);
+    bus.gain.setTargetAtTime(0.0001, c.currentTime, 0.1);
+  };
+  liveLoops.add(stop);
+  return {
+    setRate: (v) => (bpm = Math.min(200, Math.max(40, v))),
+    setLevel: (v) => bus.gain.setTargetAtTime(Math.max(0.0001, v * 1.4), c.currentTime, 0.08),
+    stop,
+  };
+}
+
+/** Breathing inside a helmet: filtered noise swelling in and out, quick and shallow when afraid. */
+export function startBreathing(): Pulse {
+  const none: Pulse = { setRate: () => {}, setLevel: () => {}, stop: () => {} };
+  if (!enabled()) return none;
+  const a = audio();
+  if (!a) return none;
+  const { c, out } = a;
+  const src = c.createBufferSource();
+  src.buffer = noise(c);
+  src.loop = true;
+  const band = c.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.value = 900;
+  band.Q.value = 0.7;
+  const swell = c.createGain();
+  swell.gain.value = 0.0001;
+  const bus = c.createGain();
+  bus.gain.value = 0.0001;
+  src.connect(band).connect(swell).connect(bus).connect(out);
+  src.start();
+  let perMin = 18;
+  let level = 0;
+  let stopped = false;
+  let timer = 0;
+  const breathe = () => {
+    if (stopped) return;
+    const now = c.currentTime;
+    const period = 60 / perMin;
+    swell.gain.cancelScheduledValues(now);
+    swell.gain.setValueAtTime(0.0001, now);
+    swell.gain.linearRampToValueAtTime(1, now + period * 0.4);
+    swell.gain.linearRampToValueAtTime(0.0001, now + period * 0.95);
+    timer = window.setTimeout(breathe, period * 1000);
+  };
+  breathe();
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    liveLoops.delete(stop);
+    window.clearTimeout(timer);
+    bus.gain.setTargetAtTime(0.0001, c.currentTime, 0.1);
+    src.stop(c.currentTime + 0.6);
+  };
+  liveLoops.add(stop);
+  return {
+    setRate: (v) => (perMin = Math.min(70, Math.max(10, v))),
+    setLevel: (v) => {
+      level = v;
+      bus.gain.setTargetAtTime(Math.max(0.0001, level * 0.16), c.currentTime, 0.1);
+    },
+    stop,
+  };
+}
+
+export interface Suspense {
+  /** 0 = a held dread, 1 = everything at once: the pulse races, the riser screams. */
+  setIntensity: (k: number) => void;
+  /** A sudden low blow: the moment it goes wrong. */
+  stinger: () => void;
+  /** Everything but the low drone drops out for a moment: the breath before the worst. */
+  silence: (ms: number) => void;
+  stop: (fadeSec?: number) => void;
+}
+
+/**
+ * The score of a flight going wrong: a low drone that never resolves, a pulse of clashing notes that
+ * speeds up and climbs as the danger does, and a riser that tightens until something gives. Made of
+ * oscillators, so it cannot play a tune, but it holds the dread of one.
+ */
+export function startSuspense(): Suspense {
+  const none: Suspense = { setIntensity: () => {}, stinger: () => {}, silence: () => {}, stop: () => {} };
+  if (!enabled()) return none;
+  const a = audio();
+  if (!a) return none;
+  const { c, out } = a;
+  const bus = c.createGain();
+  bus.gain.value = 0.0001;
+  bus.gain.setTargetAtTime(1, c.currentTime, 0.8);
+  bus.connect(out);
+
+  // The drone: two saws a hair apart (they beat against each other) over a sub-bass.
+  const droneGain = c.createGain();
+  droneGain.gain.value = 0.07;
+  const droneFilter = c.createBiquadFilter();
+  droneFilter.type = "lowpass";
+  droneFilter.frequency.value = 180;
+  const drones = [55, 55.9, 82.4].map((f, i) => {
+    const o = c.createOscillator();
+    o.type = i === 2 ? "triangle" : "sawtooth";
+    o.frequency.value = f;
+    o.connect(droneFilter);
+    o.start();
+    return o;
+  });
+  const sub = c.createOscillator();
+  sub.type = "sine";
+  sub.frequency.value = 27.5;
+  sub.connect(droneGain);
+  sub.start();
+  droneFilter.connect(droneGain).connect(bus);
+
+  // The riser: noise through a band that climbs, and a sweeping tone under it.
+  const riseNoise = c.createBufferSource();
+  riseNoise.buffer = noise(c);
+  riseNoise.loop = true;
+  const riseBand = c.createBiquadFilter();
+  riseBand.type = "bandpass";
+  riseBand.Q.value = 2.2;
+  riseBand.frequency.value = 400;
+  const riseGain = c.createGain();
+  riseGain.gain.value = 0.0001;
+  riseNoise.connect(riseBand).connect(riseGain).connect(bus);
+  riseNoise.start();
+  const riseTone = c.createOscillator();
+  riseTone.type = "triangle";
+  riseTone.frequency.value = 220;
+  const riseToneGain = c.createGain();
+  riseToneGain.gain.value = 0.0001;
+  riseTone.connect(riseToneGain).connect(bus);
+  riseTone.start();
+
+  // The pulse: eighth notes on a root and its flat second, with a tritone leap at the end of the bar.
+  const PATTERN = [0, 0, 1, 0, 0, 1, 0, 6];
+  const pulseBus = c.createGain();
+  pulseBus.gain.value = 0.0001;
+  const pulseFilter = c.createBiquadFilter();
+  pulseFilter.type = "lowpass";
+  pulseFilter.frequency.value = 900;
+  pulseBus.connect(pulseFilter).connect(bus);
+  let k = 0;
+  let step = 0;
+  let stopped = false;
+  let timer = 0;
+  const note = () => {
+    if (stopped) return;
+    const bpm = 92 + k * 90;
+    const eighth = 60 / bpm / 2;
+    const semis = PATTERN[step % PATTERN.length]! + (k > 0.7 && step % 2 === 1 ? 12 : 0);
+    const now = c.currentTime;
+    const o = c.createOscillator();
+    o.type = "sawtooth";
+    o.frequency.value = 110 * Math.pow(2, semis / 12);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.9, now + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + eighth * 0.9);
+    o.connect(g).connect(pulseBus);
+    o.start(now);
+    o.stop(now + eighth);
+    step++;
+    timer = window.setTimeout(note, eighth * 1000);
+  };
+  note();
+
+  const apply = (v: number) => {
+    k = Math.min(1, Math.max(0, v));
+    const now = c.currentTime;
+    droneFilter.frequency.setTargetAtTime(180 + k * 520, now, 0.4);
+    droneGain.gain.setTargetAtTime(0.07 + k * 0.1, now, 0.4);
+    pulseBus.gain.setTargetAtTime(k < 0.05 ? 0.0001 : 0.05 + k * 0.17, now, 0.3);
+    pulseFilter.frequency.setTargetAtTime(700 + k * 2400, now, 0.3);
+    riseBand.frequency.setTargetAtTime(400 + k * k * 4200, now, 0.3);
+    riseGain.gain.setTargetAtTime(Math.max(0.0001, k * k * 0.09), now, 0.3);
+    riseTone.frequency.setTargetAtTime(220 + k * k * 1500, now, 0.3);
+    riseToneGain.gain.setTargetAtTime(Math.max(0.0001, k * k * 0.035), now, 0.3);
+  };
+  apply(0);
+
+  const stinger = () => {
+    const now = c.currentTime;
+    const hit = c.createGain();
+    hit.gain.setValueAtTime(0.0001, now);
+    hit.gain.exponentialRampToValueAtTime(0.55, now + 0.02);
+    hit.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+    hit.connect(bus);
+    for (const f of [55, 58.3, 82.4, 116.5]) {
+      const o = c.createOscillator();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(f * 1.5, now);
+      o.frequency.exponentialRampToValueAtTime(f, now + 0.25);
+      o.connect(hit);
+      o.start(now);
+      o.stop(now + 2.3);
+    }
+    const n = c.createBufferSource();
+    n.buffer = noise(c);
+    const ng = c.createGain();
+    ng.gain.setValueAtTime(0.5, now);
+    ng.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+    n.connect(ng).connect(hit);
+    n.start(now);
+    n.stop(now + 0.6);
+  };
+
+  const silence = (ms: number) => {
+    const now = c.currentTime;
+    for (const g of [pulseBus.gain, riseGain.gain, riseToneGain.gain]) {
+      g.cancelScheduledValues(now);
+      g.setTargetAtTime(0.0001, now, 0.04);
+    }
+    window.setTimeout(() => !stopped && apply(k), ms);
+  };
+
+  const stop = (fadeSec = 0.4) => {
+    if (stopped) return;
+    stopped = true;
+    liveLoops.delete(stop);
+    window.clearTimeout(timer);
+    const now = c.currentTime;
+    bus.gain.cancelScheduledValues(now);
+    bus.gain.setTargetAtTime(0.0001, now, Math.max(0.05, fadeSec / 3));
+    const end = now + fadeSec + 0.6;
+    for (const o of [...drones, sub, riseNoise, riseTone]) o.stop(end);
+  };
+  liveLoops.add(() => stop(0.1));
+
+  return { setIntensity: apply, stinger, silence, stop };
+}
+
+/**
+ * A rocket exploding: a crack that hurts, a thump you feel in the chest, a rolling roar that
+ * decays over seconds with crackling debris in it, and, up close, a ringing in the ears. `far`
+ * is the same blast as heard across a field, a beat later: lower, rounder, no ringing.
+ */
+export function playExplosion(distance: "close" | "far" = "close", gain = 1) {
+  if (!enabled()) return;
+  const a = audio();
+  if (!a) return;
+  const { c, out } = a;
+  const now = c.currentTime;
+  const near = distance === "close";
+  const bus = c.createGain();
+  bus.gain.value = gain * (near ? 1 : 0.85);
+  bus.connect(out);
+
+  // 1. The crack: broadband noise, gone in a tenth of a second.
+  if (near) {
+    const n = c.createBufferSource();
+    n.buffer = noise(c);
+    const hp = c.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 1500;
+    const g = c.createGain();
+    g.gain.setValueAtTime(1.2, now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+    n.connect(hp).connect(g).connect(bus);
+    n.start(now);
+    n.stop(now + 0.2);
+  }
+
+  // 2. The thump: a sine that falls through the floor.
+  const thumpOsc = c.createOscillator();
+  thumpOsc.type = "sine";
+  thumpOsc.frequency.setValueAtTime(near ? 110 : 80, now);
+  thumpOsc.frequency.exponentialRampToValueAtTime(24, now + 0.9);
+  const thumpGain = c.createGain();
+  thumpGain.gain.setValueAtTime(0.0001, now);
+  thumpGain.gain.exponentialRampToValueAtTime(1.3, now + 0.015);
+  thumpGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.4);
+  thumpOsc.connect(thumpGain).connect(bus);
+  thumpOsc.start(now);
+  thumpOsc.stop(now + 1.5);
+
+  // 3. The roar: noise through a low-pass that closes slowly as the sound rolls away.
+  const roar = c.createBufferSource();
+  roar.buffer = noise(c);
+  roar.loop = true;
+  const lp = c.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.setValueAtTime(near ? 2600 : 900, now);
+  lp.frequency.exponentialRampToValueAtTime(70, now + 4.5);
+  const roarGain = c.createGain();
+  roarGain.gain.setValueAtTime(0.0001, now);
+  roarGain.gain.exponentialRampToValueAtTime(near ? 0.95 : 0.8, now + 0.05);
+  roarGain.gain.exponentialRampToValueAtTime(0.0001, now + 5);
+  roar.connect(lp).connect(roarGain).connect(bus);
+  roar.start(now);
+  roar.stop(now + 5.2);
+
+  // 4. Debris and fire: little pops and crackles scattered over the next few seconds.
+  for (let i = 0; i < 22; i++) {
+    const t = now + 0.15 + Math.random() * 3.6;
+    const n = c.createBufferSource();
+    n.buffer = noise(c);
+    const bp = c.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 600 + Math.random() * 3400;
+    bp.Q.value = 1.4;
+    const g = c.createGain();
+    const peak = (0.35 + Math.random() * 0.45) * (1 - (t - now) / 5);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05 + Math.random() * 0.09);
+    n.connect(bp).connect(g).connect(bus);
+    n.start(t, Math.random());
+    n.stop(t + 0.2);
+  }
+
+  // 5. Close up, the ears ring.
+  if (near) {
+    const ring = c.createOscillator();
+    ring.type = "sine";
+    ring.frequency.value = 3400;
+    const rg = c.createGain();
+    rg.gain.setValueAtTime(0.0001, now + 0.1);
+    rg.gain.exponentialRampToValueAtTime(0.045, now + 0.4);
+    rg.gain.exponentialRampToValueAtTime(0.0001, now + 4);
+    ring.connect(rg).connect(bus);
+    ring.start(now + 0.1);
+    ring.stop(now + 4.2);
+  }
 }

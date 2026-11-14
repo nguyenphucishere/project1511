@@ -12,6 +12,8 @@ interface Line {
   vi: string;
   /** The text exists only in English: the Vietnamese player hears the English voice read it. */
   viAsEn?: boolean;
+  /** An emotion tag for the performed (crisis) recording of this line, e.g. "(gasps) ". */
+  tag?: string;
   src: string;
 }
 
@@ -92,6 +94,10 @@ async function main() {
 
   // 3. Medical bay.
   VITAL_STATIONS.forEach((v: any) => add("doctor", v.why, `medical:${v.id}`));
+  VITAL_STATIONS.forEach((v: any) => add("doctor", v.verdict, `medical:${v.id}:verdict`));
+  add("doctor", both(["medical", "doorPrompt"]), "medical:doorPrompt");
+  add("doctor", { en: format(en.medical.greeting, { name: CHARACTERS.doctor.name.en }), vi: format(vi.medical.greeting, { name: CHARACTERS.doctor.name.vi }) }, "medical:greeting");
+  add("doctor", both(["medical", "guide"]), "medical:guide");
   add("doctor", { en: format(en.medical.clearedBody, { name: CHARACTERS.doctor.name.en }), vi: format(vi.medical.clearedBody, { name: CHARACTERS.doctor.name.vi }) }, "medical:cleared");
 
   // 4. Assembly hall: Rudolph and Garman on the floor, the loudspeaker, the part and fault explanations.
@@ -117,10 +123,25 @@ async function main() {
   );
 
   // 5. Mission control and the climb to orbit.
+  (await load("scenes/mission-control/callouts.ts")).COUNT_VOICE.forEach((t: L, i: number) => add("kranz", t, `launch-count#${i + 1}`));
+  const { SCRIPT: FAIL_SCRIPT } = await load("scenes/ascent/failureScript.ts");
+  // The crew in the cabin are performed: shouted and breathless, or shaken and low when the line is quiet.
+  const crewTag = (t: L) => (/[!]/.test(t.en) ? "(gasps) " : "(breath) ");
+  for (const [code, cues] of Object.entries(FAIL_SCRIPT) as [string, any[]][])
+    cues.forEach((c, i) => c.line && add(c.who, c.line, `failure-cabin:${code}#${i}`, { tag: crewTag(c.line) }));
+  const { ROOM_SCRIPT_ALL } = await load("scenes/mission-control/controlRoomScript.ts");
+  // The calls from the room: shouted and cracking while the panic runs, plain once the order to hold is given.
+  (ROOM_SCRIPT_ALL as any[]).forEach((b, i) =>
+    add(b.voice, b.line, `launch-room#${i}`, b.panic >= 0.9 ? { tag: "(gasps) (pant) " } : b.panic >= 0.6 ? { tag: "(gasps) " } : {}),
+  );
+  const { LAUNCH_ENDINGS } = await load("scenes/mission-control/launchEndings.ts");
+  for (const e of Object.values(LAUNCH_ENDINGS) as any[]) {
+    add("kranz", e.call, `launch-ending:${e.id}:call`);
+    e.lines.forEach((t: L, i: number) => add("narrator", t, `launch-ending:${e.id}#${i}`));
+  }
   CALLOUTS.forEach((c: any, i: number) => add(c.voice, c.line, `launch-callout#${i}`));
   add("kranz", fmt(["missionControl", "pollIntro"], { name: CHARACTERS["flight-director"].name.en }), "mission-control:poll");
   rows[rows.length - 1].vi = format(vi.missionControl.pollIntro, { name: CHARACTERS["flight-director"].name.vi });
-  add("kranz", fmt(["missionControl", "scrub"], { limit: WIND_LIMIT_KMH }), "mission-control:scrub");
   for (const o of ORBITS as any[]) add("kranz", fmt(["missionControl", "orbitBody"], { km: o.km }), `mission-control:orbit:${o.km}`);
   for (const k of ["anomalyBody", "adviceOverweight", "adviceFuel", "replacement"]) add("narrator", both(["missionControl", k]), `mission-control:${k}`);
   for (const k of Object.keys(en.ascent.callouts)) add("capcom", both(["ascent", "callouts", k]), `ascent:callout:${k}`);

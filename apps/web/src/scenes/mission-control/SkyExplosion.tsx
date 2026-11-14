@@ -23,11 +23,35 @@ import { GROUND_Y, PAD } from "./layout";
 
 /** Rocket leaves the pad here and is lost at BOOM, seen from the control room window. */
 const START = new Vector3(PAD[0], GROUND_Y + 6, PAD[2]);
-const BOOM = new Vector3(PAD[0] - 45, GROUND_Y + 100, -520);
+
+/** How each kind of failure looks from the control room: where the vehicle is lost and how it dies. */
+interface Variant {
+  /** Where it is lost, relative to the pad. */
+  boom: [number, number, number];
+  /** Blast size, 1 = a full-sized fireball. */
+  scale: number;
+  /** Sideways drift (m) along the way, as when the wind takes it. */
+  swerve: number;
+  /** Fraction of the flight after which the engine light goes out (1 = it burns until the blast). */
+  engineOut: number;
+  /** The colour of the fireball. */
+  tint: "fire" | "storm";
+}
+const VARIANTS: Record<string, Variant> = {
+  structural: { boom: [PAD[0] - 45, GROUND_Y + 100, -520], scale: 1, swerve: 0, engineOut: 1, tint: "fire" },
+  // The engines quit and the dark stage coasts, then falls: a small, late fireball.
+  "fuel-depleted": { boom: [PAD[0] - 30, GROUND_Y + 74, -500], scale: 0.55, swerve: 0, engineOut: 0.5, tint: "fire" },
+  // Never gains height: lost low over the sea.
+  "slow-climb": { boom: [PAD[0] - 10, GROUND_Y + 30, -430], scale: 0.8, swerve: 0, engineOut: 1, tint: "fire" },
+  // Thrown off course before it comes apart.
+  "wind-shear": { boom: [PAD[0] - 130, GROUND_Y + 92, -500], scale: 1, swerve: -70, engineOut: 1, tint: "fire" },
+  // Struck in the cloud: a blue-white burst.
+  lightning: { boom: [PAD[0] - 45, GROUND_Y + 120, -520], scale: 1.15, swerve: 0, engineOut: 1, tint: "storm" },
+};
 /** Seconds the rocket flies before it is destroyed. */
 export const FLY_SECONDS = 1.9;
 /** Total length of the sequence in seconds (smoke is still drifting at the end). */
-export const EXPLOSION_SECONDS = 12;
+export const EXPLOSION_SECONDS = 31;
 
 function puff(color: string, size = 128, soft = 0.55) {
   const canvas = document.createElement("canvas");
@@ -65,7 +89,9 @@ const easeOut = (x: number) => 1 - (1 - x) * (1 - x);
  * smoke trail, then a flash, fireball, shockwave ring, flying debris and a cloud of smoke that
  * lingers. `explodeAt` is performance.now() when the sequence starts.
  */
-export function SkyExplosion({ explodeAt }: { explodeAt: number }) {
+export function SkyExplosion({ explodeAt, cause = "structural" }: { explodeAt: number; cause?: string }) {
+  const V = VARIANTS[cause] ?? VARIANTS.structural!;
+  const BOOM = useMemo(() => new Vector3(...V.boom), [V]);
   const head = useRef<Group>(null);
   const headMat = useRef<SpriteMaterial>(null);
   const trail = useRef<Points>(null);
@@ -107,13 +133,16 @@ export function SkyExplosion({ explodeAt }: { explodeAt: number }) {
   }, []);
   const fireData = useMemo(() => {
     const r = seeded(9);
-    const palette = [new Color(3.2, 2.6, 1.8), new Color(1.9, 0.95, 0.3), new Color(1.5, 0.5, 0.12), new Color(0.9, 0.22, 0.06)];
+    const palette =
+      V.tint === "storm"
+        ? [new Color(3.4, 3.6, 4), new Color(1.4, 2, 3.4), new Color(0.8, 1.3, 3), new Color(0.4, 0.6, 1.6)]
+        : [new Color(3.2, 2.6, 1.8), new Color(1.9, 0.95, 0.3), new Color(1.5, 0.5, 0.12), new Color(0.9, 0.22, 0.06)];
     return Array.from({ length: 24 }, (_, i) => ({
       dir: i === 0 ? new Vector3() : new Vector3(r() - 0.5, r() - 0.35, r() - 0.5).normalize().multiplyScalar(0.4 + r() * 0.6),
       size: i === 0 ? 50 : 30 + r() * 34,
       color: palette[i === 0 ? 0 : 1 + Math.floor(r() * 3)],
     }));
-  }, []);
+  }, [V]);
   const tmp = useMemo(() => new Vector3(), []);
 
   useFrame(() => {
@@ -124,20 +153,25 @@ export function SkyExplosion({ explodeAt }: { explodeAt: number }) {
 
     // Rocket: a bright spark accelerating along its path, leaving smoke behind.
     const pathK = flyK * flyK;
-    tmp.lerpVectors(START, BOOM, pathK);
+    const at = (k: number) => {
+      tmp.lerpVectors(START, BOOM, k);
+      tmp.x += V.swerve * k * k;
+    };
+    at(pathK);
     if (head.current) {
       head.current.position.copy(tmp);
       head.current.visible = !exploded && t >= 0;
       const s = 10 + 26 * pathK;
       head.current.scale.setScalar(s);
     }
-    if (headMat.current) headMat.current.opacity = 1;
+    // The engine light: steady, or fading out when the tanks run dry.
+    if (headMat.current) headMat.current.opacity = flyK < V.engineOut ? 1 : Math.max(0, 1 - (flyK - V.engineOut) / 0.12);
     if (trail.current) {
       const geo = trail.current.geometry as BufferGeometry;
       const n = Math.min(TRAIL_N, Math.floor(pathK * TRAIL_N) + 1);
       for (let i = 0; i < TRAIL_N; i++) {
         const k = (i / (TRAIL_N - 1)) * pathK;
-        tmp.lerpVectors(START, BOOM, k);
+        at(k);
         // The trail drifts and widens a little as it ages.
         trailPos[i * 3] = tmp.x + Math.sin(i * 1.7) * 3 * (1 - i / TRAIL_N);
         trailPos[i * 3 + 1] = tmp.y;
@@ -145,14 +179,14 @@ export function SkyExplosion({ explodeAt }: { explodeAt: number }) {
       }
       (geo.getAttribute("position") as BufferAttribute).needsUpdate = true;
       geo.setDrawRange(0, n);
-      (trail.current.material as { opacity: number }).opacity = t >= 0 ? 0.75 * (1 - MathUtils.clamp((te - 5) / 6, 0, 1)) : 0;
+      (trail.current.material as { opacity: number }).opacity = t >= 0 ? 0.75 * (1 - MathUtils.clamp((te - 8) / 14, 0, 1)) : 0;
     }
 
     // Blast.
     if (flash.current && flashMat.current) {
       flash.current.visible = exploded && te < 1.2;
       const k = MathUtils.clamp(te / 1.2, 0, 1);
-      flash.current.scale.setScalar(60 + 300 * easeOut(k));
+      flash.current.scale.setScalar((60 + 300 * easeOut(k)) * V.scale);
       flashMat.current.opacity = 1 - k;
     }
     if (fire.current) {
@@ -169,7 +203,7 @@ export function SkyExplosion({ explodeAt }: { explodeAt: number }) {
             d.dir.y * (14 + 46 * grow) + 10 * k + Math.cos(te * 2.4 + i) * 2,
             d.dir.z * (14 + 46 * grow),
           );
-          sp.scale.setScalar(d.size * (0.25 + 1.1 * grow));
+          sp.scale.setScalar(d.size * V.scale * (0.25 + 1.1 * grow));
           (sp.material as SpriteMaterial).opacity = (i === 0 ? 1 - k : 1 - MathUtils.clamp((te - 0.7) / 4, 0, 1)) * 0.7;
         });
       }
@@ -177,11 +211,11 @@ export function SkyExplosion({ explodeAt }: { explodeAt: number }) {
     if (ring.current && ringMat.current) {
       ring.current.visible = exploded && te < 3;
       const k = MathUtils.clamp(te / 2.6, 0, 1);
-      ring.current.scale.setScalar(30 + 760 * easeOut(k));
+      ring.current.scale.setScalar((30 + 760 * easeOut(k)) * V.scale);
       ringMat.current.opacity = 0.9 * (1 - k);
     }
     if (debris.current) {
-      debris.current.visible = exploded && te < 8;
+      debris.current.visible = exploded && te < 12;
       if (exploded) {
         const geo = debris.current.geometry as BufferGeometry;
         const tt = Math.max(0, te);
@@ -192,7 +226,7 @@ export function SkyExplosion({ explodeAt }: { explodeAt: number }) {
           debrisData.pos[i * 3 + 2] = BOOM.z + v.z * tt;
         }
         (geo.getAttribute("position") as BufferAttribute).needsUpdate = true;
-        (debris.current.material as { opacity: number }).opacity = 1 - MathUtils.clamp((te - 3) / 5, 0, 1);
+        (debris.current.material as { opacity: number }).opacity = 1 - MathUtils.clamp((te - 4) / 7, 0, 1);
       }
     }
     if (smoke.current) {
@@ -203,7 +237,7 @@ export function SkyExplosion({ explodeAt }: { explodeAt: number }) {
         const s = child as Sprite;
         s.position.set(BOOM.x + d.dir.x * k * 2.2, BOOM.y + d.dir.y * k * 2 + k * 14 - k * k * 6, BOOM.z + d.dir.z * k * 2.2);
         s.scale.setScalar(d.size * (0.4 + 1.6 * easeOut(k)));
-        (s.material as SpriteMaterial).opacity = k <= 0 ? 0 : 0.85 * (1 - MathUtils.clamp((te - 6) / 6, 0, 1));
+        (s.material as SpriteMaterial).opacity = k <= 0 ? 0 : 0.85 * (1 - MathUtils.clamp((te - 15) / 11, 0, 1));
       });
     }
   });

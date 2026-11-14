@@ -95,18 +95,41 @@ const StarField = memo(function StarField() {
   );
 });
 
-/** The loading bar is its own component, so each preload tick re-renders only this and not the whole screen. */
-const LoadingBar = memo(function LoadingBar() {
+/** True once everything is preloaded (or after a patient wait, so a failed download never traps the player). */
+function useWarmDone() {
+  const done = useSyncExternalStore(subscribePreload, () => warmProgress() >= 100, () => false);
+  const [gaveUp, setGaveUp] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setGaveUp(true), 30000);
+    return () => window.clearTimeout(id);
+  }, []);
+  return done || gaveUp;
+}
+
+/**
+ * The loading bar sits in the middle of the screen until everything the game needs is ready, then
+ * fades away and the menu takes its place. It is its own component, so each preload tick re-renders
+ * only this and not the whole screen.
+ */
+const LoadingBar = memo(function LoadingBar({ finished }: { finished: boolean }) {
   const t = useT();
   const progress = useSyncExternalStore(subscribePreload, warmProgress, () => 0);
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-6 z-10 mx-auto w-[min(22rem,80vw)] text-center" aria-live="polite">
-      <div className="h-1.5 overflow-hidden rounded-full bg-black/40" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-        <div className="h-full rounded-full bg-yellow-300 transition-[width] duration-300" style={{ width: `${progress}%` }} />
-      </div>
-      <p className="mt-1.5 font-mono text-xs tracking-widest text-white/80">
-        {progress >= 100 ? t.sceneLoading.ready.toUpperCase() : `${t.sceneLoading.stageAssets.toUpperCase()} ${progress}%`}
+    <div
+      className={cn(
+        "pointer-events-none absolute inset-x-0 top-[56%] z-10 mx-auto w-[min(30rem,84vw)] -translate-y-1/2 text-center transition-opacity duration-500",
+        finished ? "opacity-0" : "opacity-100",
+      )}
+      aria-live="polite"
+      aria-hidden={finished}
+    >
+      <p className="mb-3 font-mono text-sm font-bold uppercase tracking-[0.3em] text-white drop-shadow-[0_2px_6px_rgb(0_0_0/0.8)]">
+        {t.sceneLoading.stageAssets}
       </p>
+      <div className="h-3 overflow-hidden rounded-full border border-primary/60 bg-black/60 p-[2px] shadow-[0_0_24px_rgb(0_0_0/0.6)]" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+        <div className="h-full rounded-full bg-primary shadow-[0_0_12px_rgb(var(--primary)/0.8)] transition-[width] duration-300" style={{ width: `${progress}%` }} />
+      </div>
+      <p className="mt-2 font-mono text-lg font-bold tabular-nums tracking-widest text-white drop-shadow-[0_2px_6px_rgb(0_0_0/0.8)]">{progress}%</p>
     </div>
   );
 });
@@ -130,6 +153,7 @@ export function TitleSplash() {
   const [leaving, setLeaving] = useState(false);
   const [chapters, setChapters] = useState(false);
   const ready = loaded >= IMAGE_COUNT;
+  const warmed = useWarmDone();
   const done = useRef(false);
   const width = useRef(FRAME_W);
   // Set when the screen turns out to run slowly on this machine: the extras (stars, breathing) switch off.
@@ -167,7 +191,7 @@ export function TitleSplash() {
         setChapters(false);
         return;
       }
-      if ((e.key === "Enter" || e.key === " ") && !chapters && !(e.target as HTMLElement | null)?.closest("button, summary, a")) {
+      if ((e.key === "Enter" || e.key === " ") && warmed && !chapters && !(e.target as HTMLElement | null)?.closest("button, summary, a")) {
         e.preventDefault();
         if (canContinue) resume();
         else if (hydrated) start();
@@ -175,7 +199,7 @@ export function TitleSplash() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [chapters, canContinue, hydrated, resume, start]);
+  }, [chapters, warmed, canContinue, hydrated, resume, start]);
 
   paused.current = chapters || leaving;
 
@@ -316,7 +340,11 @@ export function TitleSplash() {
           {img(TITLE_SRC)}
         </div>
 
-        <div className="absolute flex -translate-x-1/2 flex-col items-stretch gap-[0.9cqw]" style={{ left: `${MENU.x * 100}%`, top: `${MENU.y * 100}%`, width: `${MENU.w * 100}%` }}>
+        <div
+          className={cn("absolute flex -translate-x-1/2 flex-col items-stretch gap-[0.9cqw] transition-opacity duration-500", warmed ? "opacity-100" : "pointer-events-none opacity-0")}
+          aria-hidden={!warmed}
+          inert={!warmed}
+          style={{ left: `${MENU.x * 100}%`, top: `${MENU.y * 100}%`, width: `${MENU.w * 100}%` }}>
           {canContinue ? (
             <>
               <button type="button" onClick={resume} className={cn(primary, !lite && "motion-safe:animate-pulse")}>
@@ -352,7 +380,7 @@ export function TitleSplash() {
       </div>
 
       {/* Everything the game needs loads in the background while the player reads the title. */}
-      <LoadingBar />
+      <LoadingBar finished={warmed} />
 
       <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-4 px-4 py-4 sm:px-8">
         <StatusBadge status="demo" className="bg-space-deep">

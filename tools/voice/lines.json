@@ -129,8 +129,8 @@
     },
     {
       "role": "kranz",
-      "en": "T−15 minutes and a squall line is building. The wind limit is 40 km/h. Launch, or hold?",
-      "vi": "T−15 phút, dải mây giông đang tới. Giới hạn gió là 40 km/h. Phóng hay hoãn?",
+      "en": "T−15 minutes and a squall line is building over the Cape. Launch, or hold?",
+      "vi": "T−15 phút, dải mây giông đang hình thành trên mũi Cape. Phóng hay hoãn?",
       "src": "decision:weather-decision"
     },
     {
@@ -390,6 +390,42 @@
       "en": "Pilots read small cockpit displays during landing. Sharp vision is a hard requirement.",
       "vi": "Phi hành gia phải đọc màn hình nhỏ trong buồng lái khi hạ cánh. Thị lực tốt là yêu cầu bắt buộc.",
       "src": "medical:vision"
+    },
+    {
+      "role": "doctor",
+      "en": "Sixty-four beats a minute. That is a calm, strong heart, just what a launch demands. Well done.",
+      "vi": "Sáu mươi bốn nhịp một phút. Một trái tim khoẻ và bình tĩnh, đúng thứ mà chuyến phóng cần. Làm tốt lắm.",
+      "src": "medical:heart:verdict"
+    },
+    {
+      "role": "doctor",
+      "en": "One eighteen over seventy-six. Textbook blood pressure, and now we have a baseline for flight. Excellent.",
+      "vi": "Một trăm mười tám trên bảy mươi sáu. Huyết áp chuẩn sách giáo khoa, và giờ ta có chỉ số gốc cho chuyến bay. Tuyệt vời.",
+      "src": "medical:pressure:verdict"
+    },
+    {
+      "role": "doctor",
+      "en": "Twenty-twenty. Eyes like a hawk. You will read every display on the way down.",
+      "vi": "Hai mươi trên hai mươi. Mắt như mắt diều hâu. Bạn sẽ đọc rõ mọi màn hình trên đường hạ cánh.",
+      "src": "medical:vision:verdict"
+    },
+    {
+      "role": "doctor",
+      "en": "Come on in, I've been expecting you. Just click the door to open it.",
+      "vi": "Vào đi, tôi đợi bạn nãy giờ. Chỉ cần bấm vào cánh cửa để mở nhé.",
+      "src": "medical:doorPrompt"
+    },
+    {
+      "role": "doctor",
+      "en": "Hello, and welcome to the medical bay! I'm Dr. Lin, your flight surgeon. Let's get you checked before launch.",
+      "vi": "Xin chào, chào mừng đến phòng y tế! Tôi là Bác sĩ Lin, bác sĩ phi hành của bạn. Mình kiểm tra sức khoẻ trước giờ phóng nhé.",
+      "src": "medical:greeting"
+    },
+    {
+      "role": "doctor",
+      "en": "Click each glowing station: the heart rate monitor, the blood pressure cuff and the vision chart. Drag to look around, and use W A S D to walk.",
+      "vi": "Hãy bấm vào từng trạm đang phát sáng: máy đo nhịp tim, vòng đo huyết áp và bảng thị lực. Kéo chuột để nhìn quanh, dùng W A S D để đi.",
+      "src": "medical:guide"
     },
     {
       "role": "doctor",
@@ -776,6 +812,825 @@
       "src": "workshop:fault:heatshield"
     },
     {
+      "role": "kranz",
+      "en": "One.",
+      "vi": "Một.",
+      "src": "launch-count#1"
+    },
+    {
+      "role": "kranz",
+      "en": "Two.",
+      "vi": "Hai.",
+      "src": "launch-count#2"
+    },
+    {
+      "role": "kranz",
+      "en": "Three.",
+      "vi": "Ba.",
+      "src": "launch-count#3"
+    },
+    {
+      "role": "kranz",
+      "en": "Four.",
+      "vi": "Bốn.",
+      "src": "launch-count#4"
+    },
+    {
+      "role": "kranz",
+      "en": "Five.",
+      "vi": "Năm.",
+      "src": "launch-count#5"
+    },
+    {
+      "role": "kranz",
+      "en": "Six.",
+      "vi": "Sáu.",
+      "src": "launch-count#6"
+    },
+    {
+      "role": "kranz",
+      "en": "Seven.",
+      "vi": "Bảy.",
+      "src": "launch-count#7"
+    },
+    {
+      "role": "kranz",
+      "en": "Eight.",
+      "vi": "Tám.",
+      "src": "launch-count#8"
+    },
+    {
+      "role": "kranz",
+      "en": "Nine.",
+      "vi": "Chín.",
+      "src": "launch-count#9"
+    },
+    {
+      "role": "kranz",
+      "en": "Ten.",
+      "vi": "Mười.",
+      "src": "launch-count#10"
+    },
+    {
+      "role": "armstrong",
+      "en": "Houston! Houston, heavy vibration!",
+      "vi": "Houston! Houston, rung rất mạnh!",
+      "src": "failure-cabin:structural#0",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "aldrin",
+      "en": "Neil! That is not right!",
+      "vi": "Neil! Không ổn rồi!",
+      "src": "failure-cabin:structural#1",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "collins",
+      "en": "Loads are off the scale!",
+      "vi": "Tải vượt thang đo!",
+      "src": "failure-cabin:structural#2",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Stay with it! Stay with it!",
+      "vi": "Giữ vững! Giữ vững!",
+      "src": "failure-cabin:structural#3",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "aldrin",
+      "en": "She is shaking apart!",
+      "vi": "Nó đang rung nát ra!",
+      "src": "failure-cabin:structural#4",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "collins",
+      "en": "Master alarm!",
+      "vi": "Báo động chính!",
+      "src": "failure-cabin:structural#5",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Houston, we are losing her! Losing her!",
+      "vi": "Houston, sắp mất nó rồi! Mất nó rồi!",
+      "src": "failure-cabin:structural#6",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Something broke! Something just broke!",
+      "vi": "Có gì đó vỡ rồi! Vừa vỡ rồi!",
+      "src": "failure-cabin:structural#7",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "aldrin",
+      "en": "Abort! Abort!",
+      "vi": "Huỷ bỏ! Huỷ bỏ!",
+      "src": "failure-cabin:structural#9",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "collins",
+      "en": "Houston, Columbia! Mayday! Mayday!",
+      "vi": "Houston, Columbia! Cấp cứu! Cấp cứu!",
+      "src": "failure-cabin:structural#10",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Buzz, look at me.",
+      "vi": "Buzz, nhìn tôi này.",
+      "src": "failure-cabin:structural#11",
+      "tag": "(breath) "
+    },
+    {
+      "role": "aldrin",
+      "en": "Neil. I am here.",
+      "vi": "Neil. Tôi ở đây.",
+      "src": "failure-cabin:structural#13",
+      "tag": "(breath) "
+    },
+    {
+      "role": "armstrong",
+      "en": "It has been an honor.",
+      "vi": "Thật vinh dự.",
+      "src": "failure-cabin:structural#14",
+      "tag": "(breath) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Gentlemen. Thank you.",
+      "vi": "Các quý ông. Cảm ơn.",
+      "src": "failure-cabin:structural#16",
+      "tag": "(breath) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Houston! Fuel flow is dropping!",
+      "vi": "Houston! Lưu lượng nhiên liệu đang giảm!",
+      "src": "failure-cabin:fuel-depleted#0",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "collins",
+      "en": "Gauge reads low! Neil, it reads low!",
+      "vi": "Đồng hồ báo thấp! Neil, nó báo thấp!",
+      "src": "failure-cabin:fuel-depleted#1",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "aldrin",
+      "en": "How low?",
+      "vi": "Thấp cỡ nào?",
+      "src": "failure-cabin:fuel-depleted#2",
+      "tag": "(breath) "
+    },
+    {
+      "role": "collins",
+      "en": "Too low! Too low!",
+      "vi": "Quá thấp! Quá thấp!",
+      "src": "failure-cabin:fuel-depleted#3",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Check the tank pressures.",
+      "vi": "Kiểm tra áp suất bình.",
+      "src": "failure-cabin:fuel-depleted#4",
+      "tag": "(breath) "
+    },
+    {
+      "role": "aldrin",
+      "en": "Neil, we are short! Short!",
+      "vi": "Neil, thiếu rồi! Thiếu rồi!",
+      "src": "failure-cabin:fuel-depleted#5",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Come on! Come on!",
+      "vi": "Nào! Nào!",
+      "src": "failure-cabin:fuel-depleted#6",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Engines out! Engines are out!",
+      "vi": "Động cơ tắt rồi! Tắt hết rồi!",
+      "src": "failure-cabin:fuel-depleted#7",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "aldrin",
+      "en": "It is so quiet.",
+      "vi": "Yên lặng quá.",
+      "src": "failure-cabin:fuel-depleted#8",
+      "tag": "(breath) "
+    },
+    {
+      "role": "collins",
+      "en": "We are falling! We are falling!",
+      "vi": "Chúng ta đang rơi! Đang rơi!",
+      "src": "failure-cabin:fuel-depleted#9",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "aldrin",
+      "en": "Houston, do you read? Houston!",
+      "vi": "Houston, có nghe không? Houston!",
+      "src": "failure-cabin:fuel-depleted#11",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "collins",
+      "en": "Houston? Anyone?",
+      "vi": "Houston? Có ai không?",
+      "src": "failure-cabin:fuel-depleted#12",
+      "tag": "(breath) "
+    },
+    {
+      "role": "armstrong",
+      "en": "We did everything right.",
+      "vi": "Chúng ta đã làm đúng mọi thứ.",
+      "src": "failure-cabin:fuel-depleted#13",
+      "tag": "(breath) "
+    },
+    {
+      "role": "collins",
+      "en": "Neil...",
+      "vi": "Neil...",
+      "src": "failure-cabin:fuel-depleted#15",
+      "tag": "(breath) "
+    },
+    {
+      "role": "armstrong",
+      "en": "We are not accelerating! Houston!",
+      "vi": "Chúng ta không tăng tốc! Houston!",
+      "src": "failure-cabin:slow-climb#0",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "aldrin",
+      "en": "Altitude is not building.",
+      "vi": "Độ cao không lên.",
+      "src": "failure-cabin:slow-climb#1",
+      "tag": "(breath) "
+    },
+    {
+      "role": "collins",
+      "en": "Too heavy, Neil! Too heavy!",
+      "vi": "Quá nặng, Neil! Quá nặng!",
+      "src": "failure-cabin:slow-climb#2",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Full thrust. Give her everything.",
+      "vi": "Hết công suất. Dồn hết cho nó.",
+      "src": "failure-cabin:slow-climb#3",
+      "tag": "(breath) "
+    },
+    {
+      "role": "aldrin",
+      "en": "Climb rate zero!",
+      "vi": "Tốc độ leo bằng không!",
+      "src": "failure-cabin:slow-climb#4",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Come on, lift! Lift!",
+      "vi": "Nào, bay lên! Bay lên!",
+      "src": "failure-cabin:slow-climb#6",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "She cannot lift it! She cannot!",
+      "vi": "Nó không nhấc nổi! Không nổi!",
+      "src": "failure-cabin:slow-climb#7",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "aldrin",
+      "en": "We are coming down!",
+      "vi": "Chúng ta đang rơi xuống!",
+      "src": "failure-cabin:slow-climb#8",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Brace! Brace!",
+      "vi": "Giữ chặt! Giữ chặt!",
+      "src": "failure-cabin:slow-climb#10",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "collins",
+      "en": "Neil, the water!",
+      "vi": "Neil, mặt nước!",
+      "src": "failure-cabin:slow-climb#12",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Hold on, boys.",
+      "vi": "Bám chắc, các chàng trai.",
+      "src": "failure-cabin:slow-climb#13",
+      "tag": "(breath) "
+    },
+    {
+      "role": "aldrin",
+      "en": "Neil. It was an honor.",
+      "vi": "Neil. Thật vinh dự khi bay cùng anh.",
+      "src": "failure-cabin:slow-climb#15",
+      "tag": "(breath) "
+    },
+    {
+      "role": "armstrong",
+      "en": "The winds are throwing us!",
+      "vi": "Gió đang quăng chúng ta!",
+      "src": "failure-cabin:wind-shear#0",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "collins",
+      "en": "Yawing! I am losing the horizon!",
+      "vi": "Lệch hướng! Tôi mất chân trời!",
+      "src": "failure-cabin:wind-shear#1",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "aldrin",
+      "en": "Guidance cannot hold!",
+      "vi": "Dẫn đường không giữ nổi!",
+      "src": "failure-cabin:wind-shear#2",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Correct! Correct!",
+      "vi": "Chỉnh lại! Chỉnh lại!",
+      "src": "failure-cabin:wind-shear#3",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "collins",
+      "en": "The stick is fighting me!",
+      "vi": "Cần lái đang chống lại tôi!",
+      "src": "failure-cabin:wind-shear#4",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "We are out of control! Out of control!",
+      "vi": "Chúng ta mất kiểm soát! Mất kiểm soát!",
+      "src": "failure-cabin:wind-shear#6",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "She is tumbling! We are tumbling!",
+      "vi": "Nó đang lật nhào! Chúng ta đang lật!",
+      "src": "failure-cabin:wind-shear#7",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "collins",
+      "en": "I cannot tell up from down!",
+      "vi": "Tôi không phân biệt được trên dưới!",
+      "src": "failure-cabin:wind-shear#9",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Hold on!",
+      "vi": "Bám chắc!",
+      "src": "failure-cabin:wind-shear#10",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "collins",
+      "en": "Tell them we tried.",
+      "vi": "Hãy nói với họ là chúng tôi đã cố.",
+      "src": "failure-cabin:wind-shear#12",
+      "tag": "(breath) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Buzz!",
+      "vi": "Buzz!",
+      "src": "failure-cabin:wind-shear#13",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "aldrin",
+      "en": "Neil!",
+      "vi": "Neil!",
+      "src": "failure-cabin:wind-shear#14",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Lightning all around us.",
+      "vi": "Sét loé quanh chúng ta.",
+      "src": "failure-cabin:lightning#0",
+      "tag": "(breath) "
+    },
+    {
+      "role": "collins",
+      "en": "Static on every channel.",
+      "vi": "Mọi kênh đều nhiễu.",
+      "src": "failure-cabin:lightning#1",
+      "tag": "(breath) "
+    },
+    {
+      "role": "aldrin",
+      "en": "That flash. We have been hit!",
+      "vi": "Tia chớp đó. Chúng ta bị đánh trúng!",
+      "src": "failure-cabin:lightning#2",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Status! Report!",
+      "vi": "Báo cáo tình trạng!",
+      "src": "failure-cabin:lightning#3",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "collins",
+      "en": "Telemetry is dropping!",
+      "vi": "Dữ liệu đang mất!",
+      "src": "failure-cabin:lightning#4",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "aldrin",
+      "en": "Neil, the lights!",
+      "vi": "Neil, đèn!",
+      "src": "failure-cabin:lightning#5",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Houston? Houston! Come in, Houston!",
+      "vi": "Houston? Houston! Trả lời đi, Houston!",
+      "src": "failure-cabin:lightning#6",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "We lost everything! Everything!",
+      "vi": "Chúng ta mất hết rồi! Mất hết!",
+      "src": "failure-cabin:lightning#7",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "aldrin",
+      "en": "Abort! No guidance!",
+      "vi": "Huỷ bỏ! Mất dẫn đường!",
+      "src": "failure-cabin:lightning#8",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "collins",
+      "en": "The radio is dead!",
+      "vi": "Radio chết rồi!",
+      "src": "failure-cabin:lightning#9",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Stay calm.",
+      "vi": "Bình tĩnh.",
+      "src": "failure-cabin:lightning#10",
+      "tag": "(breath) "
+    },
+    {
+      "role": "collins",
+      "en": "Is anyone there?",
+      "vi": "Có ai không?",
+      "src": "failure-cabin:lightning#12",
+      "tag": "(breath) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Stay calm. Stay calm.",
+      "vi": "Bình tĩnh. Bình tĩnh.",
+      "src": "failure-cabin:lightning#13",
+      "tag": "(breath) "
+    },
+    {
+      "role": "booster",
+      "en": "Flight, Booster! Vibration! Vibration over limits!",
+      "vi": "Flight, Booster! Rung! Rung vượt giới hạn!",
+      "src": "launch-room#0",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "kranz",
+      "en": "All stations, Flight! Report! Report!",
+      "vi": "Toàn trung tâm, Flight đây! Báo cáo! Báo cáo!",
+      "src": "launch-room#1",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "booster",
+      "en": "Flight, Booster! Stage two is starving! Fuel is gone!",
+      "vi": "Flight, Booster! Tầng hai cạn rồi! Hết nhiên liệu!",
+      "src": "launch-room#2",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "kranz",
+      "en": "Copy! Crew, abort! Abort, abort!",
+      "vi": "Rõ! Phi hành đoàn, huỷ bỏ! Huỷ bỏ, huỷ bỏ!",
+      "src": "launch-room#3",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "booster",
+      "en": "Flight, Booster! She is not climbing! She is not climbing!",
+      "vi": "Flight, Booster! Nó không leo lên! Nó không leo lên!",
+      "src": "launch-room#4",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "kranz",
+      "en": "Too low! Abort, abort!",
+      "vi": "Quá thấp! Huỷ bỏ, huỷ bỏ!",
+      "src": "launch-room#5",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "bales",
+      "en": "Flight, Guidance! She is off course! Off course!",
+      "vi": "Flight, Dẫn đường! Nó lệch hướng rồi! Lệch hướng!",
+      "src": "launch-room#6",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "kranz",
+      "en": "Say again, Guidance! Say again!",
+      "vi": "Nói lại, Dẫn đường! Nói lại!",
+      "src": "launch-room#7",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "bales",
+      "en": "Flight, Guidance! We lost telemetry! All of it!",
+      "vi": "Flight, Dẫn đường! Mất dữ liệu! Mất hết!",
+      "src": "launch-room#8",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "kranz",
+      "en": "Say again! Say again!",
+      "vi": "Nói lại! Nói lại!",
+      "src": "launch-room#9",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "booster",
+      "en": "Flight, Booster! We have lost the vehicle! Vehicle lost!",
+      "vi": "Flight, Booster! Chúng ta mất tàu rồi! Mất tàu!",
+      "src": "launch-room#10",
+      "tag": "(gasps) (pant) "
+    },
+    {
+      "role": "bales",
+      "en": "Flight, Guidance! No tracking! No signal! Nothing!",
+      "vi": "Flight, Dẫn đường! Không bám được! Không tín hiệu! Không còn gì!",
+      "src": "launch-room#11",
+      "tag": "(gasps) (pant) "
+    },
+    {
+      "role": "capcom",
+      "en": "Columbia! Columbia, Houston! Do you read? Come in!",
+      "vi": "Columbia! Columbia, Houston! Có nghe không? Trả lời đi!",
+      "src": "launch-room#12",
+      "tag": "(gasps) (pant) "
+    },
+    {
+      "role": "capcom",
+      "en": "Columbia, Houston! Please, come in! Columbia!",
+      "vi": "Columbia, Houston! Làm ơn, trả lời đi! Columbia!",
+      "src": "launch-room#13",
+      "tag": "(gasps) (pant) "
+    },
+    {
+      "role": "kranz",
+      "en": "Capcom! Keep calling! Keep calling!",
+      "vi": "Capcom! Cứ gọi tiếp! Cứ gọi tiếp!",
+      "src": "launch-room#14",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "booster",
+      "en": "Flight, debris is falling in the water!",
+      "vi": "Flight, mảnh vỡ đang rơi xuống nước!",
+      "src": "launch-room#15",
+      "tag": "(gasps) "
+    },
+    {
+      "role": "kranz",
+      "en": "All stations, Flight. Hold your data. Nobody leaves a console.",
+      "vi": "Toàn trung tâm, Flight đây. Giữ nguyên dữ liệu. Không ai rời vị trí.",
+      "src": "launch-room#16"
+    },
+    {
+      "role": "kranz",
+      "en": "Remember what you saw. We will find out why.",
+      "vi": "Hãy nhớ những gì các bạn thấy. Chúng ta sẽ tìm ra vì sao.",
+      "src": "launch-room#17"
+    },
+    {
+      "role": "capcom",
+      "en": "Columbia... Houston...",
+      "vi": "Columbia... Houston...",
+      "src": "launch-room#18"
+    },
+    {
+      "role": "kranz",
+      "en": "All stations, Flight. We have lost the vehicle. I repeat, vehicle lost.",
+      "vi": "Toàn trung tâm, Flight đây. Chúng ta đã mất tàu. Nhắc lại, mất tàu.",
+      "src": "launch-ending:structural:call"
+    },
+    {
+      "role": "narrator",
+      "en": "Max Q: the hardest minute of the climb. The stack was asked to carry more than it was built for.",
+      "vi": "Max Q: phút khắc nghiệt nhất của chặng bay. Con tàu phải gánh nhiều hơn mức nó được thiết kế.",
+      "src": "launch-ending:structural#0"
+    },
+    {
+      "role": "narrator",
+      "en": "One seam gave way first. The rest of the structure followed in less than a second.",
+      "vi": "Một mối nối bung ra trước. Phần còn lại sụp theo chưa đầy một giây.",
+      "src": "launch-ending:structural#1"
+    },
+    {
+      "role": "narrator",
+      "en": "The sky over the Cape lit up, and then it was quiet.",
+      "vi": "Bầu trời trên mũi Canaveral bừng sáng, rồi tất cả im bặt.",
+      "src": "launch-ending:structural#2"
+    },
+    {
+      "role": "narrator",
+      "en": "In the control room nobody spoke. Every engineer there already knew why.",
+      "vi": "Trong phòng điều khiển không ai nói gì. Mọi kỹ sư ở đó đều đã biết vì sao.",
+      "src": "launch-ending:structural#3"
+    },
+    {
+      "role": "kranz",
+      "en": "Flight, Booster. Stage two is out. Propellant depleted. We are not making orbit.",
+      "vi": "Flight, Booster đây. Tầng hai đã tắt. Hết nhiên liệu. Chúng ta không tới được quỹ đạo.",
+      "src": "launch-ending:fuel-depleted:call"
+    },
+    {
+      "role": "narrator",
+      "en": "The engines shut down early, in silence, with the Earth still pulling at everything.",
+      "vi": "Động cơ tắt sớm, trong im lặng, khi Trái Đất vẫn đang kéo mọi thứ xuống.",
+      "src": "launch-ending:fuel-depleted#0"
+    },
+    {
+      "role": "narrator",
+      "en": "A rocket does not argue with arithmetic. The tanks held less than the climb required.",
+      "vi": "Tên lửa không cãi được với phép tính. Bình chứa ít hơn những gì chặng bay cần.",
+      "src": "launch-ending:fuel-depleted#1"
+    },
+    {
+      "role": "narrator",
+      "en": "The capsule coasted upward for a minute, then began to fall.",
+      "vi": "Khoang tàu trôi lên thêm một phút, rồi bắt đầu rơi.",
+      "src": "launch-ending:fuel-depleted#2"
+    },
+    {
+      "role": "narrator",
+      "en": "The last sound in the cabin was the crew breathing.",
+      "vi": "Âm thanh cuối cùng trong khoang là tiếng thở của phi hành đoàn.",
+      "src": "launch-ending:fuel-depleted#3"
+    },
+    {
+      "role": "kranz",
+      "en": "Flight, we are not accelerating. Altitude is not building. The vehicle is too heavy.",
+      "vi": "Flight đây, tàu không tăng tốc. Độ cao không lên. Tàu quá nặng.",
+      "src": "launch-ending:slow-climb:call"
+    },
+    {
+      "role": "narrator",
+      "en": "The engines burned at full thrust. It was not enough.",
+      "vi": "Động cơ cháy hết công suất. Vẫn không đủ.",
+      "src": "launch-ending:slow-climb#0"
+    },
+    {
+      "role": "narrator",
+      "en": "Too much weight, too little push. The rocket hung low over the Atlantic, struggling.",
+      "vi": "Quá nhiều khối lượng, quá ít lực đẩy. Tên lửa lơ lửng thấp trên Đại Tây Dương, vật lộn.",
+      "src": "launch-ending:slow-climb#1"
+    },
+    {
+      "role": "narrator",
+      "en": "It never reached the speed that holds a spacecraft in orbit.",
+      "vi": "Nó không bao giờ đạt được tốc độ giữ một con tàu ở lại quỹ đạo.",
+      "src": "launch-ending:slow-climb#2"
+    },
+    {
+      "role": "narrator",
+      "en": "Somewhere in the dark water, the pieces came down.",
+      "vi": "Ở đâu đó trên mặt nước tối, các mảnh vỡ rơi xuống.",
+      "src": "launch-ending:slow-climb#3"
+    },
+    {
+      "role": "kranz",
+      "en": "Flight, severe wind shear. We have lost guidance. We have lost the vehicle.",
+      "vi": "Flight đây, gió cắt cực mạnh. Mất dẫn đường. Chúng ta mất tàu.",
+      "src": "launch-ending:wind-shear:call"
+    },
+    {
+      "role": "narrator",
+      "en": "The wind aloft was stronger than the limits allowed. The warning was on the console.",
+      "vi": "Gió trên cao mạnh hơn giới hạn cho phép. Cảnh báo đã hiện sẵn trên bảng điều khiển.",
+      "src": "launch-ending:wind-shear#0"
+    },
+    {
+      "role": "narrator",
+      "en": "The vehicle turned sideways in the shear, and the air did the rest.",
+      "vi": "Con tàu xoay ngang trong lớp gió cắt, và phần còn lại là việc của không khí.",
+      "src": "launch-ending:wind-shear#1"
+    },
+    {
+      "role": "narrator",
+      "en": "Launch commit criteria exist for a reason. They are written in lost vehicles.",
+      "vi": "Tiêu chí phóng tồn tại là có lý do. Chúng được viết bằng những con tàu đã mất.",
+      "src": "launch-ending:wind-shear#2"
+    },
+    {
+      "role": "narrator",
+      "en": "There is no second rocket on the pad. The inquiry opens in the morning.",
+      "vi": "Không có tên lửa thứ hai trên bệ. Cuộc điều tra sẽ mở vào sáng mai.",
+      "src": "launch-ending:wind-shear#3"
+    },
+    {
+      "role": "kranz",
+      "en": "Flight, we have lost telemetry. All of it. Lightning. We have lost the vehicle.",
+      "vi": "Flight đây, mất toàn bộ dữ liệu. Sét. Chúng ta mất tàu.",
+      "src": "launch-ending:lightning:call"
+    },
+    {
+      "role": "narrator",
+      "en": "Storm clouds hung over the pad. The rocket's own exhaust gave the lightning a path.",
+      "vi": "Mây giông phủ kín bệ phóng. Chính luồng khí thải của tên lửa đã mở đường cho tia sét.",
+      "src": "launch-ending:lightning#0"
+    },
+    {
+      "role": "narrator",
+      "en": "A bolt followed the plume up. Every system went dark at once.",
+      "vi": "Một tia sét theo luồng lửa chạy lên. Mọi hệ thống tắt ngúm cùng lúc.",
+      "src": "launch-ending:lightning#1"
+    },
+    {
+      "role": "narrator",
+      "en": "Apollo 12 survived a strike like this, by luck. This crew had less of it.",
+      "vi": "Apollo 12 từng sống sót sau một cú sét như vậy, nhờ may mắn. Phi hành đoàn này không may mắn đến thế.",
+      "src": "launch-ending:lightning#2"
+    },
+    {
+      "role": "kranz",
+      "en": "All stations, Flight. Good orbit. Crew is safe. But I am told the money has run out.",
+      "vi": "Toàn trung tâm, Flight đây. Quỹ đạo tốt. Phi hành đoàn an toàn. Nhưng tôi nghe nói tiền đã hết.",
+      "src": "launch-ending:budget-cut:call"
+    },
+    {
+      "role": "narrator",
+      "en": "The vehicle reached orbit. The crew was safe, and the flight was perfect.",
+      "vi": "Con tàu lên tới quỹ đạo. Phi hành đoàn an toàn, chuyến bay hoàn hảo.",
+      "src": "launch-ending:budget-cut#0"
+    },
+    {
+      "role": "narrator",
+      "en": "But the programme had spent far more than it was ever given.",
+      "vi": "Nhưng chương trình đã tiêu nhiều hơn rất nhiều so với những gì được cấp.",
+      "src": "launch-ending:budget-cut#1"
+    },
+    {
+      "role": "narrator",
+      "en": "The vote came the following week. The Moon landings were cancelled.",
+      "vi": "Cuộc bỏ phiếu diễn ra tuần sau đó. Các chuyến đổ bộ Mặt Trăng bị huỷ.",
+      "src": "launch-ending:budget-cut#2"
+    },
+    {
+      "role": "narrator",
+      "en": "We reached orbit. We never went any further.",
+      "vi": "Chúng ta đã lên được quỹ đạo. Và không đi xa hơn nữa.",
+      "src": "launch-ending:budget-cut#3"
+    },
+    {
       "role": "capcom",
       "en": "Ignition sequence start. We have ignition.",
       "vi": "Bắt đầu đánh lửa. Động cơ đã nổ.",
@@ -858,12 +1713,6 @@
       "en": "Gene Kranz polls each team before launch.",
       "vi": "Gene Kranz hỏi ý kiến từng nhóm trước khi phóng.",
       "src": "mission-control:poll"
-    },
-    {
-      "role": "kranz",
-      "en": "Launch scrubbed: wind is over the 40 km/h limit. Pick another launch window.",
-      "vi": "Huỷ phóng: gió vượt giới hạn 40 km/h. Hãy chọn thời điểm phóng khác.",
-      "src": "mission-control:scrub"
     },
     {
       "role": "kranz",
@@ -969,8 +1818,8 @@
     },
     {
       "role": "capcom",
-      "en": "Through Max Q. Throttling back up.",
-      "vi": "Đã qua Max Q. Tăng lại lực đẩy.",
+      "en": "Through Max Q. The air load is easing off.",
+      "vi": "Đã qua Max Q. Tải khí động đang giảm.",
       "src": "ascent:callout:throttleUp"
     },
     {
@@ -1014,6 +1863,24 @@
       "en": "Stage two propellant is running out.",
       "vi": "Tầng hai sắp cạn nhiên liệu.",
       "src": "ascent:warn:fuel-depleted"
+    },
+    {
+      "role": "capcom",
+      "en": "Heavy buffeting. Bending loads are climbing past the limit.",
+      "vi": "Rung lắc mạnh. Tải uốn đang vượt giới hạn.",
+      "src": "ascent:warn:wind-shear"
+    },
+    {
+      "role": "capcom",
+      "en": "Static on every channel. The plume is reaching into the storm cloud.",
+      "vi": "Nhiễu trên mọi kênh. Luồng khí phụt đang chạm vào mây giông.",
+      "src": "ascent:warn:lightning"
+    },
+    {
+      "role": "capcom",
+      "en": "Dynamic pressure is over the structural limit.",
+      "vi": "Áp suất động vượt giới hạn kết cấu.",
+      "src": "ascent:warn:structural"
     },
     {
       "role": "narrator",

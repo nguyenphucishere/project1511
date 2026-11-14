@@ -78,20 +78,27 @@ const asJson = async (r: Response) => {
 };
 
 // ---- voices
-interface RoleConfig { label: string; radio: boolean; speed?: number; en: { voice: string }; vi: { voice: string } }
+/**
+ * How the lines performed in a state (panic, terror) are recorded: the same voice pushed faster, higher
+ * and louder, with an interjection tag in front of the words, "(gasps)" or "(breath)", which MiniMax
+ * speech 2.8 acts out. (ElevenLabs v3 emotion tags would do more, but that backend fails on this account.)
+ */
+interface CrisisConfig { provider: string; model: string; speed?: number; pitch?: number; vol?: number; stability?: number; similarity?: number; style_exaggeration?: number; en?: { voice: string }; vi?: { voice: string } }
+interface RoleConfig { label: string; radio: boolean; speed?: number; crisis?: CrisisConfig; en: { voice: string }; vi: { voice: string } }
 const cfg = JSON.parse(readFileSync(resolve(HERE, "voices.json"), "utf8")) as { model: string; roles: Record<string, RoleConfig> };
-const lines = (JSON.parse(readFileSync(resolve(HERE, "lines.json"), "utf8")) as { lines: { role: string; en: string; vi: string; viAsEn?: boolean; src: string }[] }).lines;
+const lines = (JSON.parse(readFileSync(resolve(HERE, "lines.json"), "utf8")) as { lines: { role: string; en: string; vi: string; viAsEn?: boolean; tag?: string; src: string }[] }).lines;
 
 const voiceCache = new Map<string, { voice_id: string; name: string }>();
-async function resolveVoice(name: string, locale: VoiceLocale): Promise<{ voice_id: string; name: string }> {
-  const k = `${locale}|${name}`;
+async function resolveVoice(name: string, locale: VoiceLocale, provider = "minimax"): Promise<{ voice_id: string; name: string }> {
+  const k = `${provider}|${locale}|${name}`;
   const hit = voiceCache.get(k);
   if (hit) return hit;
   if (DRY) return { voice_id: `dry:${name}`, name };
-  for (const q of [`language=${locale}&search=${encodeURIComponent(name)}`, `search=${encodeURIComponent(name)}`]) {
+  const scope = provider === "minimax" ? "" : `provider=${provider}&`;
+  for (const q of [`language=${locale}&${scope}search=${encodeURIComponent(name)}`, `${scope}search=${encodeURIComponent(name)}`]) {
     for (let page = 0; page < 4; page++) {
       const r = await asJson(await rfetch(`${BASE}/voices?limit=100&page=${page}&${q}`, { headers: H }));
-      const found = (r.voices ?? []).find((v: any) => v.name.toLowerCase() === name.toLowerCase() && String(v.provider).toLowerCase().startsWith("minimax"));
+      const found = (r.voices ?? []).find((v: any) => v.name.toLowerCase() === name.toLowerCase() && String(v.provider).toLowerCase().startsWith(provider));
       if (found) {
         voiceCache.set(k, found);
         return found;
@@ -103,7 +110,7 @@ async function resolveVoice(name: string, locale: VoiceLocale): Promise<{ voice_
 }
 
 // ---- jobs
-interface Job { role: string; locale: VoiceLocale; text: string; voiceLocale: VoiceLocale; key: string; file: string; hash: string }
+interface Job { crisis?: boolean; tag?: string; role: string; locale: VoiceLocale; text: string; voiceLocale: VoiceLocale; key: string; file: string; hash: string }
 const manifestPath = resolve(OUT_DIR, "manifest.json");
 const prev = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf8")) : { lines: {} };
 const manifest: { version: 1; model: string; roles: Record<string, { radio: boolean }>; lines: Record<string, { f: string; role: string; h: string }> } = {
@@ -120,12 +127,16 @@ for (const l of lines) {
     const text = locale === "vi" && l.viAsEn ? l.en : l[locale];
     const voiceLocale: VoiceLocale = locale === "vi" && l.viAsEn ? "en" : locale;
     const key = voiceKey(locale, l[locale]); // the game looks the line up by the words it shows
-    const voiceName = role[voiceLocale].voice;
-    const hash = createHash("sha1").update([text, voiceName, cfg.model, role.speed ?? 1, voiceLocale].join("|")).digest("hex").slice(0, 10);
+    const crisis = l.tag && role.crisis ? role.crisis : null;
+    const voiceName = crisis ? (crisis[voiceLocale]?.voice ?? role[voiceLocale].voice) : role[voiceLocale].voice;
+    const hash = createHash("sha1")
+      .update([text, voiceName, crisis ? crisis.model : cfg.model, crisis ? `${l.tag}|${crisis.provider}|${crisis.speed}|${crisis.pitch}|${crisis.vol}` : role.speed ?? 1, voiceLocale].join("|"))
+      .digest("hex")
+      .slice(0, 10);
     const file = `${locale}/${key}.${EXT}`;
     const known = manifest.lines[key];
     if (known && known.h === hash && existsSync(resolve(OUT_DIR, file))) continue;
-    jobs.push({ role: l.role, locale, text, voiceLocale, key, file, hash });
+    jobs.push({ role: l.role, locale, text, voiceLocale, key, file, hash, crisis: !!crisis, tag: crisis ? l.tag : undefined });
   }
 }
 // Drop recordings of lines that no longer exist (text changed, role changed), so the manifest and the folder stay clean.
@@ -152,16 +163,31 @@ mkdirSync(resolve(OUT_DIR, "vi"), { recursive: true });
 // ---- one request per line (the fallback, and --no-batch)
 async function record(job: Job): Promise<{ audio: Buffer; chars: number }> {
   const role = cfg.roles[job.role];
-  const voice = await resolveVoice(role[job.voiceLocale].voice, job.voiceLocale);
+  const crisis = job.crisis ? role.crisis! : null;
+  const voice = crisis
+    ? await resolveVoice(crisis[job.voiceLocale]?.voice ?? role[job.voiceLocale].voice, job.voiceLocale, crisis.provider)
+    : await resolveVoice(role[job.voiceLocale].voice, job.voiceLocale);
   let lastError = "";
   for (let attempt = 1; attempt <= 3; attempt++) {
     const fd = new FormData();
-    fd.append("provider", "minimax");
-    fd.append("voice_id", voice.voice_id);
-    fd.append("text", job.text);
-    fd.append("model", cfg.model);
-    fd.append("language", job.voiceLocale === "vi" ? "Vietnamese" : "English");
-    fd.append("speed", String(role.speed ?? 1));
+    if (crisis) {
+      // A performed line: the same voice, faster and higher, with the interjection tag in front of the words.
+      fd.append("provider", crisis.provider);
+      fd.append("voice_id", voice.voice_id);
+      fd.append("text", `${job.tag}${job.text}`);
+      fd.append("model", crisis.model);
+      fd.append("language", job.voiceLocale === "vi" ? "Vietnamese" : "English");
+      fd.append("speed", String(crisis.speed ?? 1));
+      if (crisis.pitch !== undefined) fd.append("pitch", String(crisis.pitch));
+      if (crisis.vol !== undefined) fd.append("vol", String(crisis.vol));
+    } else {
+      fd.append("provider", "minimax");
+      fd.append("voice_id", voice.voice_id);
+      fd.append("text", job.text);
+      fd.append("model", cfg.model);
+      fd.append("language", job.voiceLocale === "vi" ? "Vietnamese" : "English");
+      fd.append("speed", String(role.speed ?? 1));
+    }
     const sub = await rfetch(`${BASE}/tts/generate`, { method: "POST", headers: H, body: fd });
     const created = await asJson(sub);
     if (!created?.job_id) {
@@ -320,7 +346,7 @@ let queue = jobs.slice(0, LIMIT);
 if (!NO_BATCH && queue.length) {
   if (!HAVE_FFMPEG) throw new Error("ffmpeg not found: install it, or set FFMPEG=path/to/ffmpeg(.exe), or use --no-batch");
   const tmp = mkdtempSync(resolve(tmpdir(), "voice-"));
-  const batches = makeBatches(queue);
+  const batches = makeBatches(queue.filter((j) => !j.crisis));
   console.log(`${batches.length} batches for ${queue.length} lines`);
   const leftovers: Job[] = [];
   let finished = 0;
@@ -344,7 +370,7 @@ if (!NO_BATCH && queue.length) {
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, batches.length) }, batchWorker));
   rmSync(tmp, { recursive: true, force: true });
   console.log(`\nbatches finished: ${done} lines recorded, ${leftovers.length} need their own request`);
-  queue = leftovers;
+  queue = [...leftovers, ...queue.filter((j) => j.crisis)]; // performed lines are always one request each
 }
 
 const failed: string[] = [];

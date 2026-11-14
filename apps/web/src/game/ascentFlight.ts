@@ -166,13 +166,13 @@ export const heating = (met: number, orbitKm = DEFAULT_ORBIT_KM) =>
   Math.min(1, Math.max(0, dynamicPressureKpa(met, orbitKm) / ascentProfile(orbitKm).events.max_q_kpa));
 
 /** Mission seconds of warning before a failure, played at near real time so the dread has room. */
-export const TROUBLE_LEAD = 30;
+export const TROUBLE_LEAD = 24;
 /** Mission seconds before the failure at which the situation turns critical (master alarm). */
 export const CRITICAL_LEAD = 12;
 /** Real seconds after the engines fail: the abort call, then the vehicle is lost. */
-export const FAIL_ABORT_AT = 2.4;
-export const FAIL_BOOM_AT = 6.8;
-export const FAIL_END_AT = 9.6;
+export const FAIL_ABORT_AT = 3;
+export const FAIL_BOOM_AT = 16;
+export const FAIL_END_AT = 19;
 
 /** What went wrong, so the scene can say the right thing. */
 export type FailureCode = "slow-climb" | "fuel-depleted" | "wind-shear" | "lightning" | "structural";

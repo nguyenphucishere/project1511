@@ -238,11 +238,6 @@
    "role": "kranz",
    "h": "d1fede3d21"
   },
-  "en-f3ba903c875108e1": {
-   "f": "en/en-f3ba903c875108e1.m4a",
-   "role": "kranz",
-   "h": "733bb8e10c"
-  },
   "en-bc5bc1d69cfbbacf": {
    "f": "en/en-bc5bc1d69cfbbacf.m4a",
    "role": "kranz",
@@ -272,11 +267,6 @@
    "f": "en/en-1a558d9104f71a48.m4a",
    "role": "kranz",
    "h": "8127fe033f"
-  },
-  "en-355c9d412bf9749e": {
-   "f": "en/en-355c9d412bf9749e.m4a",
-   "role": "kranz",
-   "h": "ddc155c1eb"
   },
   "en-447cf59d830ec5c6": {
    "f": "en/en-447cf59d830ec5c6.m4a",
@@ -1663,11 +1653,6 @@
    "role": "capcom",
    "h": "3f3263d092"
   },
-  "vi-cb445b9cf3e71559": {
-   "f": "vi/vi-cb445b9cf3e71559.m4a",
-   "role": "capcom",
-   "h": "78e87877a4"
-  },
   "vi-0112372d20cae306": {
    "f": "vi/vi-0112372d20cae306.m4a",
    "role": "capcom",
@@ -1798,11 +1783,6 @@
    "role": "capcom",
    "h": "0dcf38f679"
   },
-  "en-a98452433b22b534": {
-   "f": "en/en-a98452433b22b534.m4a",
-   "role": "capcom",
-   "h": "d08b6c0a85"
-  },
   "en-fd0232b151477224": {
    "f": "en/en-fd0232b151477224.m4a",
    "role": "capcom",
@@ -1843,20 +1823,10 @@
    "role": "nixon",
    "h": "f78f6b8d2c"
   },
-  "vi-c988b80e3faa26f7": {
-   "f": "vi/vi-c988b80e3faa26f7.m4a",
-   "role": "kranz",
-   "h": "81324548b0"
-  },
   "vi-42d49bbb642f0ffe": {
    "f": "vi/vi-42d49bbb642f0ffe.m4a",
    "role": "kranz",
    "h": "67b21e828a"
-  },
-  "vi-9c7b4a41f9e9fd3a": {
-   "f": "vi/vi-9c7b4a41f9e9fd3a.m4a",
-   "role": "kranz",
-   "h": "1baf05fdc4"
   },
   "vi-6e9fec71edb942bc": {
    "f": "vi/vi-6e9fec71edb942bc.m4a",
@@ -2342,6 +2312,1346 @@
    "f": "vi/vi-e95803cfde2d0dec.m4a",
    "role": "armstrong",
    "h": "740d3e23bf"
+  },
+  "en-93049a4edf3701db": {
+   "f": "en/en-93049a4edf3701db.m4a",
+   "role": "doctor",
+   "h": "7b28021c01"
+  },
+  "en-e11244d97bbde024": {
+   "f": "en/en-e11244d97bbde024.m4a",
+   "role": "doctor",
+   "h": "e358b0c82d"
+  },
+  "en-a83e12753f6742dc": {
+   "f": "en/en-a83e12753f6742dc.m4a",
+   "role": "doctor",
+   "h": "e16ca564e1"
+  },
+  "en-d280a076e56babb1": {
+   "f": "en/en-d280a076e56babb1.m4a",
+   "role": "doctor",
+   "h": "bda323f4ff"
+  },
+  "en-527e8f0c58f97fa5": {
+   "f": "en/en-527e8f0c58f97fa5.m4a",
+   "role": "doctor",
+   "h": "2150f4c822"
+  },
+  "en-f073556797ff628a": {
+   "f": "en/en-f073556797ff628a.m4a",
+   "role": "doctor",
+   "h": "87720e50c8"
+  },
+  "en-e4d90273755845dc": {
+   "f": "en/en-e4d90273755845dc.m4a",
+   "role": "kranz",
+   "h": "17bf1dfd0b"
+  },
+  "vi-4db94bd581a5f25c": {
+   "f": "vi/vi-4db94bd581a5f25c.m4a",
+   "role": "kranz",
+   "h": "d582a196a5"
+  },
+  "en-635cce31b9bce486": {
+   "f": "en/en-635cce31b9bce486.m4a",
+   "role": "capcom",
+   "h": "c019abb65d"
+  },
+  "en-0b09c3b02f056595": {
+   "f": "en/en-0b09c3b02f056595.m4a",
+   "role": "capcom",
+   "h": "d3b46c5c73"
+  },
+  "en-55a208c35ccc4d48": {
+   "f": "en/en-55a208c35ccc4d48.m4a",
+   "role": "capcom",
+   "h": "fcf0558cd1"
+  },
+  "en-732bd49930fa1ffa": {
+   "f": "en/en-732bd49930fa1ffa.m4a",
+   "role": "capcom",
+   "h": "feb589ecda"
+  },
+  "vi-8783b9ffb51d1cb6": {
+   "f": "vi/vi-8783b9ffb51d1cb6.m4a",
+   "role": "capcom",
+   "h": "45f85dae7b"
+  },
+  "vi-4f7aaf8b69cd8330": {
+   "f": "vi/vi-4f7aaf8b69cd8330.m4a",
+   "role": "capcom",
+   "h": "0234c935d8"
+  },
+  "vi-2f6eecc51746c7be": {
+   "f": "vi/vi-2f6eecc51746c7be.m4a",
+   "role": "capcom",
+   "h": "33ce116b7b"
+  },
+  "vi-b4da48947663f3fd": {
+   "f": "vi/vi-b4da48947663f3fd.m4a",
+   "role": "capcom",
+   "h": "c11cc51d65"
+  },
+  "vi-34f206cefc30c4e9": {
+   "f": "vi/vi-34f206cefc30c4e9.m4a",
+   "role": "doctor",
+   "h": "2f0ea096f6"
+  },
+  "vi-8e78e5c03a52883f": {
+   "f": "vi/vi-8e78e5c03a52883f.m4a",
+   "role": "doctor",
+   "h": "08964ac695"
+  },
+  "vi-66a291f572122cda": {
+   "f": "vi/vi-66a291f572122cda.m4a",
+   "role": "doctor",
+   "h": "326a07715a"
+  },
+  "vi-5353b62a16295621": {
+   "f": "vi/vi-5353b62a16295621.m4a",
+   "role": "doctor",
+   "h": "7802895153"
+  },
+  "vi-7ecdb5bf5ecd4e36": {
+   "f": "vi/vi-7ecdb5bf5ecd4e36.m4a",
+   "role": "doctor",
+   "h": "f7202eb81d"
+  },
+  "vi-58a3b0d8c6e3fec1": {
+   "f": "vi/vi-58a3b0d8c6e3fec1.m4a",
+   "role": "doctor",
+   "h": "2efa0e6c94"
+  },
+  "en-cab64b5c41a787a7": {
+   "f": "en/en-cab64b5c41a787a7.m4a",
+   "role": "kranz",
+   "h": "1f9e6180f0"
+  },
+  "en-64c32fca37539fc9": {
+   "f": "en/en-64c32fca37539fc9.m4a",
+   "role": "kranz",
+   "h": "09611cdb36"
+  },
+  "en-a59b25048a741eeb": {
+   "f": "en/en-a59b25048a741eeb.m4a",
+   "role": "kranz",
+   "h": "412b2f7319"
+  },
+  "en-5608f1847dc55efd": {
+   "f": "en/en-5608f1847dc55efd.m4a",
+   "role": "kranz",
+   "h": "d08f263422"
+  },
+  "en-3a973b2cadb2680d": {
+   "f": "en/en-3a973b2cadb2680d.m4a",
+   "role": "kranz",
+   "h": "e2dea5f0f8"
+  },
+  "en-0e8fff74caf96a7b": {
+   "f": "en/en-0e8fff74caf96a7b.m4a",
+   "role": "kranz",
+   "h": "ce1ee78212"
+  },
+  "en-7bff196341a6c83c": {
+   "f": "en/en-7bff196341a6c83c.m4a",
+   "role": "kranz",
+   "h": "ea506d61cd"
+  },
+  "en-f492314156f6fafe": {
+   "f": "en/en-f492314156f6fafe.m4a",
+   "role": "kranz",
+   "h": "6c52695abc"
+  },
+  "en-5a6b69dc94cb3cad": {
+   "f": "en/en-5a6b69dc94cb3cad.m4a",
+   "role": "kranz",
+   "h": "be59c7e2cd"
+  },
+  "en-12596c4dbea944d2": {
+   "f": "en/en-12596c4dbea944d2.m4a",
+   "role": "kranz",
+   "h": "560834a603"
+  },
+  "vi-3310c768fda75a73": {
+   "f": "vi/vi-3310c768fda75a73.m4a",
+   "role": "kranz",
+   "h": "2492b732af"
+  },
+  "vi-ab73dad4a7bad577": {
+   "f": "vi/vi-ab73dad4a7bad577.m4a",
+   "role": "kranz",
+   "h": "d18c89cfff"
+  },
+  "vi-1f6f7035195e02e0": {
+   "f": "vi/vi-1f6f7035195e02e0.m4a",
+   "role": "kranz",
+   "h": "f280d55a52"
+  },
+  "vi-8721b1110ef0543a": {
+   "f": "vi/vi-8721b1110ef0543a.m4a",
+   "role": "kranz",
+   "h": "916b937789"
+  },
+  "vi-f42daaa00cdf0c9f": {
+   "f": "vi/vi-f42daaa00cdf0c9f.m4a",
+   "role": "kranz",
+   "h": "024d719507"
+  },
+  "vi-82d2f26f532b156c": {
+   "f": "vi/vi-82d2f26f532b156c.m4a",
+   "role": "kranz",
+   "h": "9ef5605d47"
+  },
+  "vi-19ae6b904a2e4b57": {
+   "f": "vi/vi-19ae6b904a2e4b57.m4a",
+   "role": "kranz",
+   "h": "9e0409daff"
+  },
+  "vi-4228117cb182cf2f": {
+   "f": "vi/vi-4228117cb182cf2f.m4a",
+   "role": "kranz",
+   "h": "2a8c1ce13c"
+  },
+  "vi-5039413a3ed3e5ef": {
+   "f": "vi/vi-5039413a3ed3e5ef.m4a",
+   "role": "kranz",
+   "h": "060cc7848f"
+  },
+  "vi-0641373b4542f632": {
+   "f": "vi/vi-0641373b4542f632.m4a",
+   "role": "kranz",
+   "h": "32f53f7d60"
+  },
+  "en-8297c57984a1d098": {
+   "f": "en/en-8297c57984a1d098.m4a",
+   "role": "narrator",
+   "h": "2fba7049f7"
+  },
+  "en-0529d3549b386d7f": {
+   "f": "en/en-0529d3549b386d7f.m4a",
+   "role": "narrator",
+   "h": "aa25aa5cf8"
+  },
+  "vi-69330c1fdb2ecdf6": {
+   "f": "vi/vi-69330c1fdb2ecdf6.m4a",
+   "role": "narrator",
+   "h": "13ba86fd86"
+  },
+  "vi-80e7642e0778c907": {
+   "f": "vi/vi-80e7642e0778c907.m4a",
+   "role": "narrator",
+   "h": "e7fc41dfbf"
+  },
+  "en-99640d47b728fbf2": {
+   "f": "en/en-99640d47b728fbf2.m4a",
+   "role": "kranz",
+   "h": "48cb6ae6b4"
+  },
+  "en-9c72f4d008b3eccb": {
+   "f": "en/en-9c72f4d008b3eccb.m4a",
+   "role": "kranz",
+   "h": "1094ccdd4c"
+  },
+  "en-bb1ddc9ce0cbf06f": {
+   "f": "en/en-bb1ddc9ce0cbf06f.m4a",
+   "role": "kranz",
+   "h": "8c9c7bedd1"
+  },
+  "en-b624aab6369b1b97": {
+   "f": "en/en-b624aab6369b1b97.m4a",
+   "role": "kranz",
+   "h": "04b24ed02c"
+  },
+  "en-a5eef3df1350589e": {
+   "f": "en/en-a5eef3df1350589e.m4a",
+   "role": "kranz",
+   "h": "fdf3716433"
+  },
+  "en-55335d7252d7e6e9": {
+   "f": "en/en-55335d7252d7e6e9.m4a",
+   "role": "kranz",
+   "h": "f6eb3e750c"
+  },
+  "vi-2aa171cbdb45c9aa": {
+   "f": "vi/vi-2aa171cbdb45c9aa.m4a",
+   "role": "kranz",
+   "h": "6a59a0b00b"
+  },
+  "vi-31d4da44ae004513": {
+   "f": "vi/vi-31d4da44ae004513.m4a",
+   "role": "kranz",
+   "h": "a7692cfec5"
+  },
+  "vi-722ed343e9479452": {
+   "f": "vi/vi-722ed343e9479452.m4a",
+   "role": "kranz",
+   "h": "d545b4a278"
+  },
+  "vi-aaa67f7a4fb83be9": {
+   "f": "vi/vi-aaa67f7a4fb83be9.m4a",
+   "role": "kranz",
+   "h": "bc7dfec726"
+  },
+  "vi-c8a7c26eba047feb": {
+   "f": "vi/vi-c8a7c26eba047feb.m4a",
+   "role": "kranz",
+   "h": "09c45356f0"
+  },
+  "vi-ff2e32fd9d38af10": {
+   "f": "vi/vi-ff2e32fd9d38af10.m4a",
+   "role": "kranz",
+   "h": "df1a15c143"
+  },
+  "en-b56e5211539ed3de": {
+   "f": "en/en-b56e5211539ed3de.m4a",
+   "role": "narrator",
+   "h": "813d488453"
+  },
+  "en-13bc5a469c4ada95": {
+   "f": "en/en-13bc5a469c4ada95.m4a",
+   "role": "narrator",
+   "h": "7fcaa60570"
+  },
+  "en-7d37de70f6b8e947": {
+   "f": "en/en-7d37de70f6b8e947.m4a",
+   "role": "narrator",
+   "h": "d4809293d6"
+  },
+  "en-a527c68e1c918a79": {
+   "f": "en/en-a527c68e1c918a79.m4a",
+   "role": "narrator",
+   "h": "c0179608d8"
+  },
+  "en-5ae1170975f7d75e": {
+   "f": "en/en-5ae1170975f7d75e.m4a",
+   "role": "narrator",
+   "h": "e96c26fbb6"
+  },
+  "en-47e24daf9853c39e": {
+   "f": "en/en-47e24daf9853c39e.m4a",
+   "role": "narrator",
+   "h": "863634d7e8"
+  },
+  "en-c3c2cfea21632cc5": {
+   "f": "en/en-c3c2cfea21632cc5.m4a",
+   "role": "narrator",
+   "h": "4f5644bebf"
+  },
+  "en-01b6be44b9ab2711": {
+   "f": "en/en-01b6be44b9ab2711.m4a",
+   "role": "narrator",
+   "h": "e6610db855"
+  },
+  "en-e0eb91b7145977ce": {
+   "f": "en/en-e0eb91b7145977ce.m4a",
+   "role": "narrator",
+   "h": "a05d22f5b5"
+  },
+  "en-3aca6c51f5fa8a0e": {
+   "f": "en/en-3aca6c51f5fa8a0e.m4a",
+   "role": "narrator",
+   "h": "ae67e12b1d"
+  },
+  "en-60655e24879d35ef": {
+   "f": "en/en-60655e24879d35ef.m4a",
+   "role": "narrator",
+   "h": "370c41a645"
+  },
+  "en-9c1de7e80be4525b": {
+   "f": "en/en-9c1de7e80be4525b.m4a",
+   "role": "narrator",
+   "h": "222f07c378"
+  },
+  "en-7ab9902f8e6ddb7c": {
+   "f": "en/en-7ab9902f8e6ddb7c.m4a",
+   "role": "narrator",
+   "h": "4f7beb57f2"
+  },
+  "en-ee95b2a385fb7082": {
+   "f": "en/en-ee95b2a385fb7082.m4a",
+   "role": "narrator",
+   "h": "8193bcdd00"
+  },
+  "en-0ca44b63402a5b56": {
+   "f": "en/en-0ca44b63402a5b56.m4a",
+   "role": "narrator",
+   "h": "e7ea717729"
+  },
+  "en-8732203d78f64b38": {
+   "f": "en/en-8732203d78f64b38.m4a",
+   "role": "narrator",
+   "h": "05fd4c663d"
+  },
+  "en-57431ef44b13768d": {
+   "f": "en/en-57431ef44b13768d.m4a",
+   "role": "narrator",
+   "h": "ed040a5645"
+  },
+  "en-eb2825f9e48385ec": {
+   "f": "en/en-eb2825f9e48385ec.m4a",
+   "role": "narrator",
+   "h": "5c631e441b"
+  },
+  "en-dad83047fc5a0cda": {
+   "f": "en/en-dad83047fc5a0cda.m4a",
+   "role": "narrator",
+   "h": "d565999882"
+  },
+  "en-71f1b07105dec14c": {
+   "f": "en/en-71f1b07105dec14c.m4a",
+   "role": "narrator",
+   "h": "e9af1b6cf8"
+  },
+  "en-71675ffd81842a6a": {
+   "f": "en/en-71675ffd81842a6a.m4a",
+   "role": "narrator",
+   "h": "77d0931982"
+  },
+  "vi-2cdcde3c19d44dd5": {
+   "f": "vi/vi-2cdcde3c19d44dd5.m4a",
+   "role": "narrator",
+   "h": "306fd9e266"
+  },
+  "vi-c84f5f2065f6b0cd": {
+   "f": "vi/vi-c84f5f2065f6b0cd.m4a",
+   "role": "narrator",
+   "h": "77d20a2024"
+  },
+  "vi-0e3978063fd7a153": {
+   "f": "vi/vi-0e3978063fd7a153.m4a",
+   "role": "narrator",
+   "h": "d306b24c24"
+  },
+  "vi-653a7ad953cb830c": {
+   "f": "vi/vi-653a7ad953cb830c.m4a",
+   "role": "narrator",
+   "h": "4a00f669f1"
+  },
+  "vi-2597bb35353bc7b0": {
+   "f": "vi/vi-2597bb35353bc7b0.m4a",
+   "role": "narrator",
+   "h": "dd7f97567a"
+  },
+  "vi-cc467d257d417d0a": {
+   "f": "vi/vi-cc467d257d417d0a.m4a",
+   "role": "narrator",
+   "h": "6527a86d80"
+  },
+  "vi-8250f13a6095a33d": {
+   "f": "vi/vi-8250f13a6095a33d.m4a",
+   "role": "narrator",
+   "h": "cc141e572f"
+  },
+  "vi-2713c5d3e4bdbcaa": {
+   "f": "vi/vi-2713c5d3e4bdbcaa.m4a",
+   "role": "narrator",
+   "h": "03a05f3ff1"
+  },
+  "vi-b6d1679d26298142": {
+   "f": "vi/vi-b6d1679d26298142.m4a",
+   "role": "narrator",
+   "h": "c138e1e2a0"
+  },
+  "vi-7d9f81a8060f6529": {
+   "f": "vi/vi-7d9f81a8060f6529.m4a",
+   "role": "narrator",
+   "h": "d40f73fb42"
+  },
+  "vi-99b8cb7dee8cd948": {
+   "f": "vi/vi-99b8cb7dee8cd948.m4a",
+   "role": "narrator",
+   "h": "97b57fd4c7"
+  },
+  "vi-d1bbcdc379fa2260": {
+   "f": "vi/vi-d1bbcdc379fa2260.m4a",
+   "role": "narrator",
+   "h": "f39265db96"
+  },
+  "vi-bcde8a5a06b4d83f": {
+   "f": "vi/vi-bcde8a5a06b4d83f.m4a",
+   "role": "narrator",
+   "h": "e65a9befba"
+  },
+  "vi-fc94110fa705aa24": {
+   "f": "vi/vi-fc94110fa705aa24.m4a",
+   "role": "narrator",
+   "h": "a0d4e4ebb0"
+  },
+  "vi-5103f8fb67525544": {
+   "f": "vi/vi-5103f8fb67525544.m4a",
+   "role": "narrator",
+   "h": "de01efaf12"
+  },
+  "vi-bd41b30d87fe8d16": {
+   "f": "vi/vi-bd41b30d87fe8d16.m4a",
+   "role": "narrator",
+   "h": "18bc109a42"
+  },
+  "vi-57a23bfa2d242a43": {
+   "f": "vi/vi-57a23bfa2d242a43.m4a",
+   "role": "narrator",
+   "h": "3cd4808466"
+  },
+  "vi-6b402349a2111822": {
+   "f": "vi/vi-6b402349a2111822.m4a",
+   "role": "narrator",
+   "h": "a3572e2702"
+  },
+  "vi-c49863fa8e845621": {
+   "f": "vi/vi-c49863fa8e845621.m4a",
+   "role": "narrator",
+   "h": "eb24fc0f5b"
+  },
+  "vi-bfac22fe303d8eff": {
+   "f": "vi/vi-bfac22fe303d8eff.m4a",
+   "role": "narrator",
+   "h": "efca7ceeda"
+  },
+  "vi-1b4728276a29a862": {
+   "f": "vi/vi-1b4728276a29a862.m4a",
+   "role": "narrator",
+   "h": "a028bb1718"
+  },
+  "en-4fdb0bf397b4d60e": {
+   "f": "en/en-4fdb0bf397b4d60e.m4a",
+   "role": "collins",
+   "h": "7a2f363d9e"
+  },
+  "en-6430e9bae1e632e3": {
+   "f": "en/en-6430e9bae1e632e3.m4a",
+   "role": "armstrong",
+   "h": "b62e138942"
+  },
+  "vi-058bda0ca13f4191": {
+   "f": "vi/vi-058bda0ca13f4191.m4a",
+   "role": "aldrin",
+   "h": "4758909e50"
+  },
+  "vi-6c73ce169b4a4d7f": {
+   "f": "vi/vi-6c73ce169b4a4d7f.m4a",
+   "role": "armstrong",
+   "h": "4b37604b7f"
+  },
+  "vi-5fffa814fd2863d7": {
+   "f": "vi/vi-5fffa814fd2863d7.m4a",
+   "role": "collins",
+   "h": "06ae98b133"
+  },
+  "en-27675030ca2ff11d": {
+   "f": "en/en-27675030ca2ff11d.m4a",
+   "role": "aldrin",
+   "h": "ff895fc3f9"
+  },
+  "en-a1bbc9648819b197": {
+   "f": "en/en-a1bbc9648819b197.m4a",
+   "role": "collins",
+   "h": "53e1d01670"
+  },
+  "en-26a162f4ef1e6e59": {
+   "f": "en/en-26a162f4ef1e6e59.m4a",
+   "role": "collins",
+   "h": "8069ac7c23"
+  },
+  "en-8554e8e4091fac69": {
+   "f": "en/en-8554e8e4091fac69.m4a",
+   "role": "collins",
+   "h": "7dfd0999b3"
+  },
+  "en-603337915fee6c4a": {
+   "f": "en/en-603337915fee6c4a.m4a",
+   "role": "collins",
+   "h": "feaf8515ca"
+  },
+  "en-9743393cbca482ab": {
+   "f": "en/en-9743393cbca482ab.m4a",
+   "role": "collins",
+   "h": "d3e8025989"
+  },
+  "en-7dc604a6bc55c4a7": {
+   "f": "en/en-7dc604a6bc55c4a7.m4a",
+   "role": "collins",
+   "h": "e4ccc067fb"
+  },
+  "en-c94c5f231a2b224a": {
+   "f": "en/en-c94c5f231a2b224a.m4a",
+   "role": "collins",
+   "h": "bbb7658da7"
+  },
+  "en-bedb79c9a0117ab2": {
+   "f": "en/en-bedb79c9a0117ab2.m4a",
+   "role": "collins",
+   "h": "0a304c0f56"
+  },
+  "en-599d80378927f3c4": {
+   "f": "en/en-599d80378927f3c4.m4a",
+   "role": "collins",
+   "h": "c9d02a8f75"
+  },
+  "en-5ecb32cbb4f1499c": {
+   "f": "en/en-5ecb32cbb4f1499c.m4a",
+   "role": "collins",
+   "h": "ec8ca30470"
+  },
+  "en-929f1787d4a66174": {
+   "f": "en/en-929f1787d4a66174.m4a",
+   "role": "collins",
+   "h": "d892b4deb1"
+  },
+  "en-48f896a6a5cc4fb7": {
+   "f": "en/en-48f896a6a5cc4fb7.m4a",
+   "role": "aldrin",
+   "h": "530cb7acdd"
+  },
+  "en-a570c0e7fe0fe28c": {
+   "f": "en/en-a570c0e7fe0fe28c.m4a",
+   "role": "aldrin",
+   "h": "6746f06cfc"
+  },
+  "en-7c2a744b4ee3619c": {
+   "f": "en/en-7c2a744b4ee3619c.m4a",
+   "role": "aldrin",
+   "h": "c3abf28164"
+  },
+  "en-89c56755d9df15b0": {
+   "f": "en/en-89c56755d9df15b0.m4a",
+   "role": "aldrin",
+   "h": "3ef52f90a8"
+  },
+  "en-5c51bad32c372796": {
+   "f": "en/en-5c51bad32c372796.m4a",
+   "role": "aldrin",
+   "h": "f626fc6d89"
+  },
+  "en-ce18591af3249a89": {
+   "f": "en/en-ce18591af3249a89.m4a",
+   "role": "aldrin",
+   "h": "e506a6e18d"
+  },
+  "en-dc6a0cd47869f435": {
+   "f": "en/en-dc6a0cd47869f435.m4a",
+   "role": "aldrin",
+   "h": "ad5fe58122"
+  },
+  "en-e3b139b053f4f10d": {
+   "f": "en/en-e3b139b053f4f10d.m4a",
+   "role": "armstrong",
+   "h": "44a8c3f8e8"
+  },
+  "en-f859521fc3492746": {
+   "f": "en/en-f859521fc3492746.m4a",
+   "role": "aldrin",
+   "h": "2b325b9951"
+  },
+  "en-cdf8812560bc983c": {
+   "f": "en/en-cdf8812560bc983c.m4a",
+   "role": "aldrin",
+   "h": "7a3498405f"
+  },
+  "en-02e59935aa1316e8": {
+   "f": "en/en-02e59935aa1316e8.m4a",
+   "role": "aldrin",
+   "h": "1a43565b10"
+  },
+  "en-74b440f91e252a2c": {
+   "f": "en/en-74b440f91e252a2c.m4a",
+   "role": "aldrin",
+   "h": "718cfe153d"
+  },
+  "en-ce63314b05d2dad6": {
+   "f": "en/en-ce63314b05d2dad6.m4a",
+   "role": "aldrin",
+   "h": "99d9b62048"
+  },
+  "en-a831c57d919e4008": {
+   "f": "en/en-a831c57d919e4008.m4a",
+   "role": "armstrong",
+   "h": "864d11f6c2"
+  },
+  "en-6fc0ac20e01b7031": {
+   "f": "en/en-6fc0ac20e01b7031.m4a",
+   "role": "armstrong",
+   "h": "eec1705934"
+  },
+  "en-34987633a70b6ff2": {
+   "f": "en/en-34987633a70b6ff2.m4a",
+   "role": "armstrong",
+   "h": "122fc7cb1e"
+  },
+  "en-225939f4d01ab97f": {
+   "f": "en/en-225939f4d01ab97f.m4a",
+   "role": "armstrong",
+   "h": "8ba89b470b"
+  },
+  "en-48a77d826b9aa88f": {
+   "f": "en/en-48a77d826b9aa88f.m4a",
+   "role": "armstrong",
+   "h": "c1ee88b8e3"
+  },
+  "en-357a77caef9de52b": {
+   "f": "en/en-357a77caef9de52b.m4a",
+   "role": "armstrong",
+   "h": "8c7b0b358f"
+  },
+  "en-fa06f1035c6ac1f8": {
+   "f": "en/en-fa06f1035c6ac1f8.m4a",
+   "role": "armstrong",
+   "h": "220e18e380"
+  },
+  "en-8ab8780f9afb15f0": {
+   "f": "en/en-8ab8780f9afb15f0.m4a",
+   "role": "armstrong",
+   "h": "fb71205ac8"
+  },
+  "en-0f119bfc29808629": {
+   "f": "en/en-0f119bfc29808629.m4a",
+   "role": "armstrong",
+   "h": "89df7607ad"
+  },
+  "en-7deb6f37580f816c": {
+   "f": "en/en-7deb6f37580f816c.m4a",
+   "role": "armstrong",
+   "h": "ec72df1136"
+  },
+  "en-93d1d34ae368203b": {
+   "f": "en/en-93d1d34ae368203b.m4a",
+   "role": "armstrong",
+   "h": "89c17a5789"
+  },
+  "en-1ab57c9ee4f732b5": {
+   "f": "en/en-1ab57c9ee4f732b5.m4a",
+   "role": "armstrong",
+   "h": "c32da9617c"
+  },
+  "en-6577a3cee57feda3": {
+   "f": "en/en-6577a3cee57feda3.m4a",
+   "role": "armstrong",
+   "h": "294c74718f"
+  },
+  "en-633733901236becb": {
+   "f": "en/en-633733901236becb.m4a",
+   "role": "armstrong",
+   "h": "61c92416df"
+  },
+  "vi-756546b7b2984c22": {
+   "f": "vi/vi-756546b7b2984c22.m4a",
+   "role": "armstrong",
+   "h": "fd4e1caaf0"
+  },
+  "vi-dfdad21f2da4e726": {
+   "f": "vi/vi-dfdad21f2da4e726.m4a",
+   "role": "armstrong",
+   "h": "276ecea098"
+  },
+  "vi-91a6db6d08f35a2a": {
+   "f": "vi/vi-91a6db6d08f35a2a.m4a",
+   "role": "armstrong",
+   "h": "828e7f0e28"
+  },
+  "vi-6acfd3e91928e9ca": {
+   "f": "vi/vi-6acfd3e91928e9ca.m4a",
+   "role": "armstrong",
+   "h": "7cf5104dd2"
+  },
+  "vi-10d2b41e86a89c03": {
+   "f": "vi/vi-10d2b41e86a89c03.m4a",
+   "role": "armstrong",
+   "h": "94db32d14a"
+  },
+  "vi-5ad341692349339a": {
+   "f": "vi/vi-5ad341692349339a.m4a",
+   "role": "armstrong",
+   "h": "27b416a06d"
+  },
+  "vi-6024acf80b8f45e5": {
+   "f": "vi/vi-6024acf80b8f45e5.m4a",
+   "role": "armstrong",
+   "h": "24502611f0"
+  },
+  "vi-f9e6dc0a8fede4d7": {
+   "f": "vi/vi-f9e6dc0a8fede4d7.m4a",
+   "role": "armstrong",
+   "h": "c1b4032659"
+  },
+  "vi-fd6a4ee81ef5e837": {
+   "f": "vi/vi-fd6a4ee81ef5e837.m4a",
+   "role": "armstrong",
+   "h": "77810bb8c6"
+  },
+  "vi-e5b005bac6d40e63": {
+   "f": "vi/vi-e5b005bac6d40e63.m4a",
+   "role": "armstrong",
+   "h": "6488391767"
+  },
+  "vi-b6c87360581f21e1": {
+   "f": "vi/vi-b6c87360581f21e1.m4a",
+   "role": "armstrong",
+   "h": "66d767a912"
+  },
+  "vi-9a99348c5ea4044d": {
+   "f": "vi/vi-9a99348c5ea4044d.m4a",
+   "role": "armstrong",
+   "h": "bc34cef5d8"
+  },
+  "vi-0582d61c83bfd615": {
+   "f": "vi/vi-0582d61c83bfd615.m4a",
+   "role": "armstrong",
+   "h": "51eedd4243"
+  },
+  "vi-3f54e938e3cea809": {
+   "f": "vi/vi-3f54e938e3cea809.m4a",
+   "role": "armstrong",
+   "h": "619cb16247"
+  },
+  "vi-9181f8517fae27be": {
+   "f": "vi/vi-9181f8517fae27be.m4a",
+   "role": "armstrong",
+   "h": "59c5fbe3ba"
+  },
+  "vi-adc60d89b289a722": {
+   "f": "vi/vi-adc60d89b289a722.m4a",
+   "role": "aldrin",
+   "h": "a5e0520bcb"
+  },
+  "vi-2f4e09d49d93da73": {
+   "f": "vi/vi-2f4e09d49d93da73.m4a",
+   "role": "aldrin",
+   "h": "e708fea4de"
+  },
+  "vi-04fba0b994c3e9be": {
+   "f": "vi/vi-04fba0b994c3e9be.m4a",
+   "role": "aldrin",
+   "h": "0660430dab"
+  },
+  "vi-5e82b070855ad959": {
+   "f": "vi/vi-5e82b070855ad959.m4a",
+   "role": "aldrin",
+   "h": "c583fbcdce"
+  },
+  "vi-a4294fd6905c1edb": {
+   "f": "vi/vi-a4294fd6905c1edb.m4a",
+   "role": "aldrin",
+   "h": "2d29788bfa"
+  },
+  "vi-bff7e2d9686e0996": {
+   "f": "vi/vi-bff7e2d9686e0996.m4a",
+   "role": "aldrin",
+   "h": "dd4f446f7f"
+  },
+  "vi-7de6e7dcf9084487": {
+   "f": "vi/vi-7de6e7dcf9084487.m4a",
+   "role": "aldrin",
+   "h": "19f96dafe2"
+  },
+  "vi-6ad7f7c81437c7d3": {
+   "f": "vi/vi-6ad7f7c81437c7d3.m4a",
+   "role": "aldrin",
+   "h": "c27717f810"
+  },
+  "vi-0ae6176ef10f0547": {
+   "f": "vi/vi-0ae6176ef10f0547.m4a",
+   "role": "collins",
+   "h": "02ecf158aa"
+  },
+  "vi-a022491731f66c6e": {
+   "f": "vi/vi-a022491731f66c6e.m4a",
+   "role": "aldrin",
+   "h": "4747de8b0e"
+  },
+  "vi-4817810cf4bb0363": {
+   "f": "vi/vi-4817810cf4bb0363.m4a",
+   "role": "aldrin",
+   "h": "0f16539c39"
+  },
+  "vi-76f9a2c4d330af6b": {
+   "f": "vi/vi-76f9a2c4d330af6b.m4a",
+   "role": "aldrin",
+   "h": "7be1c1528a"
+  },
+  "vi-6e1e63491a0427da": {
+   "f": "vi/vi-6e1e63491a0427da.m4a",
+   "role": "aldrin",
+   "h": "17f76309b2"
+  },
+  "en-f79ccb87d7e0fbc8": {
+   "f": "en/en-f79ccb87d7e0fbc8.m4a",
+   "role": "kranz",
+   "h": "ddcac8aa99"
+  },
+  "en-f5a47c4a1b7af8e5": {
+   "f": "en/en-f5a47c4a1b7af8e5.m4a",
+   "role": "kranz",
+   "h": "d86b310312"
+  },
+  "vi-d6179a36732eae11": {
+   "f": "vi/vi-d6179a36732eae11.m4a",
+   "role": "collins",
+   "h": "1d9480d56c"
+  },
+  "vi-377d48a27645dd67": {
+   "f": "vi/vi-377d48a27645dd67.m4a",
+   "role": "collins",
+   "h": "afdcacca29"
+  },
+  "vi-9c79af63564553ba": {
+   "f": "vi/vi-9c79af63564553ba.m4a",
+   "role": "collins",
+   "h": "da08684779"
+  },
+  "vi-c872e98a04e0077d": {
+   "f": "vi/vi-c872e98a04e0077d.m4a",
+   "role": "collins",
+   "h": "700c9468e1"
+  },
+  "vi-f72257b612635257": {
+   "f": "vi/vi-f72257b612635257.m4a",
+   "role": "collins",
+   "h": "0c033c8e97"
+  },
+  "vi-613e3897fbe7290e": {
+   "f": "vi/vi-613e3897fbe7290e.m4a",
+   "role": "collins",
+   "h": "62a81fb806"
+  },
+  "vi-e60b7a64e6136509": {
+   "f": "vi/vi-e60b7a64e6136509.m4a",
+   "role": "collins",
+   "h": "b8c4d35501"
+  },
+  "vi-6552cb0261fb3c5f": {
+   "f": "vi/vi-6552cb0261fb3c5f.m4a",
+   "role": "collins",
+   "h": "901591e7f1"
+  },
+  "vi-0a88b5a2691ee127": {
+   "f": "vi/vi-0a88b5a2691ee127.m4a",
+   "role": "collins",
+   "h": "faddda3b7b"
+  },
+  "en-0be8ced08e3acdab": {
+   "f": "en/en-0be8ced08e3acdab.m4a",
+   "role": "capcom",
+   "h": "ed9d40aa70"
+  },
+  "vi-5becc8be2cfbbaf1": {
+   "f": "vi/vi-5becc8be2cfbbaf1.m4a",
+   "role": "capcom",
+   "h": "c30b6f33cd"
+  },
+  "vi-0325c56624f3991d": {
+   "f": "vi/vi-0325c56624f3991d.m4a",
+   "role": "kranz",
+   "h": "ce51511ace"
+  },
+  "vi-6d1f1b8e2e61925b": {
+   "f": "vi/vi-6d1f1b8e2e61925b.m4a",
+   "role": "kranz",
+   "h": "16d3c5f01b"
+  },
+  "vi-98fe7e3bb17577f8": {
+   "f": "vi/vi-98fe7e3bb17577f8.m4a",
+   "role": "collins",
+   "h": "2e89019d8c"
+  },
+  "vi-57c52597922c5ab0": {
+   "f": "vi/vi-57c52597922c5ab0.m4a",
+   "role": "aldrin",
+   "h": "25743f955d"
+  },
+  "en-fb1add8bd3218744": {
+   "f": "en/en-fb1add8bd3218744.m4a",
+   "role": "aldrin",
+   "h": "0c0158fb8e"
+  },
+  "vi-114302d1e0d799c0": {
+   "f": "vi/vi-114302d1e0d799c0.m4a",
+   "role": "aldrin",
+   "h": "eb1c8b9dd7"
+  },
+  "vi-c8444360c5f15291": {
+   "f": "vi/vi-c8444360c5f15291.m4a",
+   "role": "aldrin",
+   "h": "ac6044aca1"
+  },
+  "vi-7a103fd84b17496f": {
+   "f": "vi/vi-7a103fd84b17496f.m4a",
+   "role": "aldrin",
+   "h": "ac7e8f0f5e"
+  },
+  "en-25dbbe37f31efaf6": {
+   "f": "en/en-25dbbe37f31efaf6.m4a",
+   "role": "kranz",
+   "h": "1d22f93cca"
+  },
+  "en-01ef566138caa4aa": {
+   "f": "en/en-01ef566138caa4aa.m4a",
+   "role": "kranz",
+   "h": "9e65f265b0"
+  },
+  "en-75b7d92212cdec1d": {
+   "f": "en/en-75b7d92212cdec1d.m4a",
+   "role": "kranz",
+   "h": "ad58768f14"
+  },
+  "en-7c662de4f7cf7a89": {
+   "f": "en/en-7c662de4f7cf7a89.m4a",
+   "role": "kranz",
+   "h": "64b83266c3"
+  },
+  "en-05bc1632a5f346b3": {
+   "f": "en/en-05bc1632a5f346b3.m4a",
+   "role": "kranz",
+   "h": "20362ab1e2"
+  },
+  "en-23e40b26b5a57b0f": {
+   "f": "en/en-23e40b26b5a57b0f.m4a",
+   "role": "kranz",
+   "h": "cf8d0fb641"
+  },
+  "en-b5dbb99396d30d88": {
+   "f": "en/en-b5dbb99396d30d88.m4a",
+   "role": "collins",
+   "h": "7e21ee7398"
+  },
+  "en-2e64ae6c1854bf07": {
+   "f": "en/en-2e64ae6c1854bf07.m4a",
+   "role": "collins",
+   "h": "8a456b6901"
+  },
+  "en-e5e388dc28086b3d": {
+   "f": "en/en-e5e388dc28086b3d.m4a",
+   "role": "collins",
+   "h": "abc70d4c57"
+  },
+  "en-404e2e5677ea5143": {
+   "f": "en/en-404e2e5677ea5143.m4a",
+   "role": "collins",
+   "h": "42bb5316d1"
+  },
+  "en-2999be8ee42ce55d": {
+   "f": "en/en-2999be8ee42ce55d.m4a",
+   "role": "collins",
+   "h": "dc62539ac4"
+  },
+  "en-6606dad273ae0327": {
+   "f": "en/en-6606dad273ae0327.m4a",
+   "role": "collins",
+   "h": "acbb8d02dd"
+  },
+  "vi-c0193889a1acc192": {
+   "f": "vi/vi-c0193889a1acc192.m4a",
+   "role": "booster",
+   "h": "6448033d24"
+  },
+  "vi-7fd2eee2961ded6d": {
+   "f": "vi/vi-7fd2eee2961ded6d.m4a",
+   "role": "booster",
+   "h": "b8aa0b56b1"
+  },
+  "vi-0d49e525cf56a8ee": {
+   "f": "vi/vi-0d49e525cf56a8ee.m4a",
+   "role": "booster",
+   "h": "5f3b8243e7"
+  },
+  "vi-8882192ebd8f9e23": {
+   "f": "vi/vi-8882192ebd8f9e23.m4a",
+   "role": "booster",
+   "h": "b19eefa56c"
+  },
+  "vi-8de224fca91a58f3": {
+   "f": "vi/vi-8de224fca91a58f3.m4a",
+   "role": "booster",
+   "h": "60f5c263bc"
+  },
+  "en-8cb34aec421a7e03": {
+   "f": "en/en-8cb34aec421a7e03.m4a",
+   "role": "aldrin",
+   "h": "0b4d25ef78"
+  },
+  "en-7ebfa84a2eb3e31d": {
+   "f": "en/en-7ebfa84a2eb3e31d.m4a",
+   "role": "aldrin",
+   "h": "7a68a623b1"
+  },
+  "en-89f38808657133e7": {
+   "f": "en/en-89f38808657133e7.m4a",
+   "role": "aldrin",
+   "h": "5f155a5039"
+  },
+  "en-f3b14bcd161a530a": {
+   "f": "en/en-f3b14bcd161a530a.m4a",
+   "role": "armstrong",
+   "h": "bd7527a0a2"
+  },
+  "en-7e3531e2efd22857": {
+   "f": "en/en-7e3531e2efd22857.m4a",
+   "role": "armstrong",
+   "h": "11a25c12fc"
+  },
+  "en-fa695e566b734d47": {
+   "f": "en/en-fa695e566b734d47.m4a",
+   "role": "armstrong",
+   "h": "62d3a89eab"
+  },
+  "en-6c2b66449b6fa257": {
+   "f": "en/en-6c2b66449b6fa257.m4a",
+   "role": "armstrong",
+   "h": "dc8df7e6cf"
+  },
+  "en-1853a325284be708": {
+   "f": "en/en-1853a325284be708.m4a",
+   "role": "armstrong",
+   "h": "f2fd26c4e0"
+  },
+  "en-f1b3b82e18c2bb93": {
+   "f": "en/en-f1b3b82e18c2bb93.m4a",
+   "role": "armstrong",
+   "h": "3e67759c89"
+  },
+  "en-9a7bfb88169f926d": {
+   "f": "en/en-9a7bfb88169f926d.m4a",
+   "role": "armstrong",
+   "h": "79395fc514"
+  },
+  "en-f4bdcae966143884": {
+   "f": "en/en-f4bdcae966143884.m4a",
+   "role": "armstrong",
+   "h": "8c6da9bf55"
+  },
+  "en-40cd1a81f8ef5ada": {
+   "f": "en/en-40cd1a81f8ef5ada.m4a",
+   "role": "armstrong",
+   "h": "5830d85c4a"
+  },
+  "en-414cdc88bae2afdd": {
+   "f": "en/en-414cdc88bae2afdd.m4a",
+   "role": "armstrong",
+   "h": "cd2bc52ec7"
+  },
+  "en-aa8b31641740fe1f": {
+   "f": "en/en-aa8b31641740fe1f.m4a",
+   "role": "armstrong",
+   "h": "080350f038"
+  },
+  "en-70f6539c1e2f2f35": {
+   "f": "en/en-70f6539c1e2f2f35.m4a",
+   "role": "armstrong",
+   "h": "f7eab9167f"
+  },
+  "en-d70419ecdb8cb8c1": {
+   "f": "en/en-d70419ecdb8cb8c1.m4a",
+   "role": "armstrong",
+   "h": "d6148792c6"
+  },
+  "en-89b7e9c87583b0f5": {
+   "f": "en/en-89b7e9c87583b0f5.m4a",
+   "role": "armstrong",
+   "h": "142f2b14c6"
+  },
+  "vi-4664e681a803c596": {
+   "f": "vi/vi-4664e681a803c596.m4a",
+   "role": "collins",
+   "h": "4ca69c30d4"
+  },
+  "vi-94a75b3200d53149": {
+   "f": "vi/vi-94a75b3200d53149.m4a",
+   "role": "collins",
+   "h": "80eebb8281"
+  },
+  "vi-d61789f406ac8611": {
+   "f": "vi/vi-d61789f406ac8611.m4a",
+   "role": "collins",
+   "h": "8786b1dad2"
+  },
+  "vi-bc2a24bc843cd8a7": {
+   "f": "vi/vi-bc2a24bc843cd8a7.m4a",
+   "role": "collins",
+   "h": "cfdf37b5ea"
+  },
+  "vi-56893b85a8f30346": {
+   "f": "vi/vi-56893b85a8f30346.m4a",
+   "role": "armstrong",
+   "h": "b2956785f9"
+  },
+  "vi-f824ce8000cf9c05": {
+   "f": "vi/vi-f824ce8000cf9c05.m4a",
+   "role": "armstrong",
+   "h": "2f2989b932"
+  },
+  "vi-b08f1290a19c792f": {
+   "f": "vi/vi-b08f1290a19c792f.m4a",
+   "role": "armstrong",
+   "h": "4f1e3b335e"
+  },
+  "vi-cd7266d5f1d228da": {
+   "f": "vi/vi-cd7266d5f1d228da.m4a",
+   "role": "armstrong",
+   "h": "41467c9aeb"
+  },
+  "vi-ab39261e64fb71c5": {
+   "f": "vi/vi-ab39261e64fb71c5.m4a",
+   "role": "armstrong",
+   "h": "317dfd8ab9"
+  },
+  "vi-f91dcc94bd8d9269": {
+   "f": "vi/vi-f91dcc94bd8d9269.m4a",
+   "role": "armstrong",
+   "h": "21430826ea"
+  },
+  "vi-b770e681ec1fa738": {
+   "f": "vi/vi-b770e681ec1fa738.m4a",
+   "role": "armstrong",
+   "h": "5fe8562d90"
+  },
+  "vi-ffe4500d1a606be4": {
+   "f": "vi/vi-ffe4500d1a606be4.m4a",
+   "role": "armstrong",
+   "h": "5940a16ebe"
+  },
+  "vi-10ae1a3737c2c124": {
+   "f": "vi/vi-10ae1a3737c2c124.m4a",
+   "role": "armstrong",
+   "h": "1bf3ecabf2"
+  },
+  "vi-c8f5edd95c939768": {
+   "f": "vi/vi-c8f5edd95c939768.m4a",
+   "role": "armstrong",
+   "h": "1bec3b670f"
+  },
+  "vi-e98a2e138b46f390": {
+   "f": "vi/vi-e98a2e138b46f390.m4a",
+   "role": "armstrong",
+   "h": "286e6d3e20"
+  },
+  "vi-c32d71b9c1631ab2": {
+   "f": "vi/vi-c32d71b9c1631ab2.m4a",
+   "role": "armstrong",
+   "h": "24ac36ac01"
+  },
+  "vi-0a3b0dfc7ca70787": {
+   "f": "vi/vi-0a3b0dfc7ca70787.m4a",
+   "role": "armstrong",
+   "h": "b3300d7626"
+  },
+  "vi-cfc1768d1f8cf2a6": {
+   "f": "vi/vi-cfc1768d1f8cf2a6.m4a",
+   "role": "armstrong",
+   "h": "0d04825c0b"
+  },
+  "en-6be0c54747538d24": {
+   "f": "en/en-6be0c54747538d24.m4a",
+   "role": "booster",
+   "h": "09f4928811"
+  },
+  "en-a9fa2a2e7a30d933": {
+   "f": "en/en-a9fa2a2e7a30d933.m4a",
+   "role": "booster",
+   "h": "82880834b4"
+  },
+  "en-410a24d94a2a956e": {
+   "f": "en/en-410a24d94a2a956e.m4a",
+   "role": "booster",
+   "h": "6e8fa90188"
+  },
+  "en-b20eeb7058ec2dbb": {
+   "f": "en/en-b20eeb7058ec2dbb.m4a",
+   "role": "booster",
+   "h": "cbb18af199"
+  },
+  "en-72e0fbd0a02ee3dd": {
+   "f": "en/en-72e0fbd0a02ee3dd.m4a",
+   "role": "booster",
+   "h": "dfe961f7e9"
+  },
+  "vi-c388469398b7dd4a": {
+   "f": "vi/vi-c388469398b7dd4a.m4a",
+   "role": "kranz",
+   "h": "1603a49a83"
+  },
+  "vi-c4af1320b7bdf827": {
+   "f": "vi/vi-c4af1320b7bdf827.m4a",
+   "role": "kranz",
+   "h": "2ee240efbf"
+  },
+  "vi-f366b3e2fb3b108b": {
+   "f": "vi/vi-f366b3e2fb3b108b.m4a",
+   "role": "kranz",
+   "h": "51cd94f87b"
+  },
+  "vi-298e9b6ceb9df593": {
+   "f": "vi/vi-298e9b6ceb9df593.m4a",
+   "role": "kranz",
+   "h": "f6ccf5c3ac"
+  },
+  "vi-c01e78e685f6b44f": {
+   "f": "vi/vi-c01e78e685f6b44f.m4a",
+   "role": "kranz",
+   "h": "03d2564542"
+  },
+  "vi-ae2a823837b91115": {
+   "f": "vi/vi-ae2a823837b91115.m4a",
+   "role": "kranz",
+   "h": "c5a74c77cc"
+  },
+  "en-059afa5129a5863e": {
+   "f": "en/en-059afa5129a5863e.m4a",
+   "role": "bales",
+   "h": "8b46cce40e"
+  },
+  "en-a0925cb59b872338": {
+   "f": "en/en-a0925cb59b872338.m4a",
+   "role": "bales",
+   "h": "fade82e6ed"
+  },
+  "en-f6e01f0c57118713": {
+   "f": "en/en-f6e01f0c57118713.m4a",
+   "role": "bales",
+   "h": "ca4f0347d6"
+  },
+  "en-80d5aae9da0733be": {
+   "f": "en/en-80d5aae9da0733be.m4a",
+   "role": "capcom",
+   "h": "fd3e15d188"
+  },
+  "en-61f42eca163b02df": {
+   "f": "en/en-61f42eca163b02df.m4a",
+   "role": "capcom",
+   "h": "096478b54e"
+  },
+  "vi-bfdd4049f028a564": {
+   "f": "vi/vi-bfdd4049f028a564.m4a",
+   "role": "capcom",
+   "h": "8496aa5cd5"
+  },
+  "vi-7fcc8540e4ac45eb": {
+   "f": "vi/vi-7fcc8540e4ac45eb.m4a",
+   "role": "capcom",
+   "h": "8ecdff512d"
+  },
+  "vi-9703aa380b356689": {
+   "f": "vi/vi-9703aa380b356689.m4a",
+   "role": "bales",
+   "h": "24210014ae"
+  },
+  "vi-659c657881876cbf": {
+   "f": "vi/vi-659c657881876cbf.m4a",
+   "role": "bales",
+   "h": "442197f67c"
+  },
+  "vi-0a2d81d977307b56": {
+   "f": "vi/vi-0a2d81d977307b56.m4a",
+   "role": "bales",
+   "h": "2e3f71a90a"
+  },
+  "vi-a379e0868360b1cb": {
+   "f": "vi/vi-a379e0868360b1cb.m4a",
+   "role": "collins",
+   "h": "1e4e17a3f4"
+  },
+  "vi-0172d46471b3d029": {
+   "f": "vi/vi-0172d46471b3d029.m4a",
+   "role": "collins",
+   "h": "bbb524c41b"
   }
  }
 }

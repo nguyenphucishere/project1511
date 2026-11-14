@@ -95,6 +95,9 @@ export const vi: Dictionary = {
     clearedBody: "Cả ba chỉ số đều trong ngưỡng. {name} đã ký thẻ bay cho bạn.",
     continue: "Sang xưởng lắp ráp",
     sceneLabel: "Phòng y tế qua mắt phi hành gia",
+    doorPrompt: "Vào đi, tôi đợi bạn nãy giờ. Chỉ cần bấm vào cánh cửa để mở nhé.",
+    greeting: "Xin chào, chào mừng đến phòng y tế! Tôi là {name}, bác sĩ phi hành của bạn. Mình kiểm tra sức khoẻ trước giờ phóng nhé.",
+    guide: "Hãy bấm vào từng trạm đang phát sáng: máy đo nhịp tim, vòng đo huyết áp và bảng thị lực. Kéo chuột để nhìn quanh, dùng W A S D để đi.",
   },
   workshop: {
     chiefSays: "{name} giải thích",

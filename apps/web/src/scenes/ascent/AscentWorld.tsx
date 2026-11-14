@@ -167,7 +167,7 @@ export function AscentWorld({ flight, orbitKm, failure, onEvent, onEarthSeen, on
       </group>
       <WindowFx flight={flight} reduced={reduced} />
       <Cabin flight={flight} orbitKm={orbitKm} reduced={reduced} failure={failure} />
-      <CameraRig flight={flight} reduced={reduced} onEarthSeen={onEarthSeen} onSun={onSun} />
+      <CameraRig flight={flight} reduced={reduced} failure={failure} onEarthSeen={onEarthSeen} onSun={onSun} />
     </>
   );
 }
@@ -193,6 +193,8 @@ function FlightDirector({
 
   useFrame(({ clock }, raw) => {
     const dt = Math.min(Math.max(raw, 0), 0.1);
+    // The drama runs on the wall clock, so a slow machine does not stretch it.
+    const wall = Math.min(Math.max(raw, 0), 0.5);
     const f = flight.current;
     const once = (key: string, run: () => void) => {
       if (sent.current.has(key)) return;
@@ -210,7 +212,10 @@ function FlightDirector({
 
     if (f.mode === "ride") {
       const from = f.met;
-      let next = f.met + dt * COMPRESS;
+      // A doomed flight is trimmed so the climb before the first warning never takes much more than 15 s.
+      const speed = failure ? Math.max(COMPRESS, (failure.met - TROUBLE_LEAD) / 14) : COMPRESS;
+      // The climb follows the wall clock even on a slow machine (the usual cap on a frame would stretch it).
+      let next = f.met + (failure ? Math.min(Math.max(raw, 0), 0.5) : dt) * speed;
       if (failure) next = Math.min(next, failure.met - TROUBLE_LEAD);
       f.met = Math.min(insertionMet(orbitKm), next);
       fireTimeline(from, f.met);
@@ -223,7 +228,7 @@ function FlightDirector({
     } else if (f.mode === "trouble" && failure) {
       // Near real time: the warnings need room to be felt.
       const from = f.met;
-      f.met = Math.min(failure.met, f.met + dt * 1.6);
+      f.met = Math.min(failure.met, f.met + wall * 1.6);
       fireTimeline(from, f.met);
       if (f.met >= failure.met - CRITICAL_LEAD)
         once("critical", () => {
@@ -236,7 +241,7 @@ function FlightDirector({
         emit({ id: "engineFail", caution: true, kick: 0.9 });
       }
     } else if (f.mode === "failing") {
-      f.failT += dt;
+      f.failT += wall;
       if (f.failT >= FAIL_ABORT_AT) once("abort", () => emit({ id: "abort", caution: true, kick: 0.4 }));
       if (f.failT >= FAIL_BOOM_AT)
         once("boom", () => {
@@ -260,7 +265,8 @@ function FlightDirector({
 
     if (outside.current) {
       // Pitch-over swings Earth into the window; a failing vehicle tumbles instead.
-      const p = f.mode === "failing" ? f.failT : 0;
+      // The tumble builds, then settles into a long roll instead of spinning ever faster.
+      const p = f.mode === "failing" ? (f.failT < 8 ? f.failT : 8 + (f.failT - 8) * 0.5) : 0;
       outside.current.rotation.x = tilt(f.met) + 0.07 * p * p;
       outside.current.rotation.y = 0.05 * p * p;
       outside.current.rotation.z = 0.1 + 0.11 * p * p;
@@ -1342,11 +1348,13 @@ const KEY_TURN = 1.6;
 function CameraRig({
   flight,
   reduced,
+  failure,
   onEarthSeen,
   onSun,
 }: {
   flight: MutableRefObject<AscentFlight>;
   reduced: boolean;
+  failure?: AscentFailure;
   onEarthSeen: () => void;
   onSun?: (s: SunScreen) => void;
 }) {
@@ -1460,7 +1468,13 @@ function CameraRig({
     if (f.mode === "ride" || f.mode === "trouble" || f.mode === "failing") {
       let vib = vibration(f.met);
       if (f.mode === "trouble") vib = Math.max(vib, 0.4) + 0.3 * Math.abs(Math.sin(t * 2.7));
-      if (f.mode === "failing") vib = f.boom ? 2.4 : 1.15 + 0.25 * Math.sin(t * 9);
+      const code = failure?.code;
+      if (f.mode === "failing") {
+        vib = f.boom ? 2.4 : 1.15 + 0.25 * Math.sin(t * 9);
+        // A dry tank is eerily smooth; a breaking structure shakes much harder.
+        if (code === "fuel-depleted" && !f.boom) vib = 0.08;
+        else if (code === "structural" && !f.boom) vib = 1.9 + 0.5 * Math.sin(t * 13);
+      }
       vib *= reduced ? 0.2 : 1;
       ox = vib * 0.011 * (Math.sin(t * 47) + 0.6 * Math.sin(t * 71.3));
       oy = vib * 0.015 * (Math.sin(t * 53.1) + 0.7 * Math.sin(t * 89));
@@ -1469,7 +1483,8 @@ function CameraRig({
       if (f.mode === "failing" && !reduced) {
         // The vehicle starts to tumble: the whole view swings.
         const ramp = Math.min(1, f.failT / 2.5);
-        roll += 0.24 * Math.sin(f.failT * 1.6) * ramp;
+        const swing = code === "wind-shear" ? 0.6 : code === "fuel-depleted" ? 0.08 : code === "slow-climb" ? 0.12 : 0.24;
+        roll += swing * Math.sin(f.failT * (code === "wind-shear" ? 2.4 : 1.6)) * ramp;
         pitchShake += 0.07 * Math.sin(f.failT * 2.1) * ramp;
       }
       const g = f.mode === "failing" ? 0.2 : gForce(f.met);

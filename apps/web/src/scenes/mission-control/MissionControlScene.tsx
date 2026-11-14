@@ -4,14 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { WorldCanvas } from "@/components/viewport/WorldCanvas";
 import { AscentScene } from "@/scenes/ascent/AscentScene";
 import { ObjectivePanel } from "@/components/hud/ObjectivePanel";
@@ -24,7 +16,8 @@ import { BRIEFINGS } from "@/game/script";
 import { useGameStore } from "@/game/gameStore";
 import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
-import { playSfx, setMasterVolume, startRumble, type Rumble } from "@/game/sfx";
+import { playExplosion, playSfx, setMasterVolume, speak, startRumble, stopSpeaking, type Rumble } from "@/game/sfx";
+import { ROOM_SPEAKER, roomScript, type RoomBeat } from "./controlRoomScript";
 import { useVoiceLine } from "@/hooks/useVoiceLine";
 import { preloadCrowd, startCrowdBed, type CrowdBed } from "@/game/crowdAudio";
 import {
@@ -48,7 +41,10 @@ import { DsnTrackingStatus } from "@/components/hud/DsnTrackingStatus";
 import { SpaceWeatherWidget } from "@/components/hud/SpaceWeatherWidget";
 import { BuildItYourselfPanel } from "@/components/dashboard/BuildItYourselfPanel";
 import type { DsnTelemetryResult } from "@/lib/simulation/nasa.types";
+import { useRouter } from "next/navigation";
 import { ConfigPanel } from "./ConfigPanel";
+import { LaunchEndingScreen } from "./LaunchEndingScreen";
+import { LAUNCH_ENDINGS, endingForFailure } from "./launchEndings";
 import { mood } from "./mood";
 import { EXPLOSION_SECONDS, FLY_SECONDS } from "./SkyExplosion";
 import { ControlRoomWorld } from "./ControlRoomWorld";
@@ -116,6 +112,7 @@ type Phase =
   | "failure-pov"
   | "explosion"
   | "anomaly"
+  | "budget-cut"
   | "orbit";
 
 /**
@@ -144,6 +141,7 @@ export function MissionControlScene({
   const t = useT();
   const m = t.missionControl;
   const localize = useLocalized();
+  const router = useRouter();
   const recordLaunch = useGameStore((s) => s.recordLaunch);
   const makeDecision = useGameStore((s) => s.makeDecision);
 
@@ -296,6 +294,8 @@ export function MissionControlScene({
   }, [config, result, recordLaunch, phase]);
 
   /** Back from the capsule: the vehicle comes apart in the sky and the room reacts. */
+  const [roomBeat, setRoomBeat] = useState<RoomBeat | null>(null);
+  const localeNow = useSettingsStore((s) => s.locale);
   const startExplosion = useCallback(() => {
     const at = performance.now();
     setExplodeAt(at);
@@ -303,18 +303,32 @@ export function MissionControlScene({
     const later = (ms: number, fn: () => void) =>
       cinematicTimers.current.push(window.setTimeout(fn, ms));
     // Light arrives first, then the shockwave, then the room goes quiet.
-    later(FLY_SECONDS * 1000, () => setBoomFlash(true));
+    later(FLY_SECONDS * 1000, () => {
+      setBoomFlash(true);
+      // The first pop reaches the room almost at once.
+      playExplosion("far", 0.5);
+    });
     later(FLY_SECONDS * 1000 + 90, () => setBoomFlash(false));
     later(FLY_SECONDS * 1000 + 2300, () => {
       addTrauma(0.85);
-      playSfx("boom");
+      playExplosion("far", 1.15);
     });
     later(FLY_SECONDS * 1000 + 1500, () => {
       mood.dismay = 1;
     });
     later(FLY_SECONDS * 1000 + 3800, () => playSfx("groan"));
+    // The room, beat by beat: what the consoles report, the silence, the calls into a dead channel.
+    const cause = result && !result.isSuccess ? endingForFailure(result.failureTrace).id : "structural";
+    for (const beat of roomScript(cause)) {
+      later(beat.at * 1000, () => {
+        setRoomBeat(beat);
+        speak(localize(beat.line), localeNow, { queue: true, rate: beat.rate && beat.rate < 1 ? beat.rate : undefined, panic: (beat.panic ?? 0) * 0.4 });
+        if (beat.voice === "capcom") playSfx("hiss", 0.8);
+      });
+      later(beat.at * 1000 + 3600, () => setRoomBeat((b) => (b === beat ? null : b)));
+    }
     later(EXPLOSION_SECONDS * 1000, () => finishExplosion());
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [result, localeNow]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
     // Dev-only: window.__mc.explode() plays the failure cutscene from anywhere.
@@ -328,6 +342,8 @@ export function MissionControlScene({
   const finishExplosion = useCallback(() => {
     for (const id of cinematicTimers.current) window.clearTimeout(id);
     cinematicTimers.current = [];
+    stopSpeaking();
+    setRoomBeat(null);
     mood.dismay = 0;
     setExplodeAt(null);
     addTrauma(0.2);
@@ -532,6 +548,7 @@ export function MissionControlScene({
     "failure-pov": m.flightTitle,
     explosion: m.flightTitle,
     anomaly: m.flightTitle,
+    "budget-cut": m.flightTitle,
     orbit: m.flightTitle,
   };
   const worldIgnition = useMemo(
@@ -562,10 +579,7 @@ export function MissionControlScene({
   const overweight =
     result?.failureTrace.some((s) => s.code === "slow-climb") ?? false;
 
-  // After a failed launch the flight director reads the report, then what to change, then the replacement.
-  useVoiceLine(phase === "anomaly" ? m.anomalyBody : null);
-  useVoiceLine(phase === "anomaly" ? (overweight ? m.adviceOverweight : m.adviceFuel) : null, { queue: true });
-  useVoiceLine(phase === "anomaly" ? m.replacement : null, { queue: true });
+
 
   return (
     <section
@@ -580,6 +594,7 @@ export function MissionControlScene({
             launchView={launchView}
             burnEndT={burnEndT}
             explodeAt={explodeAt}
+            explodeCause={result && !result.isSuccess ? endingForFailure(result.failureTrace).id : undefined}
           />
         </WorldCanvas>
       )}
@@ -608,6 +623,14 @@ export function MissionControlScene({
           >
             {m.vehicleLost}
           </div>
+          {roomBeat && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-20 z-20 flex flex-col items-center gap-1 px-6 text-center">
+              <p className="font-mono text-xs uppercase tracking-[0.3em] text-white/70">{localize(ROOM_SPEAKER[roomBeat.voice])}</p>
+              <p key={roomBeat.at} className="max-w-3xl animate-in fade-in text-xl font-semibold text-white drop-shadow-[0_2px_8px_rgb(0_0_0/0.9)] sm:text-3xl">
+                “{localize(roomBeat.line)}”
+              </p>
+            </div>
+          )}
           <div className="absolute bottom-6 right-6 z-20">
             <Button variant="secondary" size="sm" onClick={finishExplosion}>
               {m.skipCinematic}
@@ -796,67 +819,27 @@ export function MissionControlScene({
         </aside>
       )}
 
-      <Dialog open={phase === "anomaly"}>
-        <DialogContent locked>
-          <DialogHeader>
-            <StatusBadge status="fault" className="mb-2 w-fit">
-              {m.anomalyTitle}
-            </StatusBadge>
-            <DialogTitle className="text-2xl">{m.anomalyTitle}</DialogTitle>
-            <DialogDescription>{weatherLoss ? m.anomalyWeatherBody : m.anomalyBody}</DialogDescription>
-          </DialogHeader>
-          <section
-            aria-labelledby="trace-title"
-            className="bg-space-blue/35 px-4 py-3"
-          >
-            <h3 id="trace-title" className="mb-2 text-sm font-medium">
-              {m.traceTitle}
-            </h3>
-            <ol className="flex flex-col gap-2 text-sm">
-              {result?.failureTrace.map((s) => (
-                <li
-                  key={`${s.code}-${s.timestampSec}`}
-                  className="grid grid-cols-[4.5rem_1fr] gap-x-3"
-                >
-                  <span className="font-mono text-xs leading-5">
-                    {formatMissionTime(s.timestampSec)}
-                  </span>
-                  <span>
-                    <span className="font-medium">
-                      {localize(TRACE_TEXT[s.code].subsystem)}:{" "}
-                      {localize(TRACE_TEXT[s.code].anomaly)}
-                    </span>
-                    <span className="block text-foreground/75">
-                      {localize(TRACE_TEXT[s.code].consequence)}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </section>
-          {result?.reason && <p className="font-mono text-xs text-foreground/70">{result.reason}</p>}
-          {!weatherLoss && (
-            <div>
-              <h3 className="text-sm font-medium">{m.whatToChange}</h3>
-              <p className="mt-1 text-sm text-foreground/85">
-                {overweight ? m.adviceOverweight : m.adviceFuel}
-              </p>
-              <p className="mt-2 text-xs text-foreground/65">{m.replacement}</p>
-            </div>
-          )}
-          <DialogFooter>
-            {weatherLoss ? (
-              <Button size="lg" onClick={endInWeatherLoss}>
-                {m.weatherLossContinue}
-              </Button>
-            ) : (
-              <Button size="lg" onClick={adjust}>
-                {m.adjust}
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {phase === "anomaly" && result && (
+        <LaunchEndingScreen
+          ending={endingForFailure(result.failureTrace)}
+          trace={result.failureTrace.map((s) => ({
+            key: `${s.code}-${s.timestampSec}`,
+            time: formatMissionTime(s.timestampSec),
+            text: `${localize(TRACE_TEXT[s.code].subsystem)}: ${localize(TRACE_TEXT[s.code].anomaly)}`,
+          }))}
+          traceLabel={m.traceTitle}
+          primaryLabel={weatherLoss ? m.weatherLossContinue : m.adjust}
+          onPrimary={weatherLoss ? endInWeatherLoss : adjust}
+        />
+      )}
+      {phase === "budget-cut" && (
+        <LaunchEndingScreen
+          ending={LAUNCH_ENDINGS["budget-cut"]}
+          traceLabel={m.traceTitle}
+          primaryLabel={t.play.exitToTitle}
+          onPrimary={() => router.push("/")}
+        />
+      )}
 
       <SignOffDialog
         open={phase === "orbit"}
@@ -865,7 +848,7 @@ export function MissionControlScene({
         title={m.orbitTitle}
         description={format(m.orbitBody, { km: config.orbitKm })}
         continueLabel={m.continue}
-        onContinue={onComplete}
+        onContinue={assessment.overBudget ? () => setPhase("budget-cut") : onComplete}
       />
     </section>
   );

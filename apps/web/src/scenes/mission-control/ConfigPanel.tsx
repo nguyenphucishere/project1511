@@ -230,7 +230,7 @@ export function ConfigPanel({
           })}
           fill={a.costM}
           max={a.budgetM}
-          status={a.overBudget ? { status: "fault", text: m.overBudget } : { status: "go", text: m.ok }}
+          status={{ status: "go", text: m.ok }}
         />
         <p className="text-[11px] text-foreground/60">{m.criteriaNote}</p>
       </section>
@@ -238,16 +238,10 @@ export function ConfigPanel({
       <div className="flex flex-col items-stretch gap-1.5">
         <Button
           onClick={onProceed}
-          disabled={a.overBudget || windowsLoading}
-          aria-describedby={a.overBudget ? "blocked" : undefined}
+          disabled={windowsLoading}
         >
           {m.proceed}
         </Button>
-        {a.overBudget && (
-          <p id="blocked" className="text-xs text-foreground/80">
-            {m.blockedBudget}
-          </p>
-        )}
       </div>
     </div>
   );
