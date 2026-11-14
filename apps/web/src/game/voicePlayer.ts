@@ -10,11 +10,14 @@ import { voiceKey, type VoiceLocale } from "./voiceKey";
 export interface VoiceManifest {
   version: number;
   roles: Record<string, { radio: boolean }>;
-  lines: Record<string, { f: string; role: string }>;
+  /** `d` is the length of the recording in seconds (see tools/voice: `generate.mjs --durations`). */
+  lines: Record<string, { f: string; role: string; d?: number }>;
 }
 
 export interface VoiceEntry {
   file: string;
+  /** Length of the recording in seconds, when the manifest says. */
+  duration?: number;
   role: string;
   /** This speaker comes over a radio, so the game filters the voice like one. */
   radio: boolean;
@@ -25,7 +28,7 @@ export function lookupVoice(manifest: VoiceManifest | null, locale: VoiceLocale,
   if (!manifest) return null;
   const hit = manifest.lines[voiceKey(locale, text)];
   if (!hit) return null;
-  return { file: hit.f, role: hit.role, radio: manifest.roles[hit.role]?.radio ?? false };
+  return { file: hit.f, role: hit.role, radio: manifest.roles[hit.role]?.radio ?? false, duration: hit.d };
 }
 
 export interface VoiceDeps {
@@ -44,6 +47,12 @@ export interface VoiceDeps {
 export type PlayResult = "played" | "missing" | "unavailable";
 
 export interface PlayOptions {
+  /**
+   * Which line of voices this one belongs to. Lines in the same channel take turns (or cut each other off);
+   * lines in different channels play at the same time, so a narrator and a crew member are both heard.
+   * Default "main".
+   */
+  channel?: string;
   /** true / false forces the radio filter; undefined follows the speaker (kranz, capcom... are on the radio). */
   radio?: boolean;
   /** The open-channel hiss under a radio voice. Default on whenever the radio filter is on. */
@@ -75,9 +84,18 @@ function radioCurve(k: number): Float32Array<ArrayBuffer> {
 export function createVoicePlayer(deps: VoiceDeps) {
   let manifest: VoiceManifest | null = null;
   let loading: Promise<VoiceManifest | null> | null = null;
-  let token = 0;
-  let current: { stop: () => void } | null = null;
-  let waiting: Array<() => void> = [];
+  /** One channel is one speaker line-up: its own current line, its own waiting list. */
+  interface Channel {
+    token: number;
+    current: { stop: () => void } | null;
+    waiting: Array<() => void>;
+  }
+  const channels = new Map<string, Channel>();
+  const channel = (name = "main"): Channel => {
+    let c = channels.get(name);
+    if (!c) channels.set(name, (c = { token: 0, current: null, waiting: [] }));
+    return c;
+  };
   let activeVoices = 0;
 
   function load(): Promise<VoiceManifest | null> {
@@ -89,15 +107,20 @@ export function createVoicePlayer(deps: VoiceDeps) {
     return loading;
   }
 
-  function stop() {
-    token++;
-    waiting = [];
-    const c = current;
-    current = null;
+  function stopChannel(ch: Channel) {
+    ch.token++;
+    ch.waiting = [];
+    const c = ch.current;
+    ch.current = null;
     c?.stop();
   }
+  /** Stops one channel, or every channel when none is named. */
+  function stop(name?: string) {
+    if (name !== undefined) stopChannel(channel(name));
+    else for (const ch of channels.values()) stopChannel(ch);
+  }
 
-  function begin(entry: VoiceEntry, opts: PlayOptions, my: number): Promise<PlayResult> {
+  function begin(entry: VoiceEntry, opts: PlayOptions, my: number, ch: Channel): Promise<PlayResult> {
     const a = deps.audio();
     if (!a) return Promise.resolve("unavailable");
     const { c } = a;
@@ -135,11 +158,11 @@ export function createVoicePlayer(deps: VoiceDeps) {
       },
     };
     const ended = () => {
-      const wasCurrent = current === self;
+      const wasCurrent = ch.current === self;
       cleanup();
-      if (wasCurrent) current = null;
+      if (wasCurrent) ch.current = null;
       opts.onEnd?.();
-      if (my === token) waiting.shift()?.();
+      if (my === ch.token) ch.waiting.shift()?.();
     };
 
     try {
@@ -201,17 +224,17 @@ export function createVoicePlayer(deps: VoiceDeps) {
       return Promise.resolve("unavailable");
     }
 
-    current = self;
+    ch.current = self;
     el.onended = ended;
     el.onerror = () => {
-      const wasCurrent = current === self;
+      const wasCurrent = ch.current === self;
       cleanup();
-      if (wasCurrent) current = null;
+      if (wasCurrent) ch.current = null;
     };
     return el.play().then(
       (): PlayResult => "played",
       (): PlayResult => {
-        if (current === self) current = null;
+        if (ch.current === self) ch.current = null;
         cleanup();
         return "unavailable";
       },
@@ -225,15 +248,33 @@ export function createVoicePlayer(deps: VoiceDeps) {
     if (!m) return "unavailable";
     const entry = lookupVoice(m, locale, text);
     if (!entry) return "missing";
-    if (opts.queue && current) {
-      const my = token;
-      waiting.push(() => {
-        if (my === token && deps.enabled()) void begin(entry, opts, my);
+    const ch = channel(opts.channel);
+    if (opts.queue && ch.current) {
+      const my = ch.token;
+      ch.waiting.push(() => {
+        if (my === ch.token && deps.enabled()) void begin(entry, opts, my, ch);
       });
       return "played";
     }
-    if (!opts.queue) stop();
-    return begin(entry, opts, ++token);
+    // A line that does not queue replaces what its own channel is saying; other channels carry on.
+    if (!opts.queue) stopChannel(ch);
+    return begin(entry, opts, ++ch.token, ch);
+  }
+
+  /** Downloads the recording of a line ahead of time, so it starts the instant it is wanted. */
+  async function prefetch(text: string, locale: VoiceLocale): Promise<void> {
+    const entry = lookupVoice(await load(), locale, text);
+    if (!entry) return;
+    try {
+      await (await fetch(`${BASE}${entry.file}`)).arrayBuffer();
+    } catch {
+      /* a line that cannot be fetched now is simply fetched when it is played */
+    }
+  }
+
+  /** How long the recording of this line is, in seconds (null when unknown or there is none). */
+  async function duration(text: string, locale: VoiceLocale): Promise<number | null> {
+    return lookupVoice(await load(), locale, text)?.duration ?? null;
   }
 
   /** True when a recording of this line exists (the manifest must have loaded, which play() does first). */
@@ -241,7 +282,7 @@ export function createVoicePlayer(deps: VoiceDeps) {
     return lookupVoice(await load(), locale, text) !== null;
   }
 
-  return { play, stop, has, load };
+  return { play, stop, has, load, duration, prefetch };
 }
 
 export type VoicePlayer = ReturnType<typeof createVoicePlayer>;
