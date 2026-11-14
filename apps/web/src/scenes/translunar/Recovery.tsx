@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { DoubleSide, type Group } from "three";
+import { DoubleSide, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import { filmClock } from "./clock";
 import { SEA, T } from "./flight";
 
@@ -53,6 +53,7 @@ export function Recovery() {
   const heli = [useRef<Group>(null), useRef<Group>(null)];
   const rotor = [useRef<Group>(null), useRef<Group>(null)];
   const collar = useRef<Group>(null);
+  const wash = [useRef<Mesh>(null), useRef<Mesh>(null)];
   useFrame(() => {
     const t = filmClock.t;
     const g = root.current;
@@ -67,6 +68,15 @@ export function Recovery() {
       h.rotation.set(0.05 * Math.sin(t * 0.9 + i), yaw, 0);
       const r = rotor[i]!.current;
       if (r) r.rotation.y = t * 38;
+      // The downwash: a ring of rough water under a hovering helicopter, pulsing.
+      const ring = wash[i]!.current;
+      if (ring) {
+        const low = Math.max(0, 1 - y / 40);
+        ring.visible = low > 0.3;
+        ring.position.set(x, 0.07, z);
+        ring.scale.setScalar(1 + 0.12 * Math.sin(t * 6 + i));
+        (ring.material as MeshBasicMaterial).opacity = 0.32 * low;
+      }
     });
     // The collar goes round the capsule soon after it is down, and floats it level.
     const c = collar.current;
@@ -109,6 +119,12 @@ export function Recovery() {
           <meshStandardMaterial color="#e6e1d3" />
         </mesh>
       </group>
+      {[0, 1].map((i) => (
+        <mesh key={i} ref={wash[i]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+          <ringGeometry args={[3.5, 7.5, 40]} />
+          <meshBasicMaterial color="#e8f4ff" transparent opacity={0.3} depthWrite={false} side={DoubleSide} />
+        </mesh>
+      ))}
       <group ref={heli[0]}>
         <Helicopter rotor={rotor[0]!} />
       </group>

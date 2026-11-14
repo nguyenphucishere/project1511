@@ -12,7 +12,7 @@ import { useLocalized, useT } from "@/i18n/useT";
 import { cn } from "@/lib/utils";
 import { filmClock } from "./clock";
 import { ATMOSPHERE, ENTRY_BLACKOUT, FILM_END, MAIN_DELAY, frameAt, homePosition, plasma, viewKind, cutDip, OUTBOUND_END, RETURN_LOG, SIGNAL_LOST, T, TEI_LOS, atmosphereLayer, entryState, formatMet, skyAir, missionElapsed, thrust } from "./flight";
-import { CUES, HOUSTON, PHASES, RADIO_HOLD, RADIO_LOG, RADIO_WHO, READING, captionAt, moodAt } from "./story";
+import { CUES, HOUSTON, PHASES, RADIO_WHO, radioLineAt, READING, captionAt, moodAt } from "./story";
 import { TranslunarWorld } from "./TranslunarWorld";
 
 /** The camera is a scripted rig; the store just needs a viewpoint to exist. */
@@ -133,7 +133,7 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
   useVoiceLine(phase ? localize(phase.text) : null, { queue: true });
   useVoiceLine(reading ? localize(reading.text) : null, { queue: true });
   // The air-to-ground traffic of the entry and recovery: on a channel of its own, heard with the narrator.
-  const radioLine = part === "return" ? [...RADIO_LOG].reverse().find((l) => now >= l.t && now < l.t + RADIO_HOLD) : undefined;
+  const radioLine = part === "return" ? radioLineAt(now) : undefined;
   useVoiceLine(radioLine ? localize(radioLine.text) : null, { queue: true, radio: true, channel: "radio" });
   // No radio: behind the Moon on the way out and again for the burn that sends the ship home, and in the
   // plasma of the entry. Each says why in its own words.
