@@ -169,3 +169,163 @@ impl KeplerianOrbit {
         }
     }
 }
+
+// ============================================================================
+// Lunar Gravity Mascon Anomaly & DSN Telemetry Propagation
+// ============================================================================
+
+/// Speed of light in vacuum (km/s)
+pub const SPEED_OF_LIGHT_KM_S: f64 = 299_792.458;
+/// Nominal Apollo Unified S-band carrier frequency (MHz)
+pub const DSN_S_BAND_FREQ_MHZ: f64 = 2_282.5;
+/// Nominal Earth-Moon center-to-center distance (km)
+pub const EARTH_MOON_NOMINAL_DISTANCE_KM: f64 = 384_400.0;
+/// Baseline received carrier power constant (dBm): 43.0 (tx) + 20.5 (gtx) + 53.0 (grx) - 6.0 (loss) = 110.5 dBm
+pub const DSN_LINK_POWER_BUDGET_CONSTANT_DBM: f64 = 110.5;
+
+/// Lunar mascon localized gravity perturbation (+280 mGal = 0.0028 m/s^2)
+pub const LUNAR_MASCON_ANOMALY_MGAL: f64 = 280.0;
+pub const LUNAR_MASCON_ANOMALY_MPS2: f64 = 0.0028;
+/// Lunar standard equatorial surface gravity (m/s^2)
+pub const LUNAR_STANDARD_GRAVITY_MPS2: f64 = 1.622;
+/// Lunar regolith bulk density (kg/m^3)
+pub const LUNAR_REGOLITH_DENSITY_KG_M3: f64 = 1_500.0;
+/// Lunar regolith bearing capacity (kPa)
+pub const LUNAR_REGOLITH_BEARING_CAPACITY_KPA: f64 = 140.0;
+/// Lunar surface temperature during lunar day (deg C)
+pub const LUNAR_SURFACE_TEMP_DAY_C: f64 = 101.0;
+/// Lunar surface temperature during lunar night (deg C)
+pub const LUNAR_SURFACE_TEMP_NIGHT_C: f64 = -130.0;
+/// Nominal lunar landing terrain slope (deg)
+pub const LUNAR_TERRAIN_SLOPE_DEG: f64 = 4.5;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LunarEnvironmentConstants {
+    pub standard_gravity_mps2: f64,
+    pub mascon_anomaly_mps2: f64,
+    pub mascon_anomaly_mgal: f64,
+    pub local_gravity_effective_mps2: f64,
+    pub terrain_slope_deg: f64,
+    pub regolith_bulk_density_kg_m3: f64,
+    pub regolith_bearing_capacity_kpa: f64,
+    pub surface_temperature_c: f64,
+    pub surface_temperature_day_c: f64,
+    pub surface_temperature_night_c: f64,
+    pub moon_radius_km: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LunarGravityModel {
+    pub base_gravity_mps2: f64,
+    pub mascon_anomaly_mps2: f64,
+    pub r_moon_m: f64,
+}
+
+impl Default for LunarGravityModel {
+    fn default() -> Self {
+        Self {
+            base_gravity_mps2: LUNAR_STANDARD_GRAVITY_MPS2,
+            mascon_anomaly_mps2: LUNAR_MASCON_ANOMALY_MPS2,
+            r_moon_m: MOON_RADIUS_KM * 1000.0,
+        }
+    }
+}
+
+impl LunarGravityModel {
+    /// Calculate local gravitational acceleration at altitude (m) including optional mascon perturbation
+    pub fn local_acceleration(&self, altitude_m: f64, is_over_mascon: bool) -> f64 {
+        let r = self.r_moon_m + altitude_m.max(0.0);
+        let base = self.base_gravity_mps2 * (self.r_moon_m / r).powi(2);
+        if is_over_mascon {
+            base + self.mascon_anomaly_mps2
+        } else {
+            base
+        }
+    }
+}
+
+/// Calculate effective local lunar gravitational acceleration at specified altitude
+pub fn calculate_lunar_gravity(altitude_m: f64, is_over_mascon: bool) -> f64 {
+    LunarGravityModel::default().local_acceleration(altitude_m, is_over_mascon)
+}
+
+/// Retrieve static authentic NASA lunar surface environment constants
+pub fn get_lunar_environment_constants() -> LunarEnvironmentConstants {
+    LunarEnvironmentConstants {
+        standard_gravity_mps2: LUNAR_STANDARD_GRAVITY_MPS2,
+        mascon_anomaly_mps2: LUNAR_MASCON_ANOMALY_MPS2,
+        mascon_anomaly_mgal: LUNAR_MASCON_ANOMALY_MGAL,
+        local_gravity_effective_mps2: LUNAR_STANDARD_GRAVITY_MPS2 + LUNAR_MASCON_ANOMALY_MPS2,
+        terrain_slope_deg: LUNAR_TERRAIN_SLOPE_DEG,
+        regolith_bulk_density_kg_m3: LUNAR_REGOLITH_DENSITY_KG_M3,
+        regolith_bearing_capacity_kpa: LUNAR_REGOLITH_BEARING_CAPACITY_KPA,
+        surface_temperature_c: LUNAR_SURFACE_TEMP_DAY_C,
+        surface_temperature_day_c: LUNAR_SURFACE_TEMP_DAY_C,
+        surface_temperature_night_c: LUNAR_SURFACE_TEMP_NIGHT_C,
+        moon_radius_km: MOON_RADIUS_KM,
+        error_message: None,
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DsnTelemetryRequest {
+    pub distance_km: f64,
+    #[serde(default)]
+    pub true_anomaly_deg: f64,
+    #[serde(default)]
+    pub is_farside: bool,
+}
+
+pub type DsnTelemetryInput = DsnTelemetryRequest;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DsnTelemetryResponse {
+    pub rtlt_seconds: f64,
+    pub path_loss_db: f64,
+    pub received_power_dbm: f64,
+    pub is_occulted: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_message: Option<String>,
+}
+
+pub type DsnTelemetryResult = DsnTelemetryResponse;
+
+/// Calculate Deep Space Network Round-Trip Light Time (RTLT), path loss, and lunar radio occultation
+pub fn calculate_dsn_telemetry(
+    distance_km: f64,
+    true_anomaly_deg: f64,
+    is_farside: bool,
+) -> DsnTelemetryResponse {
+    let d = distance_km.max(1.0);
+    // 1. RTLT in seconds = 2 * d / c
+    let rtlt = (2.0 * d) / SPEED_OF_LIGHT_KM_S;
+
+    // 2. Free Space Path Loss (FSPL) in dB: 20*log10(d_km) + 20*log10(f_MHz) + 32.4478
+    let fspl = 20.0 * d.log10() + 20.0 * DSN_S_BAND_FREQ_MHZ.log10() + 32.4478;
+
+    // 3. Occultation: True anomaly behind lunar limb [109.872 deg, 250.128 deg] or explicit farside flag
+    let nu_norm = true_anomaly_deg.rem_euclid(360.0);
+    let is_occulted = is_farside || (nu_norm >= 109.872 && nu_norm <= 250.128);
+
+    // 4. Received Power: 110.5 dBm - FSPL when in LOS, -180.0 dBm during occultation
+    let received_power = if is_occulted {
+        -180.0
+    } else {
+        DSN_LINK_POWER_BUDGET_CONSTANT_DBM - fspl
+    };
+
+    DsnTelemetryResponse {
+        rtlt_seconds: (rtlt * 100_000.0).round() / 100_000.0,
+        path_loss_db: (fspl * 10_000.0).round() / 10_000.0,
+        received_power_dbm: (received_power * 10_000.0).round() / 10_000.0,
+        is_occulted,
+        error_message: None,
+    }
+}
+
+pub fn calculate_dsn_telemetry_full(req: &DsnTelemetryRequest) -> DsnTelemetryResponse {
+    calculate_dsn_telemetry(req.distance_km, req.true_anomaly_deg, req.is_farside)
+}
+

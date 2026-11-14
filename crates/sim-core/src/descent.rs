@@ -211,3 +211,96 @@ pub fn step_descent(state: &mut DescentState, delta_t_s: f64) {
         };
     }
 }
+
+// ============================================================================
+// Apollo 11 Landing Radar Doppler Dynamics (Ryan 4-Beam Altimeter/Velocity)
+// ============================================================================
+
+/// Altitude threshold for Landing Radar High/Low Scale Shift (762.0 m / 2,500 ft)
+pub const RADAR_SCALE_SHIFT_ALTITUDE_M: f64 = 762.0;
+/// Maximum operational acquisition altitude for Landing Radar (15,240.0 m / 50,000 ft)
+pub const RADAR_MAX_OPERATIONAL_ALTITUDE_M: f64 = 15_240.0;
+/// Maximum antenna pitch limit before Doppler beam drop-off (65.0 degrees)
+pub const RADAR_MAX_PITCH_LIMIT_DEG: f64 = 65.0;
+/// Maximum Doppler horizontal velocity passband (m/s)
+pub const RADAR_MAX_HORIZONTAL_VEL_MPS: f64 = 1_800.0;
+/// Maximum Doppler vertical velocity passband (m/s)
+pub const RADAR_MAX_VERTICAL_VEL_MPS: f64 = 300.0;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LandingRadarInput {
+    pub inertial_alt_m: f64,
+    pub vertical_vel_mps: f64,
+    pub horizontal_vel_mps: f64,
+    #[serde(default)]
+    pub terrain_elevation_offset_m: f64,
+    #[serde(default)]
+    pub pitch_angle_deg: Option<f64>,
+    #[serde(default)]
+    pub lateral_vel_mps: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LandingRadarMeasurement {
+    pub inertial_altitude_m: f64,
+    pub radar_altitude_m: f64,
+    pub altitude_delta_m: f64,
+    pub forward_velocity_mps: f64,
+    pub vertical_velocity_mps: f64,
+    pub lateral_velocity_mps: f64,
+    pub scale_mode: u8, // 1 = High Scale (>762m), 2 = Low Scale (<=762m)
+    pub data_good: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_message: Option<String>,
+}
+
+pub type LandingRadarResponse = LandingRadarMeasurement;
+
+/// Calculate Ryan 4-beam Landing Radar measurement accounting for terrain crater depression and scale shifts
+pub fn calculate_landing_radar(
+    inertial_alt_m: f64,
+    vertical_vel_mps: f64,
+    horizontal_vel_mps: f64,
+    terrain_elevation_offset_m: f64,
+) -> LandingRadarMeasurement {
+    calculate_landing_radar_full(&LandingRadarInput {
+        inertial_alt_m,
+        vertical_vel_mps,
+        horizontal_vel_mps,
+        terrain_elevation_offset_m,
+        pitch_angle_deg: None,
+        lateral_vel_mps: None,
+    })
+}
+
+/// Calculate landing radar with full pitch, lateral velocity telemetry, and tracking bandwidth checks
+pub fn calculate_landing_radar_full(input: &LandingRadarInput) -> LandingRadarMeasurement {
+    let radar_altitude_m = (input.inertial_alt_m - input.terrain_elevation_offset_m).max(0.0);
+    let altitude_delta_m = input.inertial_alt_m - radar_altitude_m;
+    let scale_mode = if radar_altitude_m > RADAR_SCALE_SHIFT_ALTITUDE_M {
+        1
+    } else {
+        2
+    };
+
+    let pitch_ok = input.pitch_angle_deg.map_or(true, |p| p.abs() <= RADAR_MAX_PITCH_LIMIT_DEG);
+    let alt_ok = input.inertial_alt_m >= 0.0
+        && input.inertial_alt_m <= RADAR_MAX_OPERATIONAL_ALTITUDE_M
+        && radar_altitude_m <= RADAR_MAX_OPERATIONAL_ALTITUDE_M;
+    let vel_h_ok = input.horizontal_vel_mps.abs() <= RADAR_MAX_HORIZONTAL_VEL_MPS;
+    let vel_v_ok = input.vertical_vel_mps.abs() <= RADAR_MAX_VERTICAL_VEL_MPS;
+    let data_good = pitch_ok && alt_ok && vel_h_ok && vel_v_ok;
+
+    LandingRadarMeasurement {
+        inertial_altitude_m: input.inertial_alt_m,
+        radar_altitude_m,
+        altitude_delta_m,
+        forward_velocity_mps: input.horizontal_vel_mps,
+        vertical_velocity_mps: input.vertical_vel_mps,
+        lateral_velocity_mps: input.lateral_vel_mps.unwrap_or(0.0),
+        scale_mode,
+        data_good,
+        error_message: None,
+    }
+}
+
