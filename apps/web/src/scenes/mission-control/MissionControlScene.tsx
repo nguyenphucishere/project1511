@@ -62,6 +62,9 @@ import {
   STAGE3_T,
 } from "./ascent";
 import { shotAt } from "./launchShots";
+import { KEYWORD_SECONDS, calloutsDue } from "./callouts";
+import { radioCall, stopRadio } from "@/game/radio";
+import { useSettingsStore } from "@/game/settingsStore";
 import {
   startCalmScore,
   startRockScore,
@@ -438,6 +441,38 @@ export function MissionControlScene({
     [],
   );
 
+  // Launch control on the radio: each stage event is called out in a radio-style voice and its name
+  // (one keyword) is shown on screen. A call is only made while its moment is fresh, so skipping the
+  // film does not replay the chatter, and none is made past the end of a failed flight.
+  const locale = useSettingsStore((s) => s.locale);
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
+  const [keyword, setKeyword] = useState<{ id: number; text: string } | null>(null);
+  const keywordId = useRef(0);
+  const burnEnd = result ? realSecondsAt(result.endSec) : Infinity;
+  useEffect(() => {
+    if (phase !== "flight" || ignitionAt === null) return;
+    let last = (performance.now() - ignitionAt) / 1000;
+    let hide = 0;
+    const id = window.setInterval(() => {
+      const now = (performance.now() - ignitionAt) / 1000;
+      for (const call of calloutsDue(last, Math.min(now, burnEnd))) {
+        const lang = localeRef.current;
+        radioCall(call.line, lang, call.voice);
+        setKeyword({ id: ++keywordId.current, text: call.keyword[lang] });
+        window.clearTimeout(hide);
+        hide = window.setTimeout(() => setKeyword(null), KEYWORD_SECONDS * 1000);
+      }
+      last = now;
+    }, 100);
+    return () => {
+      window.clearInterval(id);
+      window.clearTimeout(hide);
+      stopRadio();
+      setKeyword(null);
+    };
+  }, [phase, ignitionAt, burnEnd]);
+
   const briefing = BRIEFINGS["mission-control"];
   const titles: Record<Phase, string> = {
     config: m.configTitle,
@@ -543,6 +578,21 @@ export function MissionControlScene({
           >
             {m.skipCinematic}
           </Button>
+        </div>
+      )}
+
+      {keyword && (
+        <div
+          key={keyword.id}
+          aria-live="polite"
+          className="pointer-events-none absolute left-1/2 top-[15%] z-20 -translate-x-1/2 [animation:fade-in_400ms_ease-out]"
+        >
+          <div className="flex items-center gap-3 border-y border-primary/60 bg-space-deep/55 px-6 py-2 backdrop-blur-sm">
+            <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+            <span className="font-mono text-lg font-semibold uppercase tracking-[0.25em] text-foreground sm:text-2xl">
+              {keyword.text}
+            </span>
+          </div>
         </div>
       )}
 
