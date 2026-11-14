@@ -16,7 +16,7 @@ import { BRIEFINGS } from "@/game/script";
 import { useGameStore } from "@/game/gameStore";
 import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
-import { playExplosion, playSfx, setMasterVolume, speak, startRumble, stopSpeaking, type Rumble } from "@/game/sfx";
+import { playExplosion, playSfx, prefetchVoiceLines, setMasterVolume, speak, startRumble, stopSpeaking, type Rumble } from "@/game/sfx";
 import { ROOM_SPEAKER, roomScript, type RoomBeat } from "./controlRoomScript";
 import { useVoiceLine } from "@/hooks/useVoiceLine";
 import { preloadCrowd, startCrowdBed, type CrowdBed } from "@/game/crowdAudio";
@@ -66,7 +66,7 @@ import {
   STAGE3_T,
 } from "./ascent";
 import { shotAt } from "./launchShots";
-import { KEYWORD_SECONDS, calloutsDue } from "./callouts";
+import { CALLOUTS, KEYWORD_SECONDS, calloutsDue } from "./callouts";
 import { radioCall, stopRadio } from "@/game/radio";
 import { useSettingsStore } from "@/game/settingsStore";
 import {
@@ -469,7 +469,11 @@ export function MissionControlScene({
   // It gasps as the capsule climbs past them and cheers when it reaches orbit.
   const crowd = useRef<CrowdBed | null>(null);
   useEffect(() => {
-    if (phase === "countdown") preloadCrowd();
+    if (phase === "countdown") {
+      preloadCrowd();
+      // Fetch every radio call now, so each starts the instant its moment comes instead of after a download.
+      prefetchVoiceLines(CALLOUTS.map((c) => c.line[localeRef.current]), localeRef.current);
+    }
     if (phase === "countdown" || phase === "flight") {
       crowd.current ??= startCrowdBed();
       return;
@@ -491,7 +495,8 @@ export function MissionControlScene({
       if (shot === lastShot) return;
       lastShot = shot;
       const close = shot.startsWith("crowd-");
-      bed.setLevel(shot === "crowd-cheer" ? 1 : close ? 0.85 : 0.2);
+      // Nobody on the ground can be heard from inside the capsule.
+      bed.setLevel(shot.startsWith("cabin") ? 0 : shot === "crowd-cheer" ? 1 : close ? 0.85 : 0.2);
       if (shot === "crowd-cheer") bed.react("cheer");
       // The first cut to the crowd comes right after liftoff: they cheer as the rocket clears the pad.
       else if (shot === "crowd-field") bed.react("cheer", 0.7);
@@ -522,9 +527,13 @@ export function MissionControlScene({
     let hide = 0;
     const id = window.setInterval(() => {
       const now = (performance.now() - ignitionAt) / 1000;
+      // Inside the capsule (the astronaut's view) the control room is not in the picture, so its voice and
+      // the crowd stay out of it: the keyword still shows, but nothing is said over the cabin shots.
+      const inCabin = shotAt(now).id.startsWith("cabin");
+      if (inCabin) stopRadio();
       for (const call of calloutsDue(last, Math.min(now, burnEnd))) {
         const lang = localeRef.current;
-        radioCall(call.line, lang, call.voice);
+        if (!inCabin) radioCall(call.line, lang, call.voice);
         setKeyword({ id: ++keywordId.current, text: call.keyword[lang] });
         window.clearTimeout(hide);
         hide = window.setTimeout(() => setKeyword(null), KEYWORD_SECONDS * 1000);

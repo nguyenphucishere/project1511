@@ -125,7 +125,24 @@ const FFPROBE = process.env.FFPROBE || FFMPEG.replace(/ffmpeg(.exe)?$/i, "ffprob
 function durationOf(file: string): number | null {
   const r = spawnSync(FFPROBE, ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8" });
   const d = parseFloat(r.stdout);
-  return r.status === 0 && Number.isFinite(d) ? Math.round(d * 100) / 100 : null;
+  if (r.status === 0 && Number.isFinite(d)) return Math.round(d * 100) / 100;
+  return file.endsWith(".mp3") ? mp3Seconds(file) : null;
+}
+/** Without ffprobe: an mp3's length from its first frame's bitrate and the file size (exact for constant bitrate). */
+function mp3Seconds(file: string): number | null {
+  const buf = readFileSync(file);
+  let i = 0;
+  if (buf.toString("latin1", 0, 3) === "ID3") i = 10 + ((buf[6]! << 21) | (buf[7]! << 14) | (buf[8]! << 7) | buf[9]!);
+  for (; i + 4 < buf.length; i++) {
+    if (buf[i] !== 0xff || (buf[i + 1]! & 0xe0) !== 0xe0) continue;
+    const version = (buf[i + 1]! >> 3) & 3; // 3 = MPEG1, 2 = MPEG2
+    const layer = (buf[i + 1]! >> 1) & 3; // 1 = layer III
+    const br = buf[i + 2]! >> 4;
+    if (layer !== 1 || version === 1 || br === 0 || br === 15) continue;
+    const kbps = version === 3 ? [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320][br]! : [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160][br]!;
+    return Math.round(((buf.length - i) * 8 / (kbps * 1000)) * 100) / 100;
+  }
+  return null;
 }
 /** Sets `d` on every recording that has none (or all of them with --durations=all). Returns how many were set. */
 function fillDurations(all = false): number {
@@ -165,7 +182,7 @@ for (const l of lines) {
       .slice(0, 10);
     const file = `${locale}/${key}.${EXT}`;
     const known = manifest.lines[key];
-    if (known && known.h === hash && existsSync(resolve(OUT_DIR, file))) continue;
+    if (known && known.h === hash && existsSync(resolve(OUT_DIR, known.f ?? file))) continue; // whichever format it was recorded in
     jobs.push({ role: l.role, locale, text, voiceLocale, key, file, hash, crisis: !!crisis, tag: crisis ? l.tag : undefined });
   }
 }

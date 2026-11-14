@@ -22,10 +22,11 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { Warmup } from "../mission-control/Warmup";
 import { Cabin, WINDOW_Z } from "./Cabin";
 import { MoonBody } from "./MoonBody";
+import { Recovery } from "./Recovery";
 import { SEA_SUN, SeaSet } from "./SeaSet";
 import { ReentryCapsule, Ship, Stage } from "./Spacecraft";
 import { filmClock } from "./clock";
-import { R_EARTH, SUN, cabinEye, cabinLook, frameAt, mul, shipPose, viewKind } from "./flight";
+import { R_EARTH, SUN, T, cabinEye, cabinLook, frameAt, mul, plasma, shipPose, viewKind } from "./flight";
 
 const MILKY_TINT = new Color(2.2, 2.3, 2.7);
 
@@ -121,7 +122,10 @@ function FilmCamera({
         camera.position.copy(vD);
         if (lampRef.current) {
           lampRef.current.position.set(0, 0.3, 0.5).applyQuaternion(qA).add(vA.set(...pose.pos));
-          lampRef.current.intensity = t >= 124 ? 0.9 : 0.1;
+          // In the entry the only light in the cabin is the fire outside: orange, and flickering with it.
+          const fire = t >= T.REENTRY && t < T.CHUTES ? plasma(t) : 0;
+          lampRef.current.color.set(fire > 0.02 ? "#ff9a4d" : "#ffcf9e");
+          lampRef.current.intensity = fire > 0.02 ? 0.25 + 2.6 * fire * (0.72 + 0.28 * Math.sin(t * 37) * Math.sin(t * 11 + 1)) : t >= 124 ? 0.9 : 0.1;
         }
         vD.set(0, 0, WINDOW_Z).applyQuaternion(qA).add(vA.set(...pose.pos));
         camera.up.copy(vC);
@@ -201,6 +205,7 @@ export function TranslunarWorld({ startAt, from, to, onReady }: TranslunarWorldP
       <ReentryCapsule />
       <Cabin ref={cabinRef} />
       <SeaSet />
+      <Recovery />
       <Warmup />
     </>
   );

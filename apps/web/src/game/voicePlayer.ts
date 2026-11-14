@@ -1,3 +1,4 @@
+import type { TraceEvent } from "./voiceTrace";
 import { voiceKey, type VoiceLocale } from "./voiceKey";
 
 /**
@@ -37,6 +38,9 @@ export interface VoiceDeps {
   duck?: (on: boolean) => void;
   enabled: () => boolean;
   noise: (c: AudioContext) => AudioBuffer;
+  /** Hears everything the player does, for the independent watcher (see ./voiceTrace.ts). */
+  trace?: (e: TraceEvent) => void;
+  now?: () => number;
 }
 
 /**
@@ -97,6 +101,26 @@ export function createVoicePlayer(deps: VoiceDeps) {
     return c;
   };
   let activeVoices = 0;
+  let lastId = 0;
+  const clock = () => (deps.now ?? (() => performance.now()))();
+  /** Recordings already downloaded, as in-memory blobs: playing one never waits on the network. */
+  const cached = new Map<string, string>();
+  const fetching = new Map<string, Promise<void>>();
+
+  /** Downloads one recording into memory (once). A failure leaves it to be fetched when it is played. */
+  function fetchFile(file: string): Promise<void> {
+    if (cached.has(file)) return Promise.resolve();
+    let p = fetching.get(file);
+    if (!p) {
+      p = fetch(`${BASE}${file}`)
+        .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
+        .then((b) => void cached.set(file, URL.createObjectURL(b)))
+        .catch(() => undefined)
+        .finally(() => fetching.delete(file));
+      fetching.set(file, p);
+    }
+    return p;
+  }
 
   function load(): Promise<VoiceManifest | null> {
     if (manifest) return Promise.resolve(manifest);
@@ -120,12 +144,12 @@ export function createVoicePlayer(deps: VoiceDeps) {
     else for (const ch of channels.values()) stopChannel(ch);
   }
 
-  function begin(entry: VoiceEntry, opts: PlayOptions, my: number, ch: Channel): Promise<PlayResult> {
+  function begin(entry: VoiceEntry, opts: PlayOptions, my: number, ch: Channel, id: number): Promise<PlayResult> {
     const a = deps.audio();
     if (!a) return Promise.resolve("unavailable");
     const { c } = a;
     const out = a.voice ?? a.out;
-    const el = new Audio(`${BASE}${entry.file}`);
+    const el = new Audio(cached.get(entry.file) ?? `${BASE}${entry.file}`);
     el.preload = "auto";
     const panic = Math.min(1, Math.max(0, opts.panic ?? 0));
     if (opts.rate || panic > 0) {
@@ -154,11 +178,13 @@ export function createVoicePlayer(deps: VoiceDeps) {
     };
     const self = {
       stop: () => {
+        if (!finished) deps.trace?.({ k: "cut", id, t: clock() });
         cleanup();
       },
     };
     const ended = () => {
       const wasCurrent = ch.current === self;
+      if (!finished) deps.trace?.({ k: "end", id, t: clock() });
       cleanup();
       if (wasCurrent) ch.current = null;
       opts.onEnd?.();
@@ -228,11 +254,15 @@ export function createVoicePlayer(deps: VoiceDeps) {
     el.onended = ended;
     el.onerror = () => {
       const wasCurrent = ch.current === self;
+      if (!finished) deps.trace?.({ k: "cut", id, t: clock() });
       cleanup();
       if (wasCurrent) ch.current = null;
     };
     return el.play().then(
-      (): PlayResult => "played",
+      (): PlayResult => {
+        deps.trace?.({ k: "start", id, t: clock() });
+        return "played";
+      },
       (): PlayResult => {
         if (ch.current === self) ch.current = null;
         cleanup();
@@ -247,29 +277,54 @@ export function createVoicePlayer(deps: VoiceDeps) {
     const m = await load();
     if (!m) return "unavailable";
     const entry = lookupVoice(m, locale, text);
-    if (!entry) return "missing";
+    if (!entry) {
+      deps.trace?.({ k: "missing", text, ch: opts.channel ?? "main", t: clock() });
+      return "missing";
+    }
     const ch = channel(opts.channel);
+    const id = ++lastId;
+    deps.trace?.({ k: "request", id, text, ch: opts.channel ?? "main", t: clock(), d: entry.duration, queued: Boolean(opts.queue && ch.current) });
     if (opts.queue && ch.current) {
       const my = ch.token;
       ch.waiting.push(() => {
-        if (my === ch.token && deps.enabled()) void begin(entry, opts, my, ch);
+        if (my === ch.token && deps.enabled()) {
+          deps.trace?.({ k: "ready", id, t: clock() });
+          void begin(entry, opts, my, ch, id);
+        }
       });
       return "played";
     }
     // A line that does not queue replaces what its own channel is saying; other channels carry on.
     if (!opts.queue) stopChannel(ch);
-    return begin(entry, opts, ++ch.token, ch);
+    return begin(entry, opts, ++ch.token, ch, id);
   }
 
   /** Downloads the recording of a line ahead of time, so it starts the instant it is wanted. */
   async function prefetch(text: string, locale: VoiceLocale): Promise<void> {
     const entry = lookupVoice(await load(), locale, text);
     if (!entry) return;
-    try {
-      await (await fetch(`${BASE}${entry.file}`)).arrayBuffer();
-    } catch {
-      /* a line that cannot be fetched now is simply fetched when it is played */
-    }
+    await fetchFile(entry.file);
+  }
+
+  /**
+   * Downloads every recording of one language into memory, a few at a time, so no line is ever fetched
+   * while the game is running. Resolves when all are in (or have failed: those are fetched on demand).
+   */
+  async function warmAll(locale: VoiceLocale, onProgress?: (done: number, total: number) => void, concurrency = 6): Promise<{ total: number; failed: number }> {
+    const m = await load();
+    if (!m) return { total: 0, failed: 0 };
+    const files = [...new Set(Object.values(m.lines).map((l) => l.f).filter((f) => f.startsWith(`${locale}/`)))];
+    let done = 0;
+    let next = 0;
+    const worker = async () => {
+      while (next < files.length) {
+        const f = files[next++]!;
+        await fetchFile(f);
+        onProgress?.(++done, files.length);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(concurrency, files.length) }, worker));
+    return { total: files.length, failed: files.filter((f) => !cached.has(f)).length };
   }
 
   /** How long the recording of this line is, in seconds (null when unknown or there is none). */
@@ -282,7 +337,7 @@ export function createVoicePlayer(deps: VoiceDeps) {
     return lookupVoice(await load(), locale, text) !== null;
   }
 
-  return { play, stop, has, load, duration, prefetch };
+  return { play, stop, has, load, duration, prefetch, warmAll };
 }
 
 export type VoicePlayer = ReturnType<typeof createVoicePlayer>;

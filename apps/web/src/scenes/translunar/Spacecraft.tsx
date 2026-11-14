@@ -12,6 +12,7 @@ import {
   type Group,
   type Mesh,
   type MeshBasicMaterial,
+  ShaderMaterial,
   Vector3,
 } from "three";
 import { filmClock } from "./clock";
@@ -19,7 +20,10 @@ import {
   SEA,
   T,
   capsuleAltitude,
+  homePosition,
+  landedTilt,
   norm,
+  sub,
   petals,
   plasma,
   reentryPosition,
@@ -260,7 +264,7 @@ export function Ship() {
     const t = filmClock.t;
     const g = group.current;
     if (!g) return;
-    g.visible = t < T.REENTRY && viewKind(t) !== "cabin";
+    g.visible = t < T.SM_SEP && viewKind(t) !== "cabin";
     if (g.visible) orient(g, shipPose(t));
     // Eagle rides on the nose from the docking until the descent (the way home is flown by the command module alone).
     if (eagle.current) eagle.current.visible = t >= T.DOCK && t < T.OUTBOUND_END;
@@ -308,29 +312,35 @@ export function Ship() {
 const PLASMA_CORE = new Color(3.2, 1.8, 0.8);
 const PLASMA_EDGE = new Color(2, 0.6, 0.25);
 
-function Canopy({ x, z, lean }: { x: number; z: number; lean: number }) {
+/** Height of the canopies above the point on the capsule where every shroud line ends (the chute group's origin). */
+const CANOPY_HEIGHT = 9;
+
+function Canopy({ x, z }: { x: number; z: number; lean?: number }) {
+  // Every line runs from the canopy's rim to the one point on the capsule, so the three chutes share it.
   const lines = useMemo(() => {
     const geo = new BufferGeometry();
     const pts: number[] = [];
-    for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * Math.PI * 2;
-      pts.push(Math.cos(a) * 3.2, 0, Math.sin(a) * 3.2, 0, -9, 0);
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      pts.push(x + Math.cos(a) * 3.2, CANOPY_HEIGHT, z + Math.sin(a) * 3.2, 0, 0, 0);
     }
     geo.setAttribute("position", new Float32BufferAttribute(pts, 3));
     return geo;
-  }, []);
+  }, [x, z]);
   return (
-    <group position={[x, 9, z]} rotation={[lean, 0, 0]}>
-      {Array.from({ length: 8 }, (_, i) => (
-        <mesh key={i} scale={[3.2, 2.1, 3.2]}>
-          <sphereGeometry args={[1, 8, 6, (i * Math.PI) / 4, Math.PI / 4, 0, Math.PI / 2]} />
-          <meshStandardMaterial color={i % 2 ? "#f4f1ea" : "#e8561c"} roughness={0.7} side={DoubleSide} />
-        </mesh>
-      ))}
+    <>
+      <group position={[x, CANOPY_HEIGHT, z]}>
+        {Array.from({ length: 8 }, (_, i) => (
+          <mesh key={i} scale={[3.2, 2.1, 3.2]}>
+            <sphereGeometry args={[1, 8, 6, (i * Math.PI) / 4, Math.PI / 4, 0, Math.PI / 2]} />
+            <meshStandardMaterial color={i % 2 ? "#f4f1ea" : "#e8561c"} roughness={0.7} side={DoubleSide} />
+          </mesh>
+        ))}
+      </group>
       <lineSegments geometry={lines}>
         <lineBasicMaterial color="#d8d3c8" />
       </lineSegments>
-    </group>
+    </>
   );
 }
 
@@ -338,7 +348,7 @@ function ExpandingRing() {
   const ring = useRef<Mesh>(null);
   useFrame(() => {
     const t = filmClock.t;
-    const k = (t - (T.FILM_END - 5.5)) / 4;
+    const k = (t - (T.TOUCHDOWN - 0.1)) / 4;
     const m = ring.current;
     if (!m) return;
     m.visible = k > 0 && k < 1.4;
@@ -354,6 +364,43 @@ function ExpandingRing() {
 }
 
 /**
+ * Soft plasma: brightest where the surface faces the camera (so the edges fade instead of cutting off
+ * like a tube), fading along its length, from white-yellow at the shield to red-orange behind.
+ */
+function plasmaMaterial(strength: number, sink: { current: ShaderMaterial[] }, trail = false) {
+  const m = new ShaderMaterial({
+    uniforms: { uHeat: { value: 0 }, uStrength: { value: strength }, uTrail: { value: trail ? 1 : 0 } },
+    vertexShader: `
+      varying vec3 vN; varying vec3 vV; varying float vT;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vN = normalize(normalMatrix * normal);
+        vV = normalize(-mv.xyz);
+        vT = uv.y;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform float uHeat; uniform float uStrength; uniform float uTrail;
+      varying vec3 vN; varying vec3 vV; varying float vT;
+      void main() {
+        float rim = pow(abs(dot(normalize(vN), normalize(vV))), 1.6);
+        float along = uTrail > 0.5 ? pow(vT, 1.3) * smoothstep(0.0, 0.2, 1.0 - vT) : pow(1.0 - vT, 1.4) * smoothstep(0.0, 0.18, vT);
+        vec3 hot = vec3(3.0, 2.2, 1.2);
+        vec3 cool = vec3(2.0, 0.55, 0.2);
+        vec3 col = mix(cool, hot, along);
+        gl_FragColor = vec4(col, rim * along * uHeat * uStrength);
+      }`,
+    transparent: true,
+    blending: AdditiveBlending,
+    depthWrite: false,
+    side: DoubleSide,
+    toneMapped: false,
+  });
+  sink.current.push(m);
+  return m;
+}
+
+/**
  * The command module alone: through the fire of reentry (heat shield first, a plasma wake behind),
  * then under three parachutes and down into the sea at the splashdown set.
  */
@@ -361,13 +408,15 @@ export function ReentryCapsule() {
   const group = useRef<Group>(null);
   const body = useRef<Group>(null);
   const wake = useRef<Group>(null);
-  const wakeMats = useRef<MeshBasicMaterial[]>([]);
+  const wakeMats = useRef<ShaderMaterial[]>([]);
   const chutes = useRef<Group>(null);
+  const sm = useRef<Group>(null);
   useFrame(({ clock }) => {
     const t = filmClock.t;
     const g = group.current;
     if (!g) return;
-    const burning = t >= T.REENTRY && t < T.CHUTES;
+    // From the service module's separation the command module flies alone, heat shield first, along the path home.
+    const burning = t >= T.SM_SEP && t < T.CHUTES;
     const landing = t >= T.CHUTES;
     g.visible = burning || landing;
     const alt0 = landing ? capsuleAltitude(t) : 0;
@@ -375,29 +424,51 @@ export function ReentryCapsule() {
       chutes.current.visible = landing && alt0 > 1.2;
       chutes.current.position.set(SEA[0], alt0 + 1.4, SEA[2]);
     }
+    if (sm.current && !burning) sm.current.visible = false;
     if (!g.visible) return;
     if (burning) {
-      const p = reentryPosition(t);
-      const d = norm([0, -1.9, -12]);
+      const p = homePosition(t);
+      const d = norm(sub(homePosition(t + 0.05), homePosition(t - 0.05)));
       // Heat shield (the -Z base of the cone) leads; the nose trails.
       orient(g, { pos: p, fwd: [-d[0], -d[1], -d[2]] as Vec, up: [0, 1, 0] });
+      // The service module drifts back and tumbles; in the air it glows and burns away.
+      const smNode = sm.current;
+      if (smNode) {
+        const q = t - T.SM_SEP;
+        smNode.visible = t < T.REENTRY + 14;
+        const dist = 3.2 + q * 0.35;
+        smNode.position.set(p[0] - d[0] * dist, p[1] - d[1] * dist + Math.sin(q * 0.2) * 0.3, p[2] - d[2] * dist);
+        smNode.rotation.set(q * 0.22, 0.4, q * 0.09);
+        smNode.scale.setScalar(Math.max(0.01, t < T.REENTRY ? 1 : 1 - (t - T.REENTRY) / 14));
+      }
       const hot = plasma(t);
       if (wake.current) {
-        wake.current.visible = hot > 0.02;
+        // From inside the cabin the fire is not a shape around you but light at the window (see the scene's overlay).
+        wake.current.visible = hot > 0.02 && viewKind(t) !== "cabin";
         const flick = 1 + Math.sin(clock.elapsedTime * 38) * 0.08;
         wake.current.scale.set(1, 1, hot * flick);
       }
-      wakeMats.current.forEach((m, i) => (m.opacity = hot * (i ? 0.5 : 0.8)));
+      wakeMats.current.forEach((m) => (m.uniforms.uHeat.value = hot));
     } else {
       const alt = capsuleAltitude(t);
       const bob = alt < 1 ? Math.sin(clock.elapsedTime * 1.3) * 0.12 : 0;
       g.position.set(SEA[0], alt + bob, SEA[2]);
-      g.quaternion.setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2 + (alt < 1 ? Math.sin(clock.elapsedTime * 0.9) * 0.06 : 0.0));
+      g.quaternion.setFromAxisAngle(new Vector3(1, 0, 0), landedTilt(t) + (alt < 1 ? Math.sin(clock.elapsedTime * 0.9) * 0.05 : 0.0));
       if (wake.current) wake.current.visible = false;
     }
   });
   return (
     <>
+    <group ref={sm} visible={false}>
+      <mesh>
+        <cylinderGeometry args={[0.85, 0.85, 2.4, 24]} />
+        <meshStandardMaterial color="#cfcfcf" metalness={0.3} roughness={0.5} />
+      </mesh>
+      <mesh position={[0, -1.6, 0]}>
+        <coneGeometry args={[0.7, 1.0, 20, 1, true]} />
+        <meshStandardMaterial color="#2a2a2e" side={DoubleSide} />
+      </mesh>
+    </group>
     <group ref={chutes}>
       <Canopy x={-4.2} z={0} lean={0.12} />
       <Canopy x={4.2} z={0} lean={-0.12} />
@@ -413,27 +484,20 @@ export function ReentryCapsule() {
         </mesh>
       </group>
       <group ref={wake}>
-        {/* Plasma streaming back over the capsule: the wake runs toward +Z, behind the heat shield. */}
-        {[
-          [PLASMA_EDGE, 0.8, 0],
-          [PLASMA_CORE, 0.45, 1],
-        ].map(([c, r, i]) => (
-          <mesh key={i as number} position={[0, 0, 4.6]} rotation={[Math.PI / 2, 0, 0]} scale={[(r as number) * 1.2, 9, (r as number) * 1.2]}>
-            <coneGeometry args={[1, 1, 24, 1, true]} />
-            <meshBasicMaterial
-              ref={(m) => {
-                if (m) wakeMats.current[i as number] = m;
-              }}
-              color={c as Color}
-              transparent
-              opacity={0.6}
-              blending={AdditiveBlending}
-              depthWrite={false}
-              toneMapped={false}
-              side={DoubleSide}
-            />
-          </mesh>
-        ))}
+        {/* Heat shield leads (-Z). A shock cap glows just in front of it, a thin sheath of hot gas hugs
+            the capsule's sides, and a slim trail streams from the nose, widening and fading as it goes. */}
+        <mesh position={[0, 0, -0.5]} scale={[1.1, 1.1, 0.45]}>
+          <sphereGeometry args={[1, 24, 16]} />
+          <primitive object={plasmaMaterial(0.45, wakeMats)} attach="material" />
+        </mesh>
+        <mesh position={[0, 0, 0.7]} rotation={[Math.PI / 2, 0, 0]} scale={[1.02, 1.6, 1.02]}>
+          <coneGeometry args={[1, 1, 32, 6, true]} />
+          <primitive object={plasmaMaterial(0.3, wakeMats)} attach="material" />
+        </mesh>
+        <mesh position={[0, 0, 6.3]} rotation={[-Math.PI / 2, 0, 0]} scale={[0.85, 10, 0.85]}>
+          <coneGeometry args={[1, 1, 32, 8, true]} />
+          <primitive object={plasmaMaterial(0.4, wakeMats, true)} attach="material" />
+        </mesh>
       </group>
     </group>
     <ExpandingRing />

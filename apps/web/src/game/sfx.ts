@@ -1,5 +1,6 @@
 import { useSettingsStore } from "./settingsStore";
 import { createVoicePlayer, type PlayOptions, type PlayResult } from "./voicePlayer";
+import { createTracer } from "./voiceTrace";
 
 /**
  * Procedural sound effects (Web Audio, no files). Every sound is a small recipe of oscillators
@@ -714,7 +715,22 @@ function duckForVoice(on: boolean) {
   master.gain.setTargetAtTime(on ? masterVolume * 0.35 : masterVolume, ctx.currentTime, on ? 0.05 : 0.6);
 }
 
-const voicePlayer = createVoicePlayer({ audio, enabled, noise, duck: duckForVoice });
+/** The independent watcher of the spoken lines (see ./voiceTrace.ts): in development it warns in the console as a problem appears. */
+export const voiceTracer = createTracer(() => (typeof performance !== "undefined" ? performance.now() : 0), {
+  warn: (i) => {
+    if (process.env.NODE_ENV !== "production") console.warn(`[voice-trace] ${i.kind}: ${i.message}`);
+  },
+});
+if (typeof window !== "undefined") (window as unknown as { __voiceTrace?: unknown }).__voiceTrace = voiceTracer;
+const voicePlayer = createVoicePlayer({ audio, enabled, noise, duck: duckForVoice, trace: voiceTracer.record });
+
+/**
+ * Downloads every recording of this language into memory, so no line is fetched while the game runs
+ * (a download in the way of a line is what made voices come late). Calls `onProgress` as files arrive.
+ */
+export function warmAllVoices(locale: "en" | "vi", onProgress?: (done: number, total: number) => void) {
+  return voicePlayer.warmAll(locale, onProgress);
+}
 let speakToken = 0;
 
 export interface SpeakOptions {
