@@ -1,0 +1,12 @@
+import { chromium } from "playwright";
+const [stepId="ascent-scene", w="1280", h="720"] = process.argv.slice(2);
+const browser = await chromium.launch({ args: ["--use-gl=angle","--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const ctx = await browser.newContext({ viewport: { width:+w, height:+h } });
+await ctx.addInitScript((id)=>localStorage.setItem("moonbound.progress", JSON.stringify({state:{stepId:id},version:1})), stepId);
+const page = await ctx.newPage();
+await page.goto("http://127.0.0.1:3100/play", { waitUntil:"load", timeout:180000 });
+await page.waitForTimeout(15000);
+const n = await page.evaluate(() => new Promise(r => { let c=0; const f=()=>{c++; requestAnimationFrame(f)}; requestAnimationFrame(f); setTimeout(()=>r(c), 10000); }));
+console.log(stepId, w+"x"+h, "fps≈", (n/10).toFixed(1));
+await page.screenshot({ path: `probe-${stepId}.png`, timeout: 120000 });
+await browser.close();

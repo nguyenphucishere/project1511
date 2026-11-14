@@ -1,0 +1,108 @@
+PROMPT SEEDANCE (ẢNH THÀNH VIDEO), BẢN 2: KHOÁ TRẠNG THÁI ÁNH SÁNG
+
+Lỗi bản cũ: prompt chỉ tả "đèn tắt dần", không tả TRẠNG THÁI CUỐI, nên Seedance cho đèn tối rồi sáng lại như bình
+thường. Bản này sửa bằng 4 thứ: (1) khai báo trạng thái đầu và trạng thái cuối, (2) ánh sáng chỉ đi MỘT chiều,
+(3) câu cấm "không được sáng lại", (4) khối ràng buộc chung ở cuối mỗi prompt.
+
+Cách dùng: chọn Image to Video, tải lên ẢNH ĐIỆN ẢNH ĐÃ LÀM XONG Ở CHATGPT làm khung đầu, dán prompt tương ứng.
+Mỗi prompt đã đầy đủ, copy nguyên khối. Cài đặt chung: 16:9 | 1080p | TẮT âm thanh.
+Thời lượng: Max Q 6s | Cạn nhiên liệu 8s | Quá nặng 6s | Gió cắt 5s | Sét 5s
+(nếu chỉ có 5s hoặc 10s: chọn 5s cho cả năm). Tạo 3 đến 4 bản mỗi cái rồi chọn bản đẹp nhất.
+
+==================================================================
+1) MAX Q (gãy kết cấu)      thời lượng 6s      lưu thành: structural.mp4
+==================================================================
+Cinematic 35mm anamorphic shot inside a cramped 1960s Apollo command module. Three astronauts in white pressure suits and fishbowl helmets with gold reflective visors sit side by side, seen from the instrument panel. Locked-off camera with a very slow push-in.
+
+STARTING STATE (first frame): red alarm lights already flashing, cabin in tense red-orange light.
+ENDING STATE (last frame): the whole frame is blinding white from an explosion flash.
+LIGHTING RULE: the situation only gets worse. The cabin never returns to calm or normal lighting at any moment.
+
+0-2s: the cabin shakes with growing vibration, red alarm lights pulse across the visors and suits, dust vibrates in the air, the helmets turn slowly toward each other.
+2-4s: violent shaking, sparks and dust fly, the commander's helmet turns to the pilot beside him, a long frightened glance, visors reflecting flashing red light, the camera shakes with the cabin.
+4-5.5s: panels flicker and fail, a harsh orange fire glow floods the round window, the shaking gets even stronger, light flares across the visors.
+5.5-6s: a blinding white flash swallows the whole frame.
+
+Photoreal, film grain, shallow depth of field, high contrast, tense and terrifying.
+CONSTRAINTS: keep exactly three astronauts with identical positions, suits and helmets as the first frame. The faces stay hidden behind the dark reflective visors. Do not morph or distort the helmets. No camera movement except the slow push-in and the cabin shake. No text, no subtitles, no logos, no music. The mood never relaxes.
+
+==================================================================
+2) CẠN NHIÊN LIỆU           thời lượng 8s      lưu thành: fuel-depleted.mp4
+==================================================================
+Cinematic 35mm anamorphic shot inside a cramped 1960s Apollo command module. Three astronauts in white pressure suits and fishbowl helmets with gold reflective visors sit side by side, seen from the instrument panel. Locked-off camera with an extremely slow push-in.
+
+STARTING STATE (first frame): the cabin is already in the dim cold-blue, quiet emergency state shown in the image: only a few amber warning lights, deep shadows.
+ENDING STATE (last frame): the cabin is almost completely dark, only a faint cold blue glow on the visors, then a fade to black.
+LIGHTING RULE: the light only ever goes DOWN. It gets darker and colder across the whole 8 seconds. The lights NEVER come back on, NEVER brighten, NEVER return to normal cabin lighting, not even briefly. The red alarm lights are already off and stay off. Once an amber light dims it stays dim.
+
+0-2s: the violent shaking has just stopped, absolute silence, dust and a loose glove begin to float in the cabin as gravity fades, the cabin is dim and cold, the amber lights are weak.
+2-5s: the three helmets turn slowly toward each other, each one pausing on the next, soft cold blue light on the visors, tiny breath fog appears and fades inside the glass, absolute stillness, the lighting keeps slowly darkening.
+5-8s: the commander's helmet holds still, looking at the others, the remaining amber lights dim one by one until almost none are left, the pale blue glow of the Earth through the round window slowly tilts as the capsule begins to fall, the cabin sinks into darkness, then the frame fades to black.
+
+Photoreal, film grain, shallow depth of field, cold blue and black palette, slow and haunting, quiet dread, a sense of waiting for the end.
+CONSTRAINTS: keep exactly three astronauts with identical positions, suits and helmets as the first frame. The faces stay hidden behind the dark reflective visors. Do not morph or distort the helmets. No sudden camera movement. No flashes, no fire, no explosion, no new light sources, no restoration of power. No text, no subtitles, no logos, no music.
+
+==================================================================
+3) QUÁ NẶNG                 thời lượng 6s      lưu thành: slow-climb.mp4
+==================================================================
+Cinematic 35mm anamorphic shot inside a cramped 1960s Apollo command module. Three astronauts in white pressure suits and fishbowl helmets with gold reflective visors sit side by side, seen from the instrument panel. Locked-off camera with a slow push-in.
+
+STARTING STATE (first frame): amber warning lights blinking, low sunset-orange light through the round window, strained rumbling cabin.
+ENDING STATE (last frame): the window is dark, the cabin is almost black with a last dim red warning light, then a cut to black.
+LIGHTING RULE: the light only gets darker and more ominous. The window light fades from orange to dark and never returns. The cabin never goes back to normal lighting.
+
+0-2s: the cabin rumbles heavily but weakly, amber lights blink, the astronauts glance at their gauges, one warning light turns from amber to red.
+2-4s: the helmets turn to each other, quick worried glances, the light in the round window shifts from orange to dark as the capsule stalls and tilts slightly, the amber lights weaken.
+4-6s: the rumble dies down into silence, a final long glance between the commander and the pilot, a small loose object drifts upward as gravity fades, only a dim red warning light remains, then a cut to black.
+
+Photoreal, film grain, shallow depth of field, amber to deep red to black palette, growing alarm.
+CONSTRAINTS: keep exactly three astronauts with identical positions, suits and helmets as the first frame. The faces stay hidden behind the dark reflective visors. Do not morph or distort the helmets. No camera movement except the slow push-in. No explosion, no bright flash, no restoration of normal light. No text, no subtitles, no logos, no music.
+
+==================================================================
+4) GIÓ CẮT                  thời lượng 5s      lưu thành: wind-shear.mp4
+==================================================================
+Cinematic 35mm anamorphic shot inside a cramped 1960s Apollo command module. Three astronauts in white pressure suits and fishbowl helmets with gold reflective visors sit side by side, seen from the instrument panel. The camera is held at a 12 degree dutch angle with a subtle handheld shake.
+
+STARTING STATE (first frame): cold white-blue light, red caution lights flickering, the cabin already tilted.
+ENDING STATE (last frame): near total darkness, only the faint outlines of the helmets, then a hard cut to black.
+LIGHTING RULE: the situation only gets worse. After the lights cut out they do NOT come back on, and the cabin never returns to a stable, calm state.
+
+0-1.5s: the whole cabin lurches sideways, dust and loose straps swing, red caution lights flicker.
+1.5-3.5s: violent side to side shaking, the helmets are thrown and then turn toward each other, visors reflecting flashing red and cold white light, panic.
+3.5-5s: a huge jolt, the lights cut out and stay out, only the faint outlines of the helmets in darkness, then a hard cut to black.
+
+Photoreal, film grain, shallow depth of field, cold white-blue palette with red flashes, chaotic and violent.
+CONSTRAINTS: keep exactly three astronauts with identical positions, suits and helmets as the first frame. The faces stay hidden behind the dark reflective visors. Do not morph or distort the helmets. Keep the dutch angle for the whole clip. No text, no subtitles, no logos, no music.
+
+==================================================================
+5) SÉT                      thời lượng 5s      lưu thành: lightning.mp4
+==================================================================
+Cinematic 35mm anamorphic shot inside a cramped 1960s Apollo command module. Three astronauts in white pressure suits and fishbowl helmets with gold reflective visors sit side by side, seen from the instrument panel. Locked-off camera.
+
+STARTING STATE (first frame): dim cabin, red warning lights on.
+ENDING STATE (last frame): the whole frame is blinding white from a second lightning flash.
+LIGHTING RULE: the cabin lights fail after the first flash and only come back as weak flickering red emergency light, never as normal lighting.
+
+0-1s: a dim cabin lit by red warning lights, the helmets turn slowly toward each other.
+1-1.4s: a blinding white lightning flash through the round window overexposes the whole frame, the helmets become black silhouettes.
+1.4-3s: every light dies, near total darkness, only the faint outline of the visors, a small spark crawls across a panel.
+3-4.5s: weak red emergency lights flicker back on, the three astronauts look at each other in shock.
+4.5-5s: a second blinding white flash swallows the whole frame.
+
+Photoreal, film grain, hard shadows, extreme contrast, sudden and shocking.
+CONSTRAINTS: keep exactly three astronauts with identical positions, suits and helmets as the first frame. The faces stay hidden behind the dark reflective visors. Do not morph or distort the helmets. No camera movement. No text, no subtitles, no logos, no music.
+
+------------------------------------------------------------------
+NẾU VẪN BỊ SÁNG LẠI (đặc biệt cái cạn nhiên liệu), thêm câu này vào đầu cả prompt:
+"The cabin lighting changes in ONE direction only: from dim to darker to black. Never brighter."
+và cuối prompt: "At no point does the cabin lighting return to its original brightness."
+
+NẾU VIDEO BỊ NHẢY KHUNG (người đổi chỗ, mũ biến dạng), thêm:
+"Do not change the number of astronauts. Do not morph the helmets. No camera movement other than the slow push-in."
+
+NẾU CHUYỂN ĐỘNG QUÁ YẾU thêm "intense, powerful motion"; QUÁ HỖN LOẠN thì thêm "controlled motion".
+
+Mẹo: nếu Seedance có ô Negative prompt, dán vào đó:
+"lights turning back on, brightening, restored lighting, calm cabin, bright cabin, extra people, morphing helmets, visible faces, text, subtitles, watermark, logo"
+
+Sau khi có 5 file mp4: đặt vào apps/web/public/assets/video/failure/ rồi báo tôi để gắn vào game.

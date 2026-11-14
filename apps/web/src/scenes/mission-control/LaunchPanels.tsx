@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ReadoutGrid } from "@/components/hud/ReadoutGrid";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
@@ -11,11 +10,13 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { CHARACTERS } from "@/game/characters";
 import { playSfx } from "@/game/sfx";
 import { cn } from "@/lib/utils";
-import { TRACE_TEXT } from "@/lib/simulation/launch.mock";
-import { WIND_LIMIT_KMH } from "@/mocks/launch-options";
+import { TRACE_TEXT } from "@/lib/simulation/launch.engine";
 import type { LaunchAssessment, LaunchConfig, LaunchResult } from "@/lib/simulation/launch.types";
 import { formatMissionTime } from "@/lib/format";
-import { NOMINAL_EVENTS, altitudeKm, missionSecondsAt, speedKms } from "./flight";
+import { NOMINAL_EVENTS, altitudeKm, missionSecondsAt, realSecondsAt, speedKms } from "./flight";
+import { EPILOGUE } from "./ascent";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
+import { COUNT_VOICE } from "./callouts";
 
 /* ---------------------------------------------------------------- GO / NO-GO poll */
 
@@ -34,11 +35,19 @@ export function PollPanel({
   const m = t.missionControl;
   const localize = useLocalized();
   const reduced = useReducedMotion();
-  // Fueling and systems are always GO in the demo; weather depends on the chosen window.
-  const items = [
-    { id: "fueling", label: m.pollFueling, go: true },
-    { id: "systems", label: m.pollSystems, go: true },
-    { id: "weather", label: m.pollWeather, go: assessment.weatherGo },
+  // Fueling and systems report GO. Weather reports what it measures and leaves the call to
+  // Flight (the player): judging it against the launch commit criteria is the job.
+  const wx = assessment.weather;
+  const weatherReading = [
+    format(m.pollWeatherReading, { wind: Math.round(wx.wind_speed_kmh), gust: Math.round(wx.wind_gust_kmh) }),
+    wx.thunderstorm ? m.pollWeatherStorm : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const items: { id: string; label: string; detail?: string }[] = [
+    { id: "fueling", label: m.pollFueling },
+    { id: "systems", label: m.pollSystems },
+    { id: "weather", label: m.pollWeather, detail: weatherReading },
   ];
   const [answered, setAnswered] = useState(0);
   const launchRef = useRef<HTMLButtonElement>(null);
@@ -51,18 +60,19 @@ export function PollPanel({
   }, [answered, items.length, reduced]);
 
   const done = answered >= items.length;
-  const allGo = items.every((i) => i.go);
+  // Gene Kranz opens the poll. Weather is the player's call, so there is no automatic scrub line.
+  useVoiceLine(format(m.pollIntro, { name: localize(CHARACTERS["flight-director"].name) }));
 
-  // Each station's answer is heard as it comes in; only weather (the last) can be NO-GO.
+  // Each station's answer is heard as it comes in.
   useEffect(() => {
     if (answered === 0) return;
-    playSfx(answered === items.length && !assessment.weatherGo ? "noGo" : "go");
-  }, [answered, items.length, assessment.weatherGo]);
+    playSfx("go");
+  }, [answered]);
 
   useEffect(() => {
     if (!done) return;
-    (allGo ? launchRef : backRef).current?.focus({ preventScroll: true });
-  }, [done, allGo]);
+    launchRef.current?.focus({ preventScroll: true });
+  }, [done]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -71,12 +81,15 @@ export function PollPanel({
       </p>
       <ol className="flex flex-col gap-1.5" aria-live="polite">
         {items.map((item, i) => {
-          const state = i < answered ? (item.go ? "go" : "nogo") : i === answered ? "polling" : "waiting";
+          const state = i < answered ? "go" : i === answered ? "polling" : "waiting";
           return (
             <li key={item.id} className="flex items-center justify-between gap-3 bg-space-blue/30 px-3 py-2.5">
-              <span className={cn("text-sm", state === "waiting" && "text-foreground/50")}>{item.label}</span>
-              {state === "go" && <StatusBadge status="go">{m.go}</StatusBadge>}
-              {state === "nogo" && <StatusBadge status="fault">{m.noGo}</StatusBadge>}
+              <span className={cn("flex flex-col text-sm", state === "waiting" && "text-foreground/50")}>
+                {item.label}
+                {item.detail && i < answered && <span className="font-mono text-[11px] text-foreground/75">{item.detail}</span>}
+              </span>
+              {state === "go" && item.detail && <StatusBadge status="pending">{m.pollReported}</StatusBadge>}
+              {state === "go" && !item.detail && <StatusBadge status="go">{m.go}</StatusBadge>}
               {state === "polling" && (
                 <span className="inline-flex items-center gap-1.5 text-xs text-foreground/70">
                   <LoaderCircle className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />
@@ -88,14 +101,10 @@ export function PollPanel({
         })}
       </ol>
 
-      {done && !allGo && (
-        <p role="alert" className="bezel bezel-sm bg-warning/15 p-3 text-sm">
-          {format(m.scrub, { limit: WIND_LIMIT_KMH })}
-        </p>
-      )}
+      {done && <p className="text-sm text-foreground/80">{m.pollWeatherCall}</p>}
 
       <div className="flex flex-col gap-2">
-        {done && allGo && (
+        {done && (
           <>
             <Button ref={launchRef} size="lg" onClick={onLaunch} aria-describedby="launch-hint" className="h-14 text-lg">
               {m.launch}
@@ -105,7 +114,7 @@ export function PollPanel({
             </p>
           </>
         )}
-        <Button ref={backRef} variant={done && !allGo ? "primary" : "ghost"} onClick={onBack}>
+        <Button ref={backRef} variant="ghost" onClick={onBack}>
           {m.back}
         </Button>
       </div>
@@ -117,12 +126,16 @@ export function PollPanel({
 
 export const COUNTDOWN_FROM = 10;
 
+/** Compact top-right timer while the camera is outside: the big number and a Hold button. */
 export function CountdownPanel({ onIgnition, onHold }: { onIgnition: () => void; onHold: () => void }) {
   const m = useT().missionControl;
   const [left, setLeft] = useState(COUNTDOWN_FROM);
   const ignitionRef = useRef(onIgnition);
   ignitionRef.current = onIgnition;
   const holdRef = useRef<HTMLButtonElement>(null);
+  const localize = useLocalized();
+  // Launch control reads the count aloud, a number a second.
+  useVoiceLine(left >= 1 && left <= COUNT_VOICE.length ? localize(COUNT_VOICE[left - 1]!) : null);
 
   useEffect(() => {
     holdRef.current?.focus({ preventScroll: true });
@@ -139,24 +152,32 @@ export function CountdownPanel({ onIgnition, onHold }: { onIgnition: () => void;
   }, [left]);
 
   return (
-    <div className="flex flex-col items-center gap-4 py-4">
-      <p className="text-sm text-foreground/75">{left <= 3 ? m.ignition : m.countdownTitle}</p>
-      {/* Keyed so each new number replays the pop; the global reduced-motion rule stills it. */}
-      <p key={left} className="animate-count-pop font-mono text-7xl tabular-nums text-primary" role="timer" aria-live="off">
-        {formatMissionTime(-left)}
-      </p>
+    <HudCard>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs text-foreground/70">{left <= 3 ? m.ignition : m.countdownTitle}</p>
+          {/* Keyed so each new number replays the pop; the global reduced-motion rule stills it. */}
+          <p key={left} className="animate-count-pop font-mono text-3xl tabular-nums text-primary" role="timer" aria-live="off">
+            {formatMissionTime(-left)}
+          </p>
+        </div>
+        <Button ref={holdRef} variant="secondary" size="sm" onClick={onHold}>
+          {m.hold}
+        </Button>
+      </div>
       <span className="sr-only" aria-live="polite">
         {left <= 3 || left === COUNTDOWN_FROM ? String(left) : ""}
       </span>
-      <Button ref={holdRef} variant="secondary" size="lg" onClick={onHold} className="w-full">
-        {m.hold}
-      </Button>
-    </div>
+    </HudCard>
   );
 }
 
 /* ---------------------------------------------------------------- flight */
 
+/**
+ * Compact flight HUD for the top-right corner: a small clock card (mission time, altitude,
+ * speed) and the list of flight stages below it, so the launch itself stays in view.
+ */
 export function FlightPanel({
   config,
   result,
@@ -180,9 +201,12 @@ export function FlightPanel({
     let ended = false;
     let endTimer = 0;
     const tick = () => {
-      const now = Math.min(missionSecondsAt((performance.now() - ignitionAt) / 1000), result.endSec);
+      const real = (performance.now() - ignitionAt) / 1000;
+      const now = Math.min(missionSecondsAt(real), result.endSec);
       setSec(now);
-      if (now >= result.endSec && !ended) {
+      // A successful flight stays on screen for the quiet epilogue before the dialog takes over.
+      const hold = result.isSuccess ? EPILOGUE : 0;
+      if (real >= realSecondsAt(result.endSec) + hold && !ended) {
         ended = true;
         // Hold the final readout for a beat before the dialog takes over.
         endTimer = window.setTimeout(() => endRef.current(), 900);
@@ -195,7 +219,7 @@ export function FlightPanel({
       cancelAnimationFrame(raf);
       window.clearTimeout(endTimer);
     };
-  }, [ignitionAt, result.endSec]);
+  }, [ignitionAt, result.endSec, result.isSuccess]);
 
   const rows = [
     // Every nominal event is listed (an aborted flight leaves the rest greyed out); trace
@@ -215,42 +239,57 @@ export function FlightPanel({
   ].sort((a, b) => a.t - b.t);
 
   return (
-    <div className="flex flex-col gap-4">
-      <ReadoutGrid
-        className="grid-cols-3"
-        items={[
-          [m.clock, formatMissionTime(sec)],
-          [m.altitude, `${altitudeKm(sec, config.orbitKm).toFixed(0)} km`],
-          [m.speed, `${speedKms(sec).toFixed(1)} km/s`],
-        ]}
-      />
-      <ol className="flex flex-col gap-1" aria-live="polite" aria-relevant="additions">
-        {rows.map((r) => {
-          const reached = sec >= r.t;
-          return (
-            <li
-              key={r.key}
-              className={cn(
-                "flex items-center gap-3 px-3 py-1.5 text-sm",
-                r.fault && reached ? "bg-warning/20" : "bg-space-blue/25",
-                !reached && "text-foreground/45",
-              )}
-            >
-              <span className="w-16 shrink-0 font-mono text-xs">{formatMissionTime(r.t)}</span>
-              <span className="flex-1">{r.text}</span>
-              {reached &&
-                (r.fault ? (
-                  <StatusBadge status="fault">{m.noGo}</StatusBadge>
-                ) : (
-                  <Check className="h-4 w-4 text-primary" aria-hidden />
-                ))}
-            </li>
-          );
-        })}
-      </ol>
-      <StatusBadge status="demo" className="w-fit">
-        {t.common.demoData}
-      </StatusBadge>
-    </div>
+    <>
+      <HudCard>
+        <p className="text-xs text-foreground/70">{m.clock}</p>
+        <p className="font-mono text-3xl tabular-nums text-primary" role="timer" aria-live="off">
+          {formatMissionTime(sec)}
+        </p>
+        <dl className="mt-1 flex gap-4 font-mono text-xs tabular-nums">
+          <div className="flex gap-1.5">
+            <dt className="text-foreground/65">{m.altitude}</dt>
+            <dd>{altitudeKm(sec, config.orbitKm).toFixed(0)} km</dd>
+          </div>
+          <div className="flex gap-1.5">
+            <dt className="text-foreground/65">{m.speed}</dt>
+            <dd>{speedKms(sec, config.orbitKm).toFixed(1)} km/s</dd>
+          </div>
+        </dl>
+      </HudCard>
+      <HudCard>
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <h2 className="text-xs font-medium">{m.flightTitle}</h2>
+          <StatusBadge status="demo">{result.source === "server-engine" ? "SIM ENGINE · SERVER" : "SIM ENGINE · BROWSER"}</StatusBadge>
+        </div>
+        <ol className="flex flex-col gap-0.5" aria-live="polite" aria-relevant="additions">
+          {rows.map((r) => {
+            const reached = sec >= r.t;
+            return (
+              <li
+                key={r.key}
+                className={cn(
+                  "flex items-center gap-2 px-1.5 py-0.5 text-xs",
+                  r.fault && reached && "bg-warning/25",
+                  !reached && "text-foreground/45",
+                )}
+              >
+                <span className="w-14 shrink-0 font-mono tabular-nums">{formatMissionTime(r.t)}</span>
+                <span className="flex-1 leading-tight">{r.text}</span>
+                {reached &&
+                  (r.fault ? (
+                    <span className="font-mono text-[10px] font-semibold text-warning">{m.noGo}</span>
+                  ) : (
+                    <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  ))}
+              </li>
+            );
+          })}
+        </ol>
+      </HudCard>
+    </>
   );
+}
+
+function HudCard({ children }: { children: React.ReactNode }) {
+  return <div className="bezel bezel-sm bg-space-deep/80 px-3 py-2 backdrop-blur-sm">{children}</div>;
 }

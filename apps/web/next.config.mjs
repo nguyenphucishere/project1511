@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  transpilePackages: ["@space-sim/shared-schema"],
+  // Set NEXT_DIST_DIR to build somewhere other than .next so a production build never overwrites
+  // the folder a running `next dev` is serving from (that breaks the dev server with chunk errors).
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   webpack: (config, { isServer }) => {
     // Enable WebAssembly support
     config.experiments = {

@@ -3,11 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { CutscenePlayer } from "@/components/cutscene/CutscenePlayer";
 import { DialogueOverlay } from "@/components/cutscene/DialogueOverlay";
+import { InterludeOverlay } from "@/components/cutscene/InterludeOverlay";
+import { DecisionOverlay } from "@/components/cutscene/DecisionOverlay";
 import { EndScreen } from "@/components/cutscene/EndScreen";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { preloadUpcoming } from "@/scenes/preload";
 import { SCENES } from "@/scenes/registry";
 import { cn } from "@/lib/utils";
-import { getStep, type Step, type Transition } from "./flow";
+import { getStep, type ChapterId, type Step, type Transition } from "./flow";
+import { INTERLUDES } from "./interludes";
+import type { BriefingId } from "./script";
 import { useGameStore } from "./gameStore";
 
 const FADE_MS = 350;
@@ -50,6 +55,11 @@ export function SceneRouter({ stepId }: { stepId: string }) {
     };
   }, [stepId, reduced]);
 
+  // Warm the heavy scenes coming up (e.g. the assembly hall) while the player is still on this step.
+  useEffect(() => {
+    preloadUpcoming(shownId);
+  }, [shownId]);
+
   const step = getStep(shownId);
   const done = () => advanceFrom(shownId);
 
@@ -73,7 +83,9 @@ function StepView({ step, onDone }: { step: Step; onDone: () => void }) {
     case "cutscene":
       return <CutscenePlayer video={step.video} onComplete={onDone} />;
     case "briefing":
-      return <DialogueOverlay briefing={step.briefing} chapter={step.chapter} onDone={onDone} />;
+      return <BriefingStep briefing={step.briefing} chapter={step.chapter} onDone={onDone} />;
+    case "decision":
+      return <DecisionOverlay decisionId={step.decision} chapter={step.chapter} onDone={onDone} />;
     case "scene": {
       const Scene = SCENES[step.scene];
       return <Scene onComplete={onDone} />;
@@ -81,4 +93,12 @@ function StepView({ step, onDone }: { step: Step; onDone: () => void }) {
     case "end":
       return <EndScreen />;
   }
+}
+
+/** A briefing, preceded by its chapter's interlude (a spoken transition) when it has one. */
+function BriefingStep({ briefing, chapter, onDone }: { briefing: BriefingId; chapter: ChapterId | "epilogue"; onDone: () => void }) {
+  const interlude = INTERLUDES[briefing];
+  const [introDone, setIntroDone] = useState(!interlude);
+  if (interlude && !introDone) return <InterludeOverlay interlude={interlude} onDone={() => setIntroDone(true)} />;
+  return <DialogueOverlay briefing={briefing} chapter={chapter} onDone={onDone} />;
 }

@@ -63,7 +63,7 @@ export default function UiKitPage() {
 
       <section aria-labelledby="type" className="flex flex-col gap-3">
         <h2 id="type" className="text-xl font-semibold">Type</h2>
-        <p className="text-4xl font-semibold sm:text-5xl">Moonbound</p>
+        <p className="text-4xl font-semibold sm:text-5xl">Beyond The Earth</p>
         <p className="text-2xl font-semibold sm:text-3xl">Mission Control</p>
         <p className="max-w-prose text-base">
           Inter carries every label and sentence. Tiếng Việt có dấu hiển thị đầy đủ: Trung tâm điều khiển, phi hành gia.

@@ -18,7 +18,7 @@ export interface Briefing {
   objectives: LocalizedText[];
 }
 
-export type BriefingId = "medical" | "workshop" | "mission-control" | "lunar-descent" | "epilogue";
+export type BriefingId = "medical" | "workshop" | "mission-control" | "ascent" | "translunar" | "lunar-descent" | "epilogue" | "return";
 
 export const BRIEFINGS: Record<BriefingId, Briefing> = {
   medical: {
@@ -57,14 +57,19 @@ export const BRIEFINGS: Record<BriefingId, Briefing> = {
       {
         speaker: "engineer",
         text: {
-          en: "Chief Bao will walk us through every part. Inspect each one before we roll it out.",
-          vi: "Trưởng xưởng Bảo sẽ giới thiệu từng bộ phận. Hãy kiểm tra hết trước khi đưa ra bệ phóng.",
+          en: "Chief Bao and I will stack the rocket, check every part, hunt for hidden faults and run the checklist before we roll it out.",
+          vi: "Trưởng xưởng Bảo và tôi sẽ dựng tên lửa, kiểm tra từng bộ phận, tìm lỗi ẩn và chạy checklist trước khi đưa ra bệ phóng.",
         },
       },
     ],
     objectives: [
+      { en: "Stack the rocket with the gantry crane", vi: "Dựng tên lửa bằng cầu trục giàn" },
       { en: "Move around the assembly hall", vi: "Di chuyển quanh xưởng lắp ráp" },
       { en: "Inspect every rocket part", vi: "Kiểm tra mọi bộ phận tên lửa" },
+      { en: "Find the hidden faults with the scanner", vi: "Tìm các lỗi ẩn bằng máy quét" },
+      { en: "Torque the flange bolts in a star pattern", vi: "Siết các bu-lông mặt bích theo hình sao" },
+      { en: "Run the pre-flight checklist in order", vi: "Chạy checklist trước chuyến bay đúng thứ tự" },
+      { en: "Choose the engines and tanks", vi: "Chọn động cơ và bồn nhiên liệu" },
     ],
   },
   "mission-control": {
@@ -90,6 +95,50 @@ export const BRIEFINGS: Record<BriefingId, Briefing> = {
       { en: "Run the countdown and launch", vi: "Đếm ngược và phóng" },
     ],
   },
+  ascent: {
+    pov: "astronaut",
+    lines: [
+      {
+        speaker: "astronaut",
+        text: {
+          en: "Strapped in, helmet sealed. The countdown ended and the whole rocket is alive under my back.",
+          vi: "Đã thắt dây, đã đóng mũ. Đếm ngược xong rồi, cả con tên lửa đang rung lên ngay dưới lưng tôi.",
+        },
+      },
+      {
+        speaker: "astronaut",
+        text: {
+          en: "Nine minutes to orbit. Hold on through Max Q, then unbuckle and take a look at home.",
+          vi: "Chín phút nữa là tới quỹ đạo. Giữ chắc qua Max Q, rồi tháo dây và ngắm nhìn quê nhà.",
+        },
+      },
+    ],
+    objectives: [
+      { en: "Ride the rocket to orbit", vi: "Cưỡi tên lửa lên quỹ đạo" },
+      { en: "Release your harness", vi: "Tháo dây an toàn" },
+      { en: "Float to the window and look at Earth", vi: "Bơi tới cửa sổ và ngắm Trái Đất" },
+    ],
+  },
+  translunar: {
+    pov: "astronaut",
+    lines: [
+      {
+        speaker: "astronaut",
+        text: {
+          en: "Orbit confirmed. In a few minutes the third stage lights again, and after that there is no turning back.",
+          vi: "Đã xác nhận quỹ đạo. Vài phút nữa tầng ba sẽ nổ máy lần nữa, và sau đó không còn đường quay lại.",
+        },
+      },
+      {
+        speaker: "astronaut",
+        text: {
+          en: "Three days to the Moon. Sit back and watch; this part flies itself.",
+          vi: "Ba ngày tới Mặt Trăng. Cứ ngồi xem nhé, đoạn này tự bay.",
+        },
+      },
+    ],
+    objectives: [{ en: "Watch the flight to the Moon", vi: "Xem chuyến bay tới Mặt Trăng" }],
+  },
   "lunar-descent": {
     pov: "astronaut",
     lines: [
@@ -103,12 +152,16 @@ export const BRIEFINGS: Record<BriefingId, Briefing> = {
       {
         speaker: "astronaut",
         text: {
-          en: "Follow the descent checklist step by step and we'll set down softly.",
-          vi: "Làm đúng từng bước trong danh sách hạ cánh, chúng ta sẽ đáp xuống nhẹ nhàng.",
+          en: "Computer flies the first part. At 150 metres the lander is yours: pick a site, brake, steer clear of the boulders.",
+          vi: "Máy tính lo phần đầu. Đến độ cao 150 mét, tàu là của bạn: chọn điểm đáp, giảm tốc, tránh xa đá tảng.",
         },
       },
     ],
-    objectives: [{ en: "Complete the descent checklist", vi: "Hoàn thành danh sách hạ cánh" }],
+    objectives: [
+      { en: "Start the descent and pick a landing site", vi: "Bắt đầu hạ cánh và chọn điểm đáp" },
+      { en: "Touch down under 3 m/s, clear of hazards", vi: "Chạm đất dưới 3 m/s, tránh khu nguy hiểm" },
+      { en: "Cut the engine at the contact light", vi: "Tắt động cơ khi đèn tiếp đất sáng" },
+    ],
   },
   epilogue: {
     pov: "astronaut",
@@ -129,5 +182,25 @@ export const BRIEFINGS: Record<BriefingId, Briefing> = {
       },
     ],
     objectives: [],
+  },
+  return: {
+    pov: "astronaut",
+    lines: [
+      {
+        speaker: "astronaut",
+        text: {
+          en: "Flag planted, samples stowed. Time to go home.",
+          vi: "Cờ đã cắm, mẫu đã cất. Đến lúc về nhà.",
+        },
+      },
+      {
+        speaker: "astronaut",
+        text: {
+          en: "The engine has to burn once more, behind the Moon where no one can hear us. If it fails, nobody is coming.",
+          vi: "Động cơ phải nổ thêm một lần nữa, sau lưng Mặt Trăng, nơi không ai nghe thấy chúng ta. Nếu nó hỏng, sẽ không ai tới đón.",
+        },
+      },
+    ],
+    objectives: [{ en: "Ride home", vi: "Bay về nhà" }],
   },
 };

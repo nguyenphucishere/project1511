@@ -2,75 +2,119 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
 import { useGameStore } from "@/game/gameStore";
-import { ROCKET_PARTS } from "@/mocks/rocket-parts";
-import { PAYLOADS, VEHICLES } from "@/mocks/launch-options";
+import { ENDINGS, getEnding } from "@/game/endings";
+import { DECISIONS, type DecisionId } from "@/game/decisions";
+import { causeChain } from "@/game/consequences";
+import { EndingScene } from "./EndingScene";
 import { ParallaxCanvas } from "./ParallaxCanvas";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 
-/** Final screen after the epilogue: the mission summary from the run's log, and Play again. */
+const CALLS: { id: DecisionId; pointKey: string }[] = [
+  { id: "workshop-decision", pointKey: "inspection" },
+  { id: "weather-decision", pointKey: "weather" },
+  { id: "trajectory-decision", pointKey: "trajectory" },
+  { id: "agc-alarm-decision", pointKey: "agc_alarm" },
+  { id: "landing-decision", pointKey: "landing_approach" },
+];
+
+/**
+ * The ending: which one you earned, one line from history, one short paragraph on what happened
+ * and the five calls you made. The long debrief lives on its own page.
+ */
 export function EndScreen() {
   const t = useT();
   const e = t.end;
   const localize = useLocalized();
   const newGame = useGameStore((s) => s.newGame);
-  const log = useGameStore((s) => s.log);
+  const narrative = useGameStore((s) => s.narrative);
+  const endingId = useGameStore((s) => s.endingId) ?? narrative.ending ?? "ending-1";
+  const ending = getEnding(endingId) ?? ENDINGS["ending-1"];
+  // The closing quote, then the first line of the debrief, read in order.
+  useVoiceLine(ending.quote);
+  useVoiceLine(ending.debriefReport[0] ? localize(ending.debriefReport[0]) : null, { queue: true });
 
-  const cfg = log.launchConfig;
-  const vehicle = cfg && VEHICLES.find((v) => v.id === cfg.vehicle);
-  const payload = cfg && PAYLOADS.find((p) => p.id === cfg.payload);
+  // What each call cost or bought, plus the forced wave-off when earlier shortcuts ran out the fuel.
+  const chain = causeChain(narrative);
+  const effectOf = (pointKey: string) => chain.find((c) => c.id.startsWith(`${pointKey}:`) && !c.id.endsWith(":margin"));
+  const marginRunOut = chain.find((c) => c.id.endsWith(":margin"));
+  const marker = { positive: ["▲", "text-emerald-400"], negative: ["▼", "text-red-400"], neutral: ["■", "text-amber-300"] } as const;
 
-  // Chapters can be jumped to from the dev menu, so any row may be missing from this run.
-  const rows: [string, string | null][] = [
-    [e.launches, log.launchAttempts > 0 ? String(log.launchAttempts) : null],
-    [
-      e.partsInspected,
-      log.partsInspected > 0 ? format(e.partsValue, { n: log.partsInspected, total: ROCKET_PARTS.length }) : null,
-    ],
-    [
-      e.launchConfig,
-      cfg && vehicle && payload
-        ? format(e.configValue, { vehicle: vehicle.name, payload: localize(payload.name), fuel: cfg.fuelPct, orbit: cfg.orbitKm })
-        : null,
-    ],
-    [
-      e.touchdown,
-      log.landing
-        ? format(e.touchdownValue, { speed: log.landing.touchdownMs.toFixed(1), fuel: log.landing.fuelLeftPct })
-        : null,
-    ],
-  ];
+  const badgeColor =
+    ending.status === "success"
+      ? "border-emerald-600 bg-emerald-950/80 text-emerald-300"
+      : ending.status === "partial"
+        ? "border-amber-600 bg-amber-950/80 text-amber-300"
+        : "border-red-600 bg-red-950/80 text-red-300";
 
   return (
     <section className="relative h-dvh w-full overflow-hidden" aria-labelledby="end-title">
-      <ParallaxCanvas mode="drift" horizon className="absolute inset-0" />
-      <div className="absolute inset-0 overflow-y-auto px-4 py-[12dvh]">
-        <div className="mx-auto flex max-w-xl flex-col items-center gap-4 text-center">
-          <h1 id="end-title" className="text-4xl font-semibold sm:text-5xl">
-            {e.title}
-          </h1>
-          <p className="max-w-[44ch] text-lg text-foreground/85">{e.body}</p>
+      <ParallaxCanvas
+        mode="drift"
+        horizon={ending.normalizedId === "ending-1" || ending.normalizedId === "ending-3"}
+        className="absolute inset-0"
+      />
 
-          <section aria-labelledby="summary-title" className="bezel mt-2 w-full bg-space-deep/90 p-4 text-left sm:p-5">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 id="summary-title" className="text-lg font-semibold">
-                {e.summaryTitle}
-              </h2>
-              <StatusBadge status="demo">{t.common.demoData}</StatusBadge>
-            </div>
-            <dl className="flex flex-col gap-px bg-space-blue/60">
-              {rows.map(([label, value]) => (
-                <div key={label} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 bg-space-deep px-3 py-2">
-                  <dt className="text-sm text-foreground/80">{label}</dt>
-                  <dd className={value ? "font-mono text-sm" : "text-sm text-foreground/55"}>{value ?? e.notPlayed}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
+      <div className="absolute inset-0 overflow-y-auto px-4 py-[8dvh]">
+        <div className="mx-auto flex max-w-2xl flex-col items-center gap-5 text-center">
+          <div className={`animate-fade-in rounded border px-3 py-1 font-mono text-xs font-semibold uppercase tracking-widest ${badgeColor}`}>
+            {localize(ending.badgeText)} · {ending.score}/100
+          </div>
 
-          <p className="text-sm text-foreground/75">{e.homeHint}</p>
+          <div>
+            <h1 id="end-title" className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              {localize(ending.title)}
+            </h1>
+            <p className="mt-1 text-base font-medium text-primary/90">{localize(ending.subtitle)}</p>
+          </div>
+
+          <EndingScene ending={ending} />
+
+          <blockquote className="bezel bezel-gold w-full bg-space-deep/95 p-4 text-left sm:p-5">
+            <p className="border-l-2 border-primary pl-3.5 text-base italic text-foreground/95 sm:text-lg">
+              &ldquo;{ending.quote}&rdquo;
+            </p>
+            <footer className="mt-2 text-right text-xs text-foreground/60">{ending.quoteAttribution}</footer>
+          </blockquote>
+
+          {ending.debriefReport[0] && (
+            <p className="w-full text-left text-sm leading-relaxed text-foreground/85 sm:text-base">
+              {localize(ending.debriefReport[0])}
+            </p>
+          )}
+
+          <ul className="flex w-full flex-wrap justify-center gap-2 text-xs" aria-label={t.consequence.whyTitle}>
+            {CALLS.map(({ id, pointKey }) => {
+              const choice =
+                narrative.decisions[pointKey] ??
+                (pointKey === "agc_alarm" ? narrative.decisions.agcAlarm : pointKey === "landing_approach" ? narrative.decisions.landing : undefined);
+              const option = DECISIONS[id].options.find((o) => o.id === choice);
+              const effect = option ? effectOf(pointKey) : undefined;
+              return (
+                <li key={id} className="rounded border border-space-blue/60 bg-space-blue/25 px-2.5 py-1 text-left">
+                  {effect && (
+                    <span aria-hidden className={`mr-1 ${marker[effect.impact][1]}`}>
+                      {marker[effect.impact][0]}
+                    </span>
+                  )}
+                  <span className="text-foreground/60">{localize(DECISIONS[id].title)}: </span>
+                  <span className={option ? "font-semibold text-foreground" : "text-foreground/45"}>
+                    {option ? localize(option.title) : e.notPlayed}
+                  </span>
+                  {effect && <span className="block text-[11px] text-foreground/60">{localize(effect.effect)}</span>}
+                </li>
+              );
+            })}
+            {marginRunOut && (
+              <li className="rounded border border-red-700/60 bg-red-950/40 px-2.5 py-1 text-left">
+                <span aria-hidden className="mr-1 text-red-400">▼</span>
+                <span className="font-semibold text-foreground">{localize(marginRunOut.title)}</span>
+                <span className="block text-[11px] text-foreground/60">{localize(marginRunOut.effect)}</span>
+              </li>
+            )}
+          </ul>
+
           <div className="mt-1 flex flex-wrap justify-center gap-3">
             <Button size="lg" onClick={newGame}>
               {e.playAgain}

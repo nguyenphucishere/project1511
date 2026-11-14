@@ -1,4 +1,4 @@
-import type { Viewpoint, Vec3 } from "@/game/sceneStore";
+import type { Viewpoint, Vec3, WalkArea } from "@/game/sceneStore";
 import type { LevelId, PartId } from "@/mocks/rocket-parts";
 
 /**
@@ -7,7 +7,7 @@ import type { LevelId, PartId } from "@/mocks/rocket-parts";
  * the parts of that level fill the view at rest and nothing has to be hunted for.
  */
 export const EYE = 1.65;
-export const HALL = { minX: -20, maxX: 20, minZ: -16, maxZ: 18, height: 36 } as const;
+export const HALL = { minX: -20, maxX: 20, minZ: -16, maxZ: 18, height: 42 } as const;
 
 /** Bottom and top (y) of each section of the stack, plus its radius at bottom and top. */
 export const STACK = {
@@ -35,6 +35,21 @@ const FLOOR_EYE: Vec3 = [0, EYE, 13];
 const L2_EYE: Vec3 = [-5.28, 13.95, 3.96];
 const L3_EYE: Vec3 = [6.0, 22.9, 4.5];
 
+/** Hall floor: free walking everywhere except the rocket mount and the two gantry tower bases. */
+let floorWalkCache: WalkArea | undefined;
+function floorWalk(): WalkArea {
+  const tower = (level: "level2" | "level3") => {
+    const [x, z] = towerCentre(level);
+    return { minX: x - 1.5, maxX: x + 1.5, minZ: z - 1.5, maxZ: z + 1.5 };
+  };
+  return {
+    bounds: { minX: HALL.minX + 1, maxX: HALL.maxX - 1, minZ: HALL.minZ + 1, maxZ: HALL.maxZ - 1 },
+    blockers: [{ minX: -3.4, maxX: 3.4, minZ: -3.4, maxZ: 3.4 }, tower("level2"), tower("level3"), ...BAY.tanks],
+    eyeHeight: () => EYE,
+    speed: 3.2,
+  };
+}
+
 export const VIEWPOINTS: Viewpoint[] = [
   {
     id: "floor",
@@ -43,6 +58,9 @@ export const VIEWPOINTS: Viewpoint[] = [
     ...aim(FLOOR_EYE, [0, 6, 0]),
     yawRange: 0.75,
     pitchRange: 0.5,
+    get walk() {
+      return (floorWalkCache ??= floorWalk());
+    },
   },
   {
     id: "level2",
@@ -63,6 +81,91 @@ export const VIEWPOINTS: Viewpoint[] = [
 ];
 
 export const VIEWPOINT_BY_LEVEL = Object.fromEntries(VIEWPOINTS.map((v) => [v.id, v])) as Record<LevelId, Viewpoint>;
+
+/* ------------------------------------------------------------------ crane stacking */
+
+export type CraneViewId = "crane1" | "crane2" | "crane3";
+
+/** The three lifts that build the rocket: bottom-to-top sections stacked on the first stage. */
+export interface CraneLift {
+  index: 0 | 1 | 2;
+  view: CraneViewId;
+  parts: PartId[];
+  /** Underside of the section once it is seated. */
+  seatY: number;
+  /** Section height, so the crane knows how far below the hook the load hangs. */
+  height: number;
+  start: { x: number; z: number; y: number };
+}
+
+export const CRANE_LIFTS: CraneLift[] = [
+  { index: 0, view: "crane1", parts: ["interstage", "stage2"], seatY: 12, height: 7.2, start: { x: -6.2, z: 3.8, y: 14.6 } },
+  { index: 1, view: "crane2", parts: ["lander", "service-module"], seatY: 19.2, height: 5, start: { x: 6.4, z: -3.2, y: 21.8 } },
+  { index: 2, view: "crane3", parts: ["crew-capsule", "escape-tower"], seatY: 24.2, height: 5.4, start: { x: -5.4, z: -3.6, y: 26.8 } },
+];
+
+const CRANE_EYE: Vec3 = [0, EYE, 16.8];
+const CRANE_AIM = [14, 19.5, 24];
+
+/** Fixed viewpoints that frame each lift from the hall floor; WASD drives the crane there, not the head. */
+export const CRANE_VIEWPOINTS: Viewpoint[] = CRANE_LIFTS.map((l) => ({
+  id: l.view,
+  label: { en: "the crane control point", vi: "vị trí điều khiển cầu trục" },
+  position: CRANE_EYE,
+  ...aim(CRANE_EYE, [0, CRANE_AIM[l.index], 0]),
+  yawRange: 0.1,
+  pitchRange: 0.1,
+}));
+
+/** Standing just inside the fuel bay, facing the panel: the target of the "go to the fuel bay" hotspot. */
+const BAY_EYE: Vec3 = [12.4, EYE, -7.6];
+export const BAY_VIEWPOINT: Viewpoint = {
+  id: "bay",
+  label: { en: "the fuel bay", vi: "khu nhiên liệu" },
+  position: BAY_EYE,
+  ...aim(BAY_EYE, [16.5, 2.2, -7.6]),
+  yawRange: 0.75,
+  pitchRange: 0.5,
+  get walk() {
+    return VIEWPOINTS[0].walk;
+  },
+};
+
+export const ALL_VIEWPOINTS: Viewpoint[] = [...VIEWPOINTS, ...CRANE_VIEWPOINTS, BAY_VIEWPOINT];
+
+/* ------------------------------------------------------------------ checklist stations */
+
+export interface StationSpot {
+  id: "fuel" | "electrical" | "pressure";
+  position: Vec3;
+  rotationY: number;
+}
+
+/**
+ * The fuel bay: a fenced zone against the east wall with the cryogenic tanks and the fuel panel.
+ * `zone` is where the player counts as "inside"; `tanks` are footprints that block walking.
+ */
+export const BAY = {
+  centre: [15.8, -7.6] as [number, number],
+  zone: { minX: 11.8, maxX: 19, minZ: -13, maxZ: -2.2 },
+  tanks: [
+    { minX: 16.9, maxX: 19.1, minZ: -11.1, maxZ: -8.9 },
+    { minX: 16.9, maxX: 19.1, minZ: -6.3, maxZ: -4.1 },
+  ],
+  /** How close (m) the player must stand to the fuel panel to use it. */
+  reach: 7.5,
+};
+
+/** The torque bench and the interstage flange bolts of the tightening task. */
+export const BENCH = { x: 2.6, z: 9.2 };
+export const FLANGE = { y: 12.22, r: 1.74, count: 5, spread: 0.5 } as const;
+
+/** Three consoles around the pad. Each faces the rocket. */
+export const STATIONS: StationSpot[] = [
+  { id: "fuel", position: [14.6, 0, -7.4], rotationY: -Math.PI / 2 },
+  { id: "electrical", position: [-6.4, 0, 0.8], rotationY: Math.PI / 2 },
+  { id: "pressure", position: [-6.2, 0, -6.0], rotationY: Math.PI / 4 },
+];
 
 /** Local (viewpoint-relative, yaw-rotated) offset to world. Local -Z is the resting view direction. */
 export function toWorld(v: Viewpoint, local: Vec3): Vec3 {

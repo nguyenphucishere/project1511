@@ -32,8 +32,8 @@
   },
   "portraits": {
     "astronaut": {
-      "status": "placeholder",
-      "src": "/assets/characters/portraits/astronaut.png",
+      "status": "final",
+      "src": "/assets/characters/portraits/astronaut.webp",
       "displayName": "ArmStrong",
       "usage": "Briefings for Scene 1 and Scene 4 (player POV)",
       "credit": "Character artist"
@@ -53,11 +53,16 @@
       "credit": "Character artist"
     },
     "doctor": {
-      "status": "placeholder",
-      "src": "/assets/characters/portraits/doctor.png",
-      "displayName": "Flight Surgeon",
+      "status": "final",
+      "src": "/assets/characters/portraits/doctor.webp",
+      "displayName": "Dr. Lin",
       "usage": "Medical bay station panels in Scene 1",
-      "credit": "Character artist"
+      "credit": "Character artist",
+      "focus": [
+        49,
+        34
+      ],
+      "zoom": 1.8
     },
     "workshop-chief": {
       "status": "placeholder",

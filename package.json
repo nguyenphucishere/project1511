@@ -5,6 +5,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "play": "pnpm --filter @space-sim/web play",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "clean": "turbo run clean",
@@ -13,7 +14,10 @@
     "cargo:test": "cargo test --workspace",
     "db:generate": "pnpm --filter @space-sim/server db:generate",
     "db:push": "pnpm --filter @space-sim/server db:push",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "test:e2e": "./apps/server/node_modules/.bin/tsx --test \"tests/e2e/**/*.test.ts\"",
+    "voice:lines": "cd apps/web && ../server/node_modules/.bin/tsx --tsconfig tsconfig.json ../../tools/voice/extract-lines.ts",
+    "voice:generate": "node tools/voice/generate.mjs"
   },
   "devDependencies": {
     "prettier": "^3.5.2",

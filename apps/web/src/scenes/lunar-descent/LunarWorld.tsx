@@ -1,37 +1,54 @@
 "use client";
 
-import { memo, useMemo, useRef } from "react";
+import { memo, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
-import type { Group, Mesh, MeshBasicMaterial, MeshStandardMaterial } from "three";
+import type { Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, Points, PointsMaterial } from "three";
 import { LightingRig } from "@/components/viewport/LightingRig";
 import { Starfield } from "@/components/viewport/Starfield";
+import { Earth } from "@/components/viewport/Earth";
+import { Html, useTexture } from "@react-three/drei";
+import {
+  AdditiveBlending,
+  BackSide,
+  CanvasTexture,
+  Color,
+  DoubleSide,
+  MirroredRepeatWrapping,
+  SRGBColorSpace,
+} from "three";
 import { seeded } from "@/lib/random";
 import { Hotspot } from "@/components/viewport/Hotspot";
 import { shake } from "@/game/shake";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { PALETTE, SCENE_COLORS } from "@/lib/palette";
-import { DESCENT_STEPS, sampleAt } from "@/mocks/descent";
+import { DESCENT_STEPS } from "@/mocks/descent";
+import {
+  BOULDER_HALF_WIDTH,
+  CRATER_CENTER_X,
+  CRATER_RADIUS,
+  PRECISION_M,
+  SITES,
+  type LandingSite,
+  type SiteId,
+} from "./flight";
 import {
   CABIN,
   CONSOLE,
   EYE,
-  SITE_OFFSET_X,
   WINDOW,
-  driftAt,
-  missionTimeNow,
   switchPosition,
-  tiltAt,
   visualAltitude,
   visualRange,
-  type DescentClock,
+  type FlightView,
 } from "./layout";
 
 interface LunarWorldProps {
-  clock: DescentClock;
+  /** Mutable flight state written by the scene every frame; read here, never set. */
+  view: MutableRefObject<FlightView>;
+  /** Controls already thrown (0-4), for the switch levers. */
+  stepsDone: number;
   armed: number | null;
   onPress: (index: number) => void;
-  contactLight: boolean;
-  touchdownAt: number | null;
 }
 
 const BURN_TRAUMA = 0.28;
@@ -41,7 +58,7 @@ const BURN_TRAUMA = 0.28;
  * Caution & Warning matrix, FDAI 8-ball, four descent switches, and co-pilot astronaut in spacesuit)
  * with the rising lunar crater surface, distant mountain ridges, and glowing Earthrise outside.
  */
-export const LunarWorld = memo(function LunarWorld({ clock, armed, onPress, contactLight, touchdownAt }: LunarWorldProps) {
+export const LunarWorld = memo(function LunarWorld({ view, stepsDone, armed, onPress }: LunarWorldProps) {
   return (
     <>
       <LightingRig intensity={0.85} />
@@ -50,19 +67,21 @@ export const LunarWorld = memo(function LunarWorld({ clock, armed, onPress, cont
       {/* Soft earthlight / cockpit interior bounce fill */}
       <directionalLight position={[6, 4, 2]} color="#93C5FD" intensity={0.6} />
 
-      <BurnRumble clock={clock} />
+      <BurnRumble view={view} />
       <Cabin />
-      <CockpitInstruments />
-      <AstronautPilot clock={clock} />
-      <Console clock={clock} armed={armed} onPress={onPress} contactLight={contactLight} />
-      <Outside clock={clock} touchdownAt={touchdownAt} />
+      <CockpitInstruments view={view} />
+      <AstronautPilot />
+      <Console view={view} stepsDone={stepsDone} armed={armed} onPress={onPress} />
+      <Outside view={view} />
     </>
   );
 });
 
-function BurnRumble({ clock }: { clock: DescentClock }) {
+/** The engine shakes the cabin while it burns, harder at high throttle. */
+function BurnRumble({ view }: { view: MutableRefObject<FlightView> }) {
   useFrame(() => {
-    if (clock.stepsDone >= 1 && clock.stepsDone <= 3) shake.trauma = Math.max(shake.trauma, BURN_TRAUMA);
+    const v = view.current;
+    if (v.engineOn && v.touchdownAt === null) shake.trauma = Math.max(shake.trauma, BURN_TRAUMA * (0.4 + v.throttle));
   });
   return null;
 }
@@ -170,10 +189,20 @@ function Cabin() {
 }
 
 /** Detailed Apollo/Artemis Cockpit Avionics & Displays */
-function CockpitInstruments() {
+function CockpitInstruments({ view }: { view: MutableRefObject<FlightView> }) {
   const dskyRef = useRef<MeshBasicMaterial>(null);
   const fdaiRef = useRef<Group>(null);
+  // Markers on the two tapes of the radar altimeter / rate-of-descent meter.
+  const tapeMarks = useRef<(Mesh | null)[]>([]);
   const reduced = useReducedMotion();
+
+  // The tapes read the real flight: radar altitude (0-150 m) and descent rate (-6..+0.5 m/s).
+  useFrame(() => {
+    const v = view.current;
+    const [alt, rate] = tapeMarks.current;
+    if (alt) alt.position.y = -0.075 + 0.15 * Math.min(1, Math.max(0, v.altM / 150));
+    if (rate) rate.position.y = -0.075 + 0.15 * Math.min(1, Math.max(0, (v.vsMs + 6) / 6.5));
+  });
 
   useFrame(({ clock }) => {
     if (reduced) return;
@@ -184,7 +213,7 @@ function CockpitInstruments() {
     }
     // FDAI 8-ball gentle gyro stabilization drift
     if (fdaiRef.current) {
-      fdaiRef.current.rotation.x = Math.sin(t * 0.4) * 0.08;
+      fdaiRef.current.rotation.x = Math.sin(t * 0.4) * 0.08 + view.current.tilt * 3;
       fdaiRef.current.rotation.y = Math.cos(t * 0.3) * 0.06;
     }
   });
@@ -279,7 +308,12 @@ function CockpitInstruments() {
               <planeGeometry args={[0.08, 0.18]} />
               <meshBasicMaterial color="#0F172A" />
             </mesh>
-            <mesh position={[0, 0.02, 0.002]}>
+            <mesh
+              ref={(m) => {
+                tapeMarks.current[i] = m;
+              }}
+              position={[0, 0.02, 0.002]}
+            >
               <planeGeometry args={[0.07, 0.015]} />
               <meshBasicMaterial color={i === 0 ? SCENE_COLORS.screenCyan : SCENE_COLORS.screenGreen} />
             </mesh>
@@ -291,7 +325,7 @@ function CockpitInstruments() {
 }
 
 /** Animated Lunar Module Pilot (LMP) in authentic NASA Apollo/Artemis spacesuit */
-function AstronautPilot({ clock }: { clock: DescentClock }) {
+function AstronautPilot() {
   const root = useRef<Group>(null);
   const head = useRef<Group>(null);
   const leftArm = useRef<Group>(null);
@@ -446,12 +480,7 @@ function AstronautPilot({ clock }: { clock: DescentClock }) {
 
 /* ---------------------------------------------------------------- console */
 
-function Console({
-  clock,
-  armed,
-  onPress,
-  contactLight,
-}: Pick<LunarWorldProps, "clock" | "armed" | "onPress" | "contactLight">) {
+function Console({ view, stepsDone, armed, onPress }: LunarWorldProps) {
   return (
     <group>
       <mesh position={[0, CONSOLE.y - 0.5, CONSOLE.z]}>
@@ -463,9 +492,9 @@ function Console({
         <boxGeometry args={[CONSOLE.width + 0.04, 0.03, CONSOLE.depth]} />
         <meshStandardMaterial color={SCENE_COLORS.steelMid} metalness={0.55} roughness={0.35} />
       </mesh>
-      <ContactLamp lit={contactLight} />
+      <ContactLamp view={view} />
       {DESCENT_STEPS.map((step, i) => {
-        const done = i < clock.stepsDone;
+        const done = i < stepsDone;
         const sw = <Switch done={done} armed={armed === i} />;
         return armed === i ? (
           <Hotspot key={step.id} id={`switch-${step.id}`} label={step.label} position={switchPosition(i)} markerHeight={0.2} markerScale={0.4} onActivate={() => onPress(i)}>
@@ -510,7 +539,15 @@ function Switch({ done, armed }: { done: boolean; armed: boolean }) {
   );
 }
 
-function ContactLamp({ lit }: { lit: boolean }) {
+/** The contact light: dark until the probes touch, then it blinks until the engine is cut. */
+function ContactLamp({ view }: { view: MutableRefObject<FlightView> }) {
+  const reduced = useReducedMotion();
+  const lamp = useRef<MeshBasicMaterial>(null);
+  useFrame(() => {
+    if (!lamp.current) return;
+    const lit = view.current.contact && (reduced || view.current.engineOn || view.current.touchdownAt !== null || Math.sin(performance.now() * 0.012) > -0.3);
+    lamp.current.color.set(lit ? SCENE_COLORS.screenCyan : SCENE_COLORS.steelMid);
+  });
   return (
     <group position={[0, CONSOLE.y + 0.05, CONSOLE.z - 0.2]}>
       <mesh>
@@ -519,7 +556,7 @@ function ContactLamp({ lit }: { lit: boolean }) {
       </mesh>
       <mesh position={[0, 0, 0.032]}>
         <planeGeometry args={[0.28, 0.05]} />
-        <meshBasicMaterial color={lit ? SCENE_COLORS.screenCyan : SCENE_COLORS.steelMid} />
+        <meshBasicMaterial ref={lamp} color={SCENE_COLORS.steelMid} />
       </mesh>
     </group>
   );
@@ -527,19 +564,23 @@ function ContactLamp({ lit }: { lit: boolean }) {
 
 /* ---------------------------------------------------------------- outside */
 
-function Outside({ clock, touchdownAt }: { clock: DescentClock; touchdownAt: number | null }) {
+const SITE_COLOR: Record<SiteId, string> = {
+  A: SCENE_COLORS.screenCyan,
+  B: SCENE_COLORS.nasaRed,
+  C: SCENE_COLORS.screenAmber,
+};
+
+type ViewRef = MutableRefObject<FlightView>;
+
+function Outside({ view }: { view: ViewRef }) {
   const reduced = useReducedMotion();
   const root = useRef<Group>(null);
   const surface = useRef<Group>(null);
-  const reticle = useRef<Group>(null);
+  const ground = useRef<Group>(null);
   const dust = useRef<Mesh>(null);
   const dustMat = useRef<MeshBasicMaterial>(null);
   const burst = useRef<Mesh>(null);
   const burstMat = useRef<MeshBasicMaterial>(null);
-
-  // RCS cold gas thruster burst animations outside the window
-  const leftRcsPlume = useRef<Mesh>(null);
-  const leftRcsMat = useRef<MeshBasicMaterial>(null);
 
   const craters = useMemo(() => {
     const rand = seeded(11);
@@ -548,9 +589,12 @@ function Outside({ clock, touchdownAt }: { clock: DescentClock; touchdownAt: num
       const x = (rand() - 0.5) * 320;
       const z = -rand() * 360 + 60;
       const r = 1 + rand() * rand() * 14;
-      if (Math.hypot(x, z) < 14 || Math.hypot(x - SITE_OFFSET_X, z) < 10) continue;
+      // Keep the landing strip (all three sites and the crater beside the far one) free of random craters.
+      if (Math.hypot(x, z) < 14 || (Math.abs(z) < 18 + r && x > -44 - r && x < 24 + r)) continue;
       list.push({ x, z, r });
     }
+    // The crater that makes the far site dangerous.
+    list.push({ x: CRATER_CENTER_X, z: 0, r: CRATER_RADIUS });
     return list;
   }, []);
 
@@ -592,37 +636,36 @@ function Outside({ clock, touchdownAt }: { clock: DescentClock; touchdownAt: num
   }, []);
 
   useFrame(() => {
+    const v = view.current;
     const now = performance.now();
-    const t = missionTimeNow(clock, now);
-    const { altM } = sampleAt(t);
 
-    if (root.current) root.current.rotation.x = tiltAt(t);
+    if (root.current) {
+      root.current.rotation.x = v.tilt;
+      // The lander banks a little into its sideways drift.
+      const roll = reduced ? 0 : -v.hsMs * 0.012;
+      root.current.rotation.z += (roll - root.current.rotation.z) * 0.08;
+    }
     if (surface.current) {
-      surface.current.position.set(-driftAt(t), -visualAltitude(altM), -visualRange(altM));
+      surface.current.position.set(-v.xM, -visualAltitude(v.altM), -visualRange(v.altM));
     }
-    if (reticle.current) reticle.current.visible = clock.stepsDone >= 3 && touchdownAt === null;
+    if (ground.current) ground.current.position.x = v.xM;
 
-    // Active RCS thruster cold-gas plume firing pulses
-    if (leftRcsPlume.current && leftRcsMat.current) {
-      const firing = !reduced && clock.stepsDone >= 1 && clock.stepsDone <= 3 && Math.sin(now * 0.008) > 0.45;
-      leftRcsPlume.current.visible = firing;
-      leftRcsMat.current.opacity = firing ? 0.75 : 0;
-    }
-
-    // Engine wash: dust streams out from under the lander in the last 25 m
+    // Engine wash: a bright ring spreads under the lander in the last 30 m.
     if (dust.current && dustMat.current) {
-      const k = clock.stepsDone >= 3 && touchdownAt === null ? Math.max(0, 1 - altM / 25) : 0;
-      dust.current.visible = k > 0;
+      const k = v.engineOn && v.touchdownAt === null ? Math.min(1, v.throttle * 1.8) * Math.max(0, 1 - v.altM / 30) : 0;
+      dust.current.visible = k > 0.01;
       dust.current.scale.setScalar(2 + k * 5.5);
       dustMat.current.opacity = 0.6 * k;
     }
+    // Touchdown: one shock ring; a crash throws a bigger, longer one.
     if (burst.current && burstMat.current) {
-      const age = touchdownAt === null ? -1 : (now - touchdownAt) / 1000;
-      const on = age >= 0 && age < 1.8 && !reduced;
+      const dur = v.crashed ? 2.6 : 1.8;
+      const age = v.touchdownAt === null ? -1 : (now - v.touchdownAt) / 1000;
+      const on = age >= 0 && age < dur && !reduced;
       burst.current.visible = on;
       if (on) {
-        const p = age / 1.8;
-        burst.current.scale.setScalar(3 + 14 * (1 - (1 - p) * (1 - p)));
+        const p = age / dur;
+        burst.current.scale.setScalar((3 + 14 * (1 - (1 - p) * (1 - p))) * (v.crashed ? 1.7 : 1));
         burstMat.current.opacity = 0.75 * (1 - p);
       }
     }
@@ -632,59 +675,21 @@ function Outside({ clock, touchdownAt }: { clock: DescentClock; touchdownAt: num
     <group ref={root} position={EYE}>
       <Starfield positions={stars} />
 
-      {/* Earthrise: Vibrant Blue Earth with swirling storm clouds and atmospheric blue halo */}
-      <group position={[38, 30, -165]}>
-        {/* Atmospheric Blue Glow Rim */}
-        <mesh>
-          <sphereGeometry args={[7.4, 24, 20]} />
-          <meshBasicMaterial color="#60A5FA" transparent opacity={0.3} />
-        </mesh>
-        {/* Ocean Planet */}
-        <mesh>
-          <sphereGeometry args={[7, 28, 20]} />
-          <meshStandardMaterial color={SCENE_COLORS.earthBlue} emissive="#0B3D91" emissiveIntensity={0.35} />
-        </mesh>
-        {/* Cloud spirals */}
-        <mesh position={[-1.8, 1.6, 6.2]}>
-          <sphereGeometry args={[2.4, 14, 10]} />
-          <meshBasicMaterial color={SCENE_COLORS.earthCloud} />
-        </mesh>
-        <mesh position={[1.6, -1.2, 6.3]}>
-          <sphereGeometry args={[2.0, 14, 10]} />
-          <meshBasicMaterial color={SCENE_COLORS.earthCloud} />
-        </mesh>
+      {/* Milky Way panorama behind everything, plus the real Earth rising over the horizon */}
+      <MilkyWay />
+      <group position={[46, 34, -165]}>
+        <Earth radius={12} />
       </group>
 
-      {/* External RCS Quad Thruster visible just outside the forward-left window */}
-      <group position={[-1.4, 0.8, -1.6]} rotation={[0, 0.4, 0]}>
-        <mesh>
-          <boxGeometry args={[0.18, 0.18, 0.18]} />
-          <meshStandardMaterial color={SCENE_COLORS.steelDark} metalness={0.7} />
-        </mesh>
-        {/* 4 Titanium Thruster Nozzles */}
-        {[
-          [0, 0.12, 0],
-          [0, -0.12, 0],
-          [0.12, 0, 0],
-          [-0.12, 0, 0],
-        ].map(([px, py, pz], i) => (
-          <mesh key={i} position={[px, py, pz]}>
-            <cylinderGeometry args={[0.02, 0.05, 0.1, 8]} />
-            <meshStandardMaterial color={SCENE_COLORS.titanium} metalness={0.8} />
-          </mesh>
-        ))}
-        {/* Cold-gas exhaust plume */}
-        <mesh ref={leftRcsPlume} position={[-0.25, 0, 0]} rotation={[0, 0, Math.PI / 2]} visible={false}>
-          <coneGeometry args={[0.09, 0.35, 12]} />
-          <meshBasicMaterial ref={leftRcsMat} color="#93C5FD" transparent opacity={0} depthWrite={false} />
-        </mesh>
-      </group>
+      {/* External RCS quads just outside the forward windows: they fire when the pilot drifts the lander sideways. */}
+      <RcsQuad side={-1} view={view} />
+      <RcsQuad side={1} view={view} />
 
       <group ref={surface}>
         {/* Silver-grey lunar regolith basalt plain */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -110]}>
           <planeGeometry args={[560, 560]} />
-          <meshStandardMaterial color={SCENE_COLORS.lunarMid} roughness={0.95} />
+          <RegolithMaterial />
         </mesh>
 
         {/* Distant Lunar Mountain Ranges on the horizon */}
@@ -724,7 +729,7 @@ function Outside({ clock, touchdownAt }: { clock: DescentClock; touchdownAt: num
           </group>
         ))}
 
-        {/* Hazard boulder field at the initial abort aim point */}
+        {/* Hazard boulder field dead ahead of the lander (site B) */}
         {boulders.map((b, i) => (
           <mesh key={i} position={[b.x, b.r * 0.5, b.z]} rotation={[b.rot, b.rot * 0.7, 0]}>
             <dodecahedronGeometry args={[b.r, 0]} />
@@ -732,30 +737,272 @@ function Outside({ clock, touchdownAt }: { clock: DescentClock; touchdownAt: num
           </mesh>
         ))}
 
-        {/* Sighting reticle on safe landing target */}
-        <group ref={reticle} position={[SITE_OFFSET_X, 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
-          <mesh>
-            <ringGeometry args={[1.7, 2.1, 32]} />
-            <meshBasicMaterial color={SCENE_COLORS.screenCyan} />
-          </mesh>
-          {[0, 1].map((k) => (
-            <mesh key={k} rotation={[0, 0, k * (Math.PI / 2)]}>
-              <planeGeometry args={[1.2, 0.18]} />
-              <meshBasicMaterial color={SCENE_COLORS.screenCyan} />
-            </mesh>
-          ))}
-        </group>
+        <SiteMarkers view={view} />
+        <DustPlume view={view} />
 
-        {/* Surface touchdown dust plumes */}
-        <mesh ref={dust} position={[SITE_OFFSET_X, 0.15, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
-          <ringGeometry args={[0.4, 1, 24]} />
-          <meshBasicMaterial ref={dustMat} color={SCENE_COLORS.lunarLight} transparent opacity={0} depthWrite={false} />
-        </mesh>
-        <mesh ref={burst} position={[SITE_OFFSET_X, 0.2, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
-          <ringGeometry args={[0.7, 1, 32]} />
-          <meshBasicMaterial ref={burstMat} color={SCENE_COLORS.lunarLight} transparent opacity={0} depthWrite={false} />
-        </mesh>
+        {/* Engine-wash ring and touchdown shock ring, following the lander sideways */}
+        <group ref={ground}>
+          <mesh ref={dust} position={[0, 0.15, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+            <ringGeometry args={[0.4, 1, 24]} />
+            <meshBasicMaterial ref={dustMat} color={SCENE_COLORS.lunarLight} transparent opacity={0} depthWrite={false} />
+          </mesh>
+          <mesh ref={burst} position={[0, 0.2, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+            <ringGeometry args={[0.7, 1, 32]} />
+            <meshBasicMaterial ref={burstMat} color={SCENE_COLORS.lunarLight} transparent opacity={0} depthWrite={false} />
+          </mesh>
+        </group>
       </group>
     </group>
   );
+}
+
+/** One external RCS quad. The thruster on the left side pushes the lander right, and vice versa. */
+function RcsQuad({ side, view }: { side: -1 | 1; view: ViewRef }) {
+  const reduced = useReducedMotion();
+  const plume = useRef<Mesh>(null);
+  const mat = useRef<MeshBasicMaterial>(null);
+
+  useFrame(() => {
+    if (!plume.current || !mat.current) return;
+    const rcs = view.current.rcs;
+    const firing = !reduced && ((side === -1 && rcs === 1) || (side === 1 && rcs === -1));
+    plume.current.visible = firing;
+    if (firing) {
+      const flicker = 0.7 + 0.25 * Math.sin(performance.now() * 0.05);
+      mat.current.opacity = flicker;
+      plume.current.scale.set(1, 0.8 + 0.4 * Math.sin(performance.now() * 0.07), 1);
+    }
+  });
+
+  return (
+    <group position={[side * 1.4, 0.8, -1.6]} rotation={[0, -side * 0.4, 0]}>
+      <mesh>
+        <boxGeometry args={[0.18, 0.18, 0.18]} />
+        <meshStandardMaterial color={SCENE_COLORS.steelDark} metalness={0.7} />
+      </mesh>
+      {/* 4 titanium thruster nozzles */}
+      {[
+        [0, 0.12, 0],
+        [0, -0.12, 0],
+        [0.12, 0, 0],
+        [-0.12, 0, 0],
+      ].map(([px, py, pz], i) => (
+        <mesh key={i} position={[px, py, pz]}>
+          <cylinderGeometry args={[0.02, 0.05, 0.1, 8]} />
+          <meshStandardMaterial color={SCENE_COLORS.titanium} metalness={0.8} />
+        </mesh>
+      ))}
+      {/* Cold-gas exhaust plume, pointing away from the lander */}
+      <mesh ref={plume} position={[side * 0.25, 0, 0]} rotation={[0, 0, (side * -Math.PI) / 2]} visible={false}>
+        <coneGeometry args={[0.09, 0.35, 12]} />
+        <meshBasicMaterial ref={mat} color="#BFDBFE" transparent opacity={0} depthWrite={false} blending={AdditiveBlending} />
+      </mesh>
+    </group>
+  );
+}
+
+/**
+ * The three landing sites on the ground: a ring with a precision band, a light beam and a letter.
+ * The chosen one pulses and its beam glows. Hazards are tinted red.
+ */
+function SiteMarkers({ view }: { view: ViewRef }) {
+  const hazard = useRef<Group>(null);
+  useFrame(() => {
+    if (hazard.current) hazard.current.visible = view.current.showSites;
+  });
+  return (
+    <>
+      {SITES.map((s) => (
+        <SiteMarker key={s.id} site={s} view={view} />
+      ))}
+      {/* The crater slope beside site C. */}
+      <group ref={hazard} visible={false}>
+        <mesh position={[CRATER_CENTER_X, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[CRATER_RADIUS + 0.6, 40]} />
+          <meshBasicMaterial color={SCENE_COLORS.nasaRed} transparent opacity={0.2} depthWrite={false} />
+        </mesh>
+      </group>
+    </>
+  );
+}
+
+function SiteMarker({ site, view }: { site: LandingSite; view: ViewRef }) {
+  const reduced = useReducedMotion();
+  const group = useRef<Group>(null);
+  const pulse = useRef<Group>(null);
+  const ring = useRef<MeshBasicMaterial>(null);
+  const beam = useRef<MeshBasicMaterial>(null);
+  const color = SITE_COLOR[site.id];
+  // The letter label is DOM (drei Html ignores a hidden parent), so it is mounted only while the sites show.
+  const [labelOn, setLabelOn] = useState(false);
+  const labelRef = useRef(false);
+
+  useFrame(() => {
+    const v = view.current;
+    if (group.current) group.current.visible = v.showSites;
+    if (labelRef.current !== v.showSites) {
+      labelRef.current = v.showSites;
+      setLabelOn(v.showSites);
+    }
+    const selected = v.siteId === site.id;
+    const s = reduced ? 1 : 0.75 + 0.25 * Math.sin(performance.now() * 0.003);
+    if (ring.current) ring.current.opacity = selected ? 0.55 + 0.4 * s : 0.4;
+    // Fades out over the last 30 m: right above the site the beam would be a wall across the window.
+    const near = Math.min(1, v.altM / 30);
+    if (beam.current) beam.current.opacity = (selected ? 0.28 * s : 0.08) * near;
+    if (pulse.current) pulse.current.scale.setScalar(selected && !reduced ? 1 + 0.06 * Math.sin(performance.now() * 0.003) : 1);
+  });
+
+  return (
+    <group ref={group} position={[site.x, 0.09, 0]} visible={false}>
+      <group ref={pulse} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh>
+          <ringGeometry args={[1.7, 2.1, 40]} />
+          <meshBasicMaterial ref={ring} color={color} transparent depthWrite={false} />
+        </mesh>
+        {[0, 1].map((k) => (
+          <mesh key={k} rotation={[0, 0, k * (Math.PI / 2)]}>
+            <planeGeometry args={[1.3, 0.16]} />
+            <meshBasicMaterial color={color} transparent opacity={0.8} depthWrite={false} />
+          </mesh>
+        ))}
+        {/* The 3 m precision ring */}
+        <mesh>
+          <ringGeometry args={[PRECISION_M - 0.07, PRECISION_M, 48]} />
+          <meshBasicMaterial color={color} transparent opacity={0.35} depthWrite={false} />
+        </mesh>
+        {site.terrain === "boulders" && (
+          <mesh position={[0, 0, -0.02]}>
+            <circleGeometry args={[BOULDER_HALF_WIDTH + 0.6, 40]} />
+            <meshBasicMaterial color={SCENE_COLORS.nasaRed} transparent opacity={0.16} depthWrite={false} />
+          </mesh>
+        )}
+      </group>
+      {/* Beacon beam */}
+      <mesh position={[0, 7, 0]}>
+        <cylinderGeometry args={[0.1, 0.1, 14, 8, 1, true]} />
+        <meshBasicMaterial ref={beam} color={color} transparent depthWrite={false} blending={AdditiveBlending} side={DoubleSide} />
+      </mesh>
+      {labelOn && (
+        <Html center position={[0, 2.8, 0]} style={{ pointerEvents: "none" }} zIndexRange={[5, 0]}>
+          <span
+            className="flex h-6 w-6 items-center justify-center border text-xs font-bold text-space-deep"
+            style={{ background: color, borderColor: "#0B192C" }}
+          >
+            {site.id}
+          </span>
+        </Html>
+      )}
+    </group>
+  );
+}
+
+/** A soft round sprite for the dust, drawn once. */
+function makeDustSprite(): CanvasTexture {
+  const size = 64;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const g = canvas.getContext("2d");
+  if (g) {
+    const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    grad.addColorStop(0, "rgba(255,255,255,0.9)");
+    grad.addColorStop(0.45, "rgba(255,255,255,0.35)");
+    grad.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+  }
+  const tex = new CanvasTexture(canvas);
+  tex.colorSpace = SRGBColorSpace;
+  return tex;
+}
+
+const DUST_COUNT = 160;
+
+/**
+ * Regolith kicked up by the engine: particles streaming out from under the lander along the
+ * ground, denser the harder the engine works and the closer the ground is. Follows the lander sideways.
+ */
+function DustPlume({ view }: { view: ViewRef }) {
+  const reduced = useReducedMotion();
+  const group = useRef<Group>(null);
+  const points = useRef<Points>(null);
+  const mat = useRef<PointsMaterial>(null);
+
+  const seeds = useMemo(() => {
+    const rand = seeded(77);
+    return Array.from({ length: DUST_COUNT }, () => ({ a: rand() * Math.PI * 2, s: 0.4 + rand() * 0.6, ph: rand(), up: rand() }));
+  }, []);
+  const positions = useMemo(() => new Float32Array(DUST_COUNT * 3), []);
+  const sprite = useMemo(() => makeDustSprite(), []);
+
+  useFrame(() => {
+    const v = view.current;
+    if (!group.current || !points.current || !mat.current) return;
+    const wash = v.engineOn && v.touchdownAt === null ? Math.min(1, v.throttle * 1.8) * Math.max(0, 1 - v.altM / 40) : 0;
+    // After touchdown the cloud settles for a moment instead of vanishing.
+    const settle = v.touchdownAt === null ? 0 : Math.max(0, 1 - (performance.now() - v.touchdownAt) / 2200) * (v.crashed ? 1 : 0.7);
+    const k = Math.max(wash, settle);
+    group.current.visible = !reduced && k > 0.02;
+    if (!group.current.visible) return;
+    group.current.position.x = v.xM;
+
+    const t = performance.now() / 1000;
+    for (let i = 0; i < DUST_COUNT; i++) {
+      const sd = seeds[i];
+      const life = (t * 0.5 + sd.ph) % 1;
+      const r = 0.8 + life * 13 * sd.s * (0.5 + k);
+      positions[i * 3] = Math.cos(sd.a) * r;
+      positions[i * 3 + 1] = 0.15 + Math.sin(life * Math.PI) * 1.1 * sd.up * (0.4 + k);
+      positions[i * 3 + 2] = Math.sin(sd.a) * r * 0.75;
+    }
+    points.current.geometry.attributes.position.needsUpdate = true;
+    mat.current.opacity = 0.55 * k;
+    mat.current.size = 1.2 + k * 1.6;
+  });
+
+  return (
+    <group ref={group} visible={false}>
+      <points ref={points} frustumCulled={false}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        </bufferGeometry>
+        <pointsMaterial
+          ref={mat}
+          map={sprite}
+          color={SCENE_COLORS.lunarLight}
+          size={1.4}
+          sizeAttenuation
+          transparent
+          opacity={0}
+          depthWrite={false}
+        />
+      </points>
+    </group>
+  );
+}
+
+const MILKY_TINT = new Color(2.4, 2.5, 2.9);
+
+/** NASA/ESA Milky Way panorama on a huge inverted sphere; never occludes or gets fogged. */
+function MilkyWay() {
+  const tex = useTexture("/assets/textures/milky_way_4k.jpg", (t) => {
+    t.colorSpace = SRGBColorSpace;
+  });
+  return (
+    <mesh rotation={[0.5, 0.4, 0]} renderOrder={-1}>
+      <sphereGeometry args={[420, 48, 32]} />
+      <meshBasicMaterial map={tex} side={BackSide} depthWrite={false} toneMapped={false} color={MILKY_TINT} />
+    </mesh>
+  );
+}
+
+/** Lunar regolith: the LRO-derived Moon map mirror-tiled over the plain so no seams show. */
+function RegolithMaterial() {
+  const tex = useTexture("/assets/textures/moon_4k.jpg", (t) => {
+    t.colorSpace = SRGBColorSpace;
+    t.wrapS = t.wrapT = MirroredRepeatWrapping;
+    t.repeat.set(10, 10);
+    t.anisotropy = 16;
+  });
+  return <meshStandardMaterial map={tex} color="#D4D4DA" roughness={0.97} metalness={0} bumpMap={tex} bumpScale={1.2} />;
 }

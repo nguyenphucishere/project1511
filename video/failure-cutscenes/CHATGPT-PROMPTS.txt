@@ -1,0 +1,38 @@
+PROMPT TẠO ẢNH CHO CHATGPT
+Cách dùng: đính kèm đúng file ảnh khối trong thư mục frames, rồi dán prompt tương ứng bên dưới.
+(Mỗi prompt đã đầy đủ, copy nguyên khối.)
+
+==================================================================
+1) MAX Q (gãy kết cấu)        ảnh đính kèm: frames/structural-blockout.png
+==================================================================
+Turn this 3D blockout into a photoreal cinematic still. KEEP THE EXACT COMPOSITION: three astronauts in a row inside a 1960s Apollo command module, seen from the instrument panel, shoulders and helmets only. Left: the commander, centre: the command module pilot, right: the lunar module pilot. Their helmets are turned slightly toward each other. Authentic Apollo A7L white pressure suits with orange hoses and chest connectors, round fishbowl helmets with gold-tinted reflective visors; faces are only faintly visible behind the glass (dim eyes, no clear facial features). The visors reflect the cabin lights. Cramped metal cabin, toggle switches, wires, worn paint, a small round hatch window behind them. Shot on 35mm anamorphic, shallow depth of field, film grain, 16:9, no text, no logos, no watermark.
+MOOD: Emergency. Red alarm lights flooding the cabin, harsh red reflections on the visors, orange glow of fire through the window, tension, the crew exchanging frightened glances.
+
+==================================================================
+2) CẠN NHIÊN LIỆU             ảnh đính kèm: frames/fuel-depleted-blockout.png
+==================================================================
+Turn this 3D blockout into a photoreal cinematic still. KEEP THE EXACT COMPOSITION: three astronauts in a row inside a 1960s Apollo command module, seen from the instrument panel, shoulders and helmets only. Left: the commander, centre: the command module pilot, right: the lunar module pilot. Their helmets are turned slightly toward each other. Authentic Apollo A7L white pressure suits with orange hoses and chest connectors, round fishbowl helmets with gold-tinted reflective visors; faces are only faintly visible behind the glass (dim eyes, no clear facial features). The visors reflect the cabin lights. Cramped metal cabin, toggle switches, wires, worn paint, a small round hatch window behind them. Shot on 35mm anamorphic, shallow depth of field, film grain, 16:9, no text, no logos, no watermark.
+MOOD: Eerie silence. Cold blue moonlit tones, only a few amber warning lights, Earth's curve glowing through the window, stillness, the crew looking at each other in quiet dread.
+
+==================================================================
+3) QUÁ NẶNG                   ảnh đính kèm: frames/slow-climb-blockout.png
+==================================================================
+Turn this 3D blockout into a photoreal cinematic still. KEEP THE EXACT COMPOSITION: three astronauts in a row inside a 1960s Apollo command module, seen from the instrument panel, shoulders and helmets only. Left: the commander, centre: the command module pilot, right: the lunar module pilot. Their helmets are turned slightly toward each other. Authentic Apollo A7L white pressure suits with orange hoses and chest connectors, round fishbowl helmets with gold-tinted reflective visors; faces are only faintly visible behind the glass (dim eyes, no clear facial features). The visors reflect the cabin lights. Cramped metal cabin, toggle switches, wires, worn paint, a small round hatch window behind them. Shot on 35mm anamorphic, shallow depth of field, film grain, 16:9, no text, no logos, no watermark.
+MOOD: Struggling ascent. Amber warning lights, low sunset-orange light through the window, a sense of strain and dread, the crew looking at each other with growing alarm.
+
+==================================================================
+4) GIÓ CẮT                    ảnh đính kèm: frames/wind-shear-blockout.png
+==================================================================
+Turn this 3D blockout into a photoreal cinematic still. KEEP THE EXACT COMPOSITION: three astronauts in a row inside a 1960s Apollo command module, seen from the instrument panel, shoulders and helmets only. Left: the commander, centre: the command module pilot, right: the lunar module pilot. Their helmets are turned slightly toward each other. Authentic Apollo A7L white pressure suits with orange hoses and chest connectors, round fishbowl helmets with gold-tinted reflective visors; faces are only faintly visible behind the glass (dim eyes, no clear facial features). The visors reflect the cabin lights. Cramped metal cabin, toggle switches, wires, worn paint, a small round hatch window behind them. Shot on 35mm anamorphic, shallow depth of field, film grain, 16:9, no text, no logos, no watermark.
+MOOD: The capsule is violently tilted (about 12 degree dutch angle), cold white-blue light, red caution lights flickering, loose dust and small objects floating, panic.
+
+==================================================================
+5) SÉT                        ảnh đính kèm: frames/lightning-blockout.png
+==================================================================
+Turn this 3D blockout into a photoreal cinematic still. KEEP THE EXACT COMPOSITION: three astronauts in a row inside a 1960s Apollo command module, seen from the instrument panel, shoulders and helmets only. Left: the commander, centre: the command module pilot, right: the lunar module pilot. Their helmets are turned slightly toward each other. Authentic Apollo A7L white pressure suits with orange hoses and chest connectors, round fishbowl helmets with gold-tinted reflective visors; faces are only faintly visible behind the glass (dim eyes, no clear facial features). The visors reflect the cabin lights. Cramped metal cabin, toggle switches, wires, worn paint, a small round hatch window behind them. Shot on 35mm anamorphic, shallow depth of field, film grain, 16:9, no text, no logos, no watermark.
+MOOD: Blinding white lightning flash through the window overexposing everything, hard shadows, red warning lights, silhouettes of helmets, shock.
+
+------------------------------------------------------------------
+Nếu ChatGPT lộ mặt rõ ràng, nhắc thêm: "faces hidden behind dark reflective visors".
+Nếu bố cục bị đổi, nhắc thêm: "keep the exact composition and camera angle of the attached image".
+Prompt Seedance (video) nằm trong PROMPTS.md cùng thư mục.

@@ -1,7 +1,7 @@
-import { CircleCheck, CircleDashed, FlaskConical, TriangleExclamationPoint, OctagonExclamationPoint } from "lucide-react";
+import { Calculator, CircleCheck, CircleDashed, FlaskConical, TriangleExclamationPoint, OctagonExclamationPoint } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type Status = "go" | "pending" | "caution" | "fault" | "demo";
+export type Status = "go" | "pending" | "caution" | "fault" | "demo" | "calculated";
 
 const styles: Record<Status, { className: string; Icon: typeof CircleCheck }> = {
   go: { className: "text-white bg-space-emerald/90 shadow-[0_0_8px_rgba(16,185,129,0.35)]", Icon: CircleCheck },
@@ -11,6 +11,11 @@ const styles: Record<Status, { className: string; Icon: typeof CircleCheck }> = 
   demo: {
     className: "text-space-cyan bg-space-blue/40 shadow-[inset_0_0_0_1px_rgb(var(--space-cyan)/0.7)]",
     Icon: FlaskConical,
+  },
+  /** Numbers computed by the simulation engine from flight data, not illustrative demo values. */
+  calculated: {
+    className: "text-space-emerald bg-space-blue/40 shadow-[inset_0_0_0_1px_rgb(var(--space-emerald)/0.7)]",
+    Icon: Calculator,
   },
 };
 

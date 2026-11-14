@@ -16,7 +16,7 @@ vi.stubGlobal("window", {
 const CONFIG: LaunchConfig = { vehicle: "saros", payload: "standard", fuelPct: 100, orbitKm: 185, window: "w2" };
 const store = () => useGameStore.getState();
 
-const EMPTY = { launchAttempts: 0, launchConfig: null, partsInspected: 0, landing: null };
+const EMPTY = { launchAttempts: 0, launchConfig: null, partsInspected: 0, loadout: null, landing: null };
 
 beforeEach(() => {
   memory.clear();
@@ -74,6 +74,7 @@ describe("mission log", () => {
       launchAttempts: 1,
       launchConfig: CONFIG,
       partsInspected: 8,
+      loadout: null,
       landing: { touchdownMs: 0.5, fuelLeftPct: 5 },
     });
   });
@@ -114,13 +115,27 @@ describe("saved progress", () => {
     await useGameStore.persist.rehydrate();
     expect(store().hydrated).toBe(true);
     expect(store().stepId).toBeNull();
-    expect(store().log).toEqual({ launchAttempts: 0, launchConfig: null, partsInspected: 8, landing: null });
+    expect(store().log).toEqual({ launchAttempts: 0, launchConfig: null, partsInspected: 8, loadout: null, landing: null });
   });
 
   it("loads a saved log written before parts and landing existed", async () => {
     memory.set(KEY, JSON.stringify({ state: { stepId: "launch-video", log: { launchAttempts: 2, launchConfig: CONFIG } }, version: 1 }));
     await useGameStore.persist.rehydrate();
     expect(store().stepId).toBe("launch-video");
-    expect(store().log).toEqual({ launchAttempts: 2, launchConfig: CONFIG, partsInspected: 0, landing: null });
+    expect(store().log).toEqual({ launchAttempts: 2, launchConfig: CONFIG, partsInspected: 0, loadout: null, landing: null });
+  });
+});
+
+describe("workshop loadout", () => {
+  it("records the build and keeps it across a reload, dropping an invalid one", async () => {
+    store().newGame();
+    store().recordLoadout({ engine: "heavy", tank: "large" });
+    expect(store().log.loadout).toEqual({ engine: "heavy", tank: "large" });
+    await useGameStore.persist.rehydrate();
+    expect(store().log.loadout).toEqual({ engine: "heavy", tank: "large" });
+
+    memory.set(KEY, JSON.stringify({ state: { stepId: "launch-video", log: { loadout: { engine: "ion", tank: "large" } } }, version: 1 }));
+    await useGameStore.persist.rehydrate();
+    expect(store().log.loadout).toBeNull();
   });
 });
