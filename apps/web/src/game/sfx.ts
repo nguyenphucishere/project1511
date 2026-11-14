@@ -49,6 +49,7 @@ export type SfxId =
 export type LoopId = "engine";
 
 const MASTER_VOLUME = 0.5;
+let masterVolume = MASTER_VOLUME;
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -69,7 +70,7 @@ export function audio(): { c: AudioContext; out: GainNode } | null {
     if (!Ctor) return null;
     ctx = new Ctor();
     master = ctx.createGain();
-    master.gain.value = MASTER_VOLUME;
+    master.gain.value = masterVolume;
     // A gentle limiter, so loud hardware hits can be boosted without clipping the roar and score.
     const limiter = ctx.createDynamicsCompressor();
     limiter.threshold.value = -10;
@@ -81,6 +82,15 @@ export function audio(): { c: AudioContext; out: GainNode } | null {
   }
   if (ctx.state === "suspended") void ctx.resume();
   return { c: ctx, out: master! };
+}
+
+/**
+ * Sets how loud everything the game makes is (the limiter after it keeps loud moments from
+ * clipping). Scenes with a lot going on at once raise it; call with no argument to go back.
+ */
+export function setMasterVolume(volume = MASTER_VOLUME) {
+  masterVolume = volume;
+  if (ctx && master) master.gain.setTargetAtTime(volume, ctx.currentTime, 0.3);
 }
 
 /** Two seconds of white noise, made once and shared by every noise-based sound. */

@@ -125,6 +125,16 @@ export function preloadScene(scene: SceneId): Promise<void> {
   return promise;
 }
 
+/** Waits a moment and then for an idle frame, so the preload never starts in the middle of an animation. */
+function breather(): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(() => {
+      if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(() => resolve(), { timeout: 1500 });
+      else resolve();
+    }, 700);
+  });
+}
+
 /** The scenes still to warm, one after another so they never fight over the connection. */
 let chain: Promise<void> = Promise.resolve();
 const queued = new Set<SceneId>();
@@ -143,10 +153,61 @@ export function preloadUpcoming(stepId: string): void {
   if (scenes.length === 0) return;
   for (const s of scenes) queued.add(s);
   const start = () => {
-    for (const s of scenes) chain = chain.then(() => preloadScene(s));
+    // One scene at a time, with a breather before each: evaluating a scene's code and decoding its
+    // textures is heavy, and without the gaps the animation on screen (the title) stutters.
+    for (const s of scenes) chain = chain.then(() => breather()).then(() => preloadScene(s));
   };
   if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(start, { timeout: 2000 });
   else setTimeout(start, 300);
+}
+
+/* ---------------------------------------------------------------- title-screen warm-up */
+
+const warmed = new Map<SceneId, number>();
+const warmQueued = new Set<SceneId>();
+
+/**
+ * The gentle warm-up used on the title screen: it only downloads the scenes' files into the HTTP
+ * cache (network work, no main-thread cost). It deliberately does NOT evaluate any scene code or
+ * decode any texture or HDR environment: that is heavy synchronous work that stutters the title's
+ * animation, so it waits until the player has pressed start (see preloadUpcoming).
+ */
+export function warmUpcoming(stepId: string): void {
+  if (typeof window === "undefined") return;
+  const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+  if (saveData) return;
+  const scenes = scenesToPreload(stepId).filter((s) => !warmQueued.has(s));
+  for (const s of scenes) warmQueued.add(s);
+  let chainWarm: Promise<void> = Promise.resolve();
+  for (const scene of scenes) {
+    chainWarm = chainWarm
+      .then(() => breather())
+      .then(async () => {
+        const files = JOBS[scene]?.files ?? [];
+        const total = files.reduce((n, f) => n + f.weight, 0) || 1;
+        let got = 0;
+        warmed.set(scene, 0);
+        for (const f of files) {
+          try {
+            const r = await fetch(f.url);
+            await r.arrayBuffer();
+          } catch {
+            /* a missing file never blocks the title */
+          }
+          got += f.weight;
+          warmed.set(scene, Math.round((got / total) * 100));
+          for (const l of listeners) l();
+        }
+        warmed.set(scene, 100);
+        for (const l of listeners) l();
+      });
+  }
+}
+
+/** 0..100 across every scene, for the title screen's loading bar (files downloaded so far). */
+export function warmProgress(): number {
+  const all = Object.keys(JOBS) as SceneId[];
+  return Math.round(all.reduce((n, s) => n + (warmed.get(s) ?? 0), 0) / all.length);
 }
 
 /** Overall progress (0..100) across every scene that will be played, for the title screen. */
