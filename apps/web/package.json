@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbo",
-    "build": "next build",
+    "dev": "next dev",
+    "build": "pnpm --filter @space-sim/shared-schema build && next build",
     "start": "next start",
     "play": "node scripts/play.mjs",
     "lint": "next lint",
