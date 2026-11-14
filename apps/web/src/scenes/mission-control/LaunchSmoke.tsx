@@ -18,7 +18,18 @@ import {
 import { seeded } from "@/lib/random";
 import { SCENE_COLORS } from "@/lib/palette";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { HOLD_DOWN, SEPARATION_T, STAGE2_T, rocketRise, rocketSpeed } from "./ascent";
+import {
+  ADAPTER_T,
+  CUTOFF_T,
+  HOLD_DOWN,
+  SEP2_T,
+  SEPARATION_T,
+  STAGE2_T,
+  STAGE3_T,
+  rocketRise,
+  rocketSpeed,
+} from "./ascent";
+import { STRETCH } from "./flight";
 import { PAD } from "./layout";
 
 /**
@@ -30,12 +41,15 @@ import { PAD } from "./layout";
  * Particles live in the pad's local space (this renders inside the pad group).
  */
 
-const MAX = 1600;
+const MAX = 3600;
 
 /** Heights on the stack (pad-local, above the stack base) where exhaust leaves the engines. */
 const STAGE1_NOZZLE_Y = 1.4;
-const STAGE2_NOZZLE_Y = 12.5;
-const INTERSTAGE_Y = 13.4;
+const STAGE2_NOZZLE_Y = 12.6;
+const STAGE3_NOZZLE_Y = 19.5;
+const INTERSTAGE_Y = 11.6;
+const INTERSTAGE2_Y = 20.4;
+const ADAPTER_Y = 24.6;
 
 interface LaunchSmokeProps {
   ignitionAt: number | null;
@@ -64,11 +78,21 @@ export function LaunchSmoke({ ignitionAt, burnEndT }: LaunchSmokeProps) {
 
   useFrame(({ camera }, rawDelta) => {
     const dt = Math.min(Math.max(rawDelta, 0), 0.05);
-    const t = ignitionAt === null ? -1 : (performance.now() - ignitionAt) / 1000;
+    const t =
+      ignitionAt === null ? -1 : (performance.now() - ignitionAt) / 1000;
     // Mounted long after ignition (e.g. the failure cutscene restages the pad): nothing to replay.
     if (prev.current.t < 0 && t > 1) prev.current = { t, rise: rocketRise(t) };
     if (t >= 0) {
-      emit(sim, carry.current, t, Math.max(prev.current.t, 0), prev.current.rise, dt, burnEndT, reduced);
+      emit(
+        sim,
+        carry.current,
+        t,
+        Math.max(prev.current.t, 0),
+        prev.current.rise,
+        dt,
+        burnEndT,
+        reduced,
+      );
       prev.current = { t, rise: rocketRise(t) };
     }
     sim.step(dt);
@@ -79,7 +103,16 @@ export function LaunchSmoke({ ignitionAt, burnEndT }: LaunchSmokeProps) {
     if (mesh.current) mesh.current.visible = n > 0;
   });
 
-  return <mesh ref={mesh} geometry={geometry} material={material} frustumCulled={false} visible={false} renderOrder={2} />;
+  return (
+    <mesh
+      ref={mesh}
+      geometry={geometry}
+      material={material}
+      frustumCulled={false}
+      visible={false}
+      renderOrder={2}
+    />
+  );
 }
 
 const PAD_V = new Vector3(...PAD);
@@ -99,7 +132,12 @@ function emit(
   const rise = rocketRise(t);
 
   // Ground cloud: heaviest at ignition and while the stack clears the tower, then thinning.
-  const groundRate = t < HOLD_DOWN + 2.5 ? 85 : t < HOLD_DOWN + 7 ? 85 * (1 - (t - HOLD_DOWN - 2.5) / 4.5) : 0;
+  const groundRate =
+    t < HOLD_DOWN + 2.5 * STRETCH
+      ? 85
+      : t < HOLD_DOWN + 7 * STRETCH
+        ? 85 * (1 - (t - HOLD_DOWN - 2.5 * STRETCH) / (4.5 * STRETCH))
+        : 0;
   carry.ground += groundRate * (reduced ? 0.5 : 1) * dt;
   while (carry.ground >= 1) {
     carry.ground -= 1;
@@ -108,10 +146,24 @@ function emit(
 
   // Exhaust trail from whichever engine is burning.
   const stage1 = t < SEPARATION_T;
-  const burning = stage1 || (t >= STAGE2_T && t < burnEndT);
-  if (burning && rise > 0.5) {
-    const nozzle = stage1 ? STAGE1_NOZZLE_Y : STAGE2_NOZZLE_Y;
-    const rate = stage1 ? 60 : 38;
+  const stage2 = t >= STAGE2_T && t < Math.min(SEP2_T, burnEndT);
+  const stage3 = t >= STAGE3_T && t < Math.min(burnEndT, CUTOFF_T);
+  // Between stages the engines are off, but vapour keeps streaming off the freshly cut skirt, so the
+  // column behind the rocket never breaks into separate pieces.
+  const coast1 = t >= SEPARATION_T && t < STAGE2_T;
+  const coast2 = t >= SEP2_T && t < STAGE3_T;
+  if ((stage1 || stage2 || stage3 || coast1 || coast2) && rise > 0.5) {
+    const nozzle =
+      stage1 || coast1
+        ? coast1
+          ? INTERSTAGE_Y
+          : STAGE1_NOZZLE_Y
+        : stage2
+          ? STAGE2_NOZZLE_Y
+          : coast2
+            ? INTERSTAGE2_Y
+            : STAGE3_NOZZLE_Y;
+    const rate = coast1 || coast2 ? 38 : stage1 ? 70 : stage2 ? 56 : 38;
     carry.trail += rate * dt;
     const count = Math.floor(carry.trail);
     carry.trail -= count;
@@ -119,14 +171,18 @@ function emit(
     for (let i = 0; i < count; i++) {
       const k = (i + Math.random()) / Math.max(count, 1);
       const y = prevRise + (rise - prevRise) * k + nozzle;
-      sim.spawnTrail(y, rocketSpeed(t), stage1);
+      sim.spawnTrail(y, rocketSpeed(t), stage1 ? 1 : stage2 || coast1 ? 2 : 3);
     }
   }
 
-  // Separation motors: one ring puff at the interstage.
-  if (prevT < SEPARATION_T && t >= SEPARATION_T) {
-    for (let i = 0; i < 40; i++) sim.spawnRing(rocketRise(SEPARATION_T) + INTERSTAGE_Y);
-  }
+  // Separation bolts and retro motors: a ring puff at each interstage, and where the adapter opens.
+  const puff = (at: number, y: number, n: number) => {
+    if (prevT < at && t >= at)
+      for (let i = 0; i < n; i++) sim.spawnRing(rocketRise(at) + y);
+  };
+  puff(SEPARATION_T, INTERSTAGE_Y, 90);
+  puff(SEP2_T, INTERSTAGE2_Y, 70);
+  puff(ADAPTER_T, ADAPTER_Y, 24);
 }
 
 /* ---------------------------------------------------------------- simulation */
@@ -152,11 +208,25 @@ class SmokeSim {
   drag = new Float32Array(MAX);
   lift = new Float32Array(MAX);
   private all = [
-    this.px, this.py, this.pz, this.vx, this.vy, this.vz, this.age, this.life, this.size0,
-    this.size1, this.alpha, this.rot, this.spin, this.shade, this.heat, this.drag, this.lift,
+    this.px,
+    this.py,
+    this.pz,
+    this.vx,
+    this.vy,
+    this.vz,
+    this.age,
+    this.life,
+    this.size0,
+    this.size1,
+    this.alpha,
+    this.rot,
+    this.spin,
+    this.shade,
+    this.heat,
+    this.drag,
+    this.lift,
   ];
-  private order = new Uint16Array(MAX);
-  private depth = new Float32Array(MAX);
+  private keys = new Float64Array(MAX);
   private rand = seeded(42);
 
   private add(): number {
@@ -180,7 +250,9 @@ class SmokeSim {
     // Most of the exhaust leaves through the flame trench (±X); the rest rolls out all round.
     const trench = r() < 0.65;
     const side = r() < 0.5 ? -1 : 1;
-    const angle = trench ? (side > 0 ? 0 : Math.PI) + (r() - 0.5) * 0.7 : r() * Math.PI * 2;
+    const angle = trench
+      ? (side > 0 ? 0 : Math.PI) + (r() - 0.5) * 0.7
+      : r() * Math.PI * 2;
     const speed = (trench ? 11 : 6) + r() * 8;
     this.px[i] = Math.cos(angle) * (2 + r() * 2);
     this.pz[i] = Math.sin(angle) * (2 + r() * 2);
@@ -191,15 +263,20 @@ class SmokeSim {
     this.size0[i] = 2.5 + r() * 2;
     this.size1[i] = 13 + r() * 12;
     this.alpha[i] = 0.75 + r() * 0.2;
-    this.heat[i] = t < HOLD_DOWN + 3 ? 1 : 0.6;
+    this.heat[i] = t < HOLD_DOWN + 3 * STRETCH ? 1 : 0.6;
     this.drag[i] = 0.55 + r() * 0.3;
     this.lift[i] = 0.35 + r() * 0.5;
   }
 
-  spawnTrail(y: number, rocketV: number, stage1: boolean) {
+  /** `stage` 1..3: the exhaust column behind the climbing rocket; it lingers for many seconds so the whole climb stays drawn on the sky. */
+  spawnTrail(y: number, rocketV: number, stage: 1 | 2 | 3) {
     const r = this.rand;
     const i = this.add();
-    this.base(i, stage1 ? 4 + r() * 2 : 3 + r() * 1.5);
+    const stage1 = stage === 1;
+    this.base(
+      i,
+      stage1 ? 13 + r() * 6 : stage === 2 ? 11 + r() * 5 : 9 + r() * 4,
+    );
     this.px[i] = (r() - 0.5) * 0.8;
     this.pz[i] = (r() - 0.5) * 0.8;
     this.py[i] = y;
@@ -208,9 +285,13 @@ class SmokeSim {
     this.vx[i] = (r() - 0.5) * 2.5;
     this.vz[i] = (r() - 0.5) * 2.5;
     this.vy[i] = -Math.min(rocketV * 0.15, 6) - r() * 3;
-    this.size0[i] = stage1 ? 1.6 : 0.9;
-    this.size1[i] = stage1 ? 7 + r() * 4 : 4 + r() * 2;
-    this.alpha[i] = stage1 ? 0.7 : 0.4;
+    this.size0[i] = stage1 ? 2.2 : 1.4;
+    this.size1[i] = stage1
+      ? 10 + r() * 5
+      : stage === 2
+        ? 7 + r() * 3
+        : 5 + r() * 2;
+    this.alpha[i] = stage1 ? 0.62 : 0.5;
     this.heat[i] = 1;
     this.drag[i] = 1.4;
     this.lift[i] = 0.1;
@@ -270,19 +351,26 @@ class SmokeSim {
   /** Writes alive particles back-to-front into the instance attributes; returns the count. */
   write(geo: InstancedBufferGeometry, cam: Vector3, dir: Vector3): number {
     const n = this.count;
+    // Depth and index packed in one number, so the sort is the engine's native numeric one (no
+    // comparator call per step) — this ran every frame on thousands of puffs and caused hitches.
+    const keys = this.keys.subarray(0, n);
     for (let i = 0; i < n; i++) {
-      this.order[i] = i;
-      this.depth[i] = (this.px[i]! - cam.x) * dir.x + (this.py[i]! - cam.y) * dir.y + (this.pz[i]! - cam.z) * dir.z;
+      const d =
+        (this.px[i]! - cam.x) * dir.x +
+        (this.py[i]! - cam.y) * dir.y +
+        (this.pz[i]! - cam.z) * dir.z;
+      keys[i] = Math.round(d * 16) * 4096 + i;
     }
-    const order = this.order.subarray(0, n);
-    order.sort((a, b) => this.depth[b]! - this.depth[a]!);
+    keys.sort();
 
     const pos = geo.getAttribute("iPos") as InstancedBufferAttribute;
     const data = geo.getAttribute("iData") as InstancedBufferAttribute;
     const p = pos.array as Float32Array;
     const q = data.array as Float32Array;
     for (let k = 0; k < n; k++) {
-      const i = order[k]!;
+      // Far puffs first: walk the ascending keys backwards.
+      const key = keys[n - 1 - k]!;
+      const i = key - Math.floor(key / 4096) * 4096;
       const life = this.age[i]! / this.life[i]!;
       // Fast growth that eases off, like a billow expanding and slowing.
       const grow = 1 - (1 - life) * (1 - life);
@@ -296,7 +384,9 @@ class SmokeSim {
       q[k * 4 + 1] = this.alpha[i]! * fadeIn * fadeOut * fadeOut;
       q[k * 4 + 2] = this.rot[i]!;
       // Heat glow cools within the first second; the shade rides in the fraction.
-      q[k * 4 + 3] = Math.floor(this.heat[i]! * Math.exp(-this.age[i]! * 2.2) * 100) + this.shade[i]! * 0.99;
+      q[k * 4 + 3] =
+        Math.floor(this.heat[i]! * Math.exp(-this.age[i]! * 2.2) * 100) +
+        this.shade[i]! * 0.99;
     }
     pos.needsUpdate = true;
     data.needsUpdate = true;
@@ -350,6 +440,9 @@ function buildRenderer() {
         float s = sin(iData.z);
         vec2 corner = mat2(c, s, -s, c) * position.xy * iData.x;
         vec4 mv = modelViewMatrix * vec4(iPos, 1.0);
+        // A puff the camera is inside (or right next to) would paint the whole frame grey, so it
+        // dissolves as the camera closes in, in proportion to its own size.
+        vAlpha *= smoothstep(3.0 + iData.x * 0.3, 6.0 + iData.x * 1.3, -mv.z);
         mv.xy += corner;
         gl_Position = projectionMatrix * mv;
       }
@@ -393,10 +486,21 @@ function puffTexture(): CanvasTexture {
   const blobs = Array.from({ length: 16 }, () => {
     const a = rand() * Math.PI * 2;
     const d = Math.sqrt(rand()) * size * 0.2;
-    return { x: size / 2 + Math.cos(a) * d, y: size / 2 + Math.sin(a) * d, r: size * (0.16 + rand() * 0.14) };
+    return {
+      x: size / 2 + Math.cos(a) * d,
+      y: size / 2 + Math.sin(a) * d,
+      r: size * (0.16 + rand() * 0.14),
+    };
   });
   for (const b of blobs) {
-    const g = ctx.createRadialGradient(b.x - b.r * 0.3, b.y - b.r * 0.35, b.r * 0.1, b.x, b.y, b.r);
+    const g = ctx.createRadialGradient(
+      b.x - b.r * 0.3,
+      b.y - b.r * 0.35,
+      b.r * 0.1,
+      b.x,
+      b.y,
+      b.r,
+    );
     g.addColorStop(0, "rgba(255,255,255,0.55)");
     g.addColorStop(0.6, "rgba(170,170,170,0.35)");
     g.addColorStop(1, "rgba(90,90,90,0)");
@@ -407,7 +511,14 @@ function puffTexture(): CanvasTexture {
   }
   // Fade the square's edges so no quad corner ever shows.
   ctx.globalCompositeOperation = "destination-in";
-  const edge = ctx.createRadialGradient(size / 2, size / 2, size * 0.2, size / 2, size / 2, size / 2);
+  const edge = ctx.createRadialGradient(
+    size / 2,
+    size / 2,
+    size * 0.2,
+    size / 2,
+    size / 2,
+    size / 2,
+  );
   edge.addColorStop(0, "rgba(0,0,0,1)");
   edge.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = edge;

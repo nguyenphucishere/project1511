@@ -2,7 +2,15 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { DoubleSide, MathUtils, PerspectiveCamera, Vector3, type Camera, type Group, type MeshBasicMaterial } from "three";
+import {
+  DoubleSide,
+  MathUtils,
+  PerspectiveCamera,
+  Vector3,
+  type Camera,
+  type Group,
+  type MeshBasicMaterial,
+} from "three";
 import { LightingRig } from "@/components/viewport/LightingRig";
 import { Environment } from "@react-three/drei";
 import { seeded } from "@/lib/random";
@@ -11,7 +19,24 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { SCENE_COLORS } from "@/lib/palette";
 import { rocketRise, rocketSpeed } from "./ascent";
 import { LaunchVehicle } from "./LaunchVehicle";
-import { GROUND_Y, LAUNCH_VANTAGE, PAD, ROCKET_HEIGHT, ROOM, TIER, WINDOW } from "./layout";
+import { Warmup } from "./Warmup";
+import { shotAt } from "./launchShots";
+import { HoldDownClamps, SwingArm } from "./Mechanics";
+import { Crowd, binocularGeometry } from "./Crowd";
+import { SpaceDome } from "./SpaceDome";
+import {
+  BEACH_R,
+  CROWD_BEACH,
+  CROWD_FIELD,
+  FIELD_R,
+  GROUND_Y,
+  LAUNCH_VANTAGE,
+  PAD,
+  ROCKET_HEIGHT,
+  ROOM,
+  TIER,
+  WINDOW,
+} from "./layout";
 import { mood } from "./mood";
 import { SkyExplosion } from "./SkyExplosion";
 
@@ -30,7 +55,20 @@ interface ControlRoomWorldProps {
  * Scene 3 geometry: the control room's back tier and front row, the window, and outside the
  * rocket on its pad at dawn. The launch itself is DOM-driven; this only plays the liftoff.
  */
-export function ControlRoomWorld({ ignitionAt, launchView, burnEndT, explodeAt = null }: ControlRoomWorldProps) {
+export function ControlRoomWorld({
+  ignitionAt,
+  launchView,
+  burnEndT,
+  explodeAt = null,
+}: ControlRoomWorldProps) {
+  // The pad is remounted for every replacement vehicle (smoke and positions reset), but NOT for the
+  // first launch: the vehicle already stands there with its shaders compiled and geometry uploaded,
+  // and rebuilding all of it at the moment of ignition was a 300 ms freeze at liftoff.
+  const stage = useRef({ ignitionAt, count: 0 });
+  if (stage.current.ignitionAt !== ignitionAt) {
+    if (stage.current.ignitionAt !== null) stage.current.count++;
+    stage.current.ignitionAt = ignitionAt;
+  }
   return (
     <>
       <LaunchCamera active={launchView} ignitionAt={ignitionAt} />
@@ -39,8 +77,26 @@ export function ControlRoomWorld({ ignitionAt, launchView, burnEndT, explodeAt =
       <Consoles />
       <MissionStaff />
       <Outside />
-      {/* Remount per launch so smoke and position reset for the replacement vehicle. */}
-      <LaunchPad key={ignitionAt ?? "idle"} ignitionAt={ignitionAt} burnEndT={burnEndT} />
+      <SpaceDome ignitionAt={ignitionAt} />
+      <Crowd
+        position={CROWD_FIELD}
+        count={110}
+        radius={FIELD_R}
+        ignitionAt={ignitionAt}
+        seed={3}
+      />
+      <Crowd
+        position={CROWD_BEACH}
+        count={70}
+        radius={BEACH_R}
+        ignitionAt={ignitionAt}
+        seed={8}
+      />
+      <LaunchPad
+        key={stage.current.count}
+        ignitionAt={ignitionAt}
+        burnEndT={burnEndT}
+      />
       {explodeAt !== null && <SkyExplosion explodeAt={explodeAt} />}
     </>
   );
@@ -62,14 +118,21 @@ const ZOOM_REF_DIST = 60;
 const MAX_ZOOM = 5;
 const ZOOM_RATE = 2.5;
 
-const easeInOut = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
+const easeInOut = (k: number) =>
+  k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2;
 
 /**
  * Cinematic launch view. On the launch command the camera dollies off the flight director's
  * tier, out through the big window and down to a spot near the pad; from ignition it tracks
  * the rocket as it climbs. Clearing it (hold, anomaly → adjust) cuts back to the console.
  */
-function LaunchCamera({ active, ignitionAt }: { active: boolean; ignitionAt: number | null }) {
+function LaunchCamera({
+  active,
+  ignitionAt,
+}: {
+  active: boolean;
+  ignitionAt: number | null;
+}) {
   const setCameraRig = useSceneStore((s) => s.setCameraRig);
   const reduced = useReducedMotion();
   // Read per frame, so ignition doesn't restart the fly-out.
@@ -89,6 +152,7 @@ function LaunchCamera({ active, ignitionAt }: { active: boolean; ignitionAt: num
     let started = false;
     let elapsed = 0;
     let lens: Camera | null = null;
+    let lastShot = "";
 
     const rig: CameraRig = (camera, dt) => {
       if (!started) {
@@ -109,8 +173,48 @@ function LaunchCamera({ active, ignitionAt }: { active: boolean; ignitionAt: num
         a * start.z + b * WINDOW_GATE.z + c * vantage.z,
       );
 
-      const t = ignition.current === null ? -1 : (performance.now() - ignition.current) / 1000;
+      const t =
+        ignition.current === null
+          ? -1
+          : (performance.now() - ignition.current) / 1000;
       const rise = t < 0 ? 0 : rocketRise(t);
+
+      // From ignition the launch is cut like a film: a new angle every few seconds.
+      if (t >= 0 && !reduced) {
+        const shot = shotAt(t);
+        const cut = shot.id !== lastShot;
+        lastShot = shot.id;
+        const f = shot.frame({
+          t,
+          rise,
+          speed: rocketSpeed(t),
+          pad: [pad.x, pad.y, pad.z],
+        });
+        // Engine rumble shakes the lens, fading as the shot calms down.
+        const shake = f.shake;
+        camera.position.set(
+          f.pos[0] + Math.sin(t * 57) * shake,
+          f.pos[1] + Math.sin(t * 71 + 1) * shake,
+          f.pos[2] + Math.sin(t * 43 + 2) * shake,
+        );
+        goal.set(f.aim[0], f.aim[1], f.aim[2]);
+        if (cut) aim.copy(goal);
+        else aim.lerp(goal, 1 - Math.exp(-f.rate * dt));
+        camera.lookAt(aim);
+        if (camera instanceof PerspectiveCamera) {
+          lens = camera;
+          const want = Math.min(
+            MAX_ZOOM,
+            Math.max(f.zoom, camera.position.distanceTo(goal) / ZOOM_REF_DIST),
+          );
+          camera.zoom = cut
+            ? want
+            : camera.zoom +
+              (want - camera.zoom) * (1 - Math.exp(-ZOOM_RATE * dt));
+          camera.updateProjectionMatrix();
+        }
+        return;
+      }
       pos.addScaledVector(away, rise * PULL_BACK);
       pos.y += rise * CRANE;
       camera.position.copy(pos);
@@ -123,8 +227,12 @@ function LaunchCamera({ active, ignitionAt }: { active: boolean; ignitionAt: num
 
       if (camera instanceof PerspectiveCamera) {
         lens = camera;
-        const want = Math.min(MAX_ZOOM, Math.max(1, camera.position.distanceTo(goal) / ZOOM_REF_DIST));
-        camera.zoom += (want - camera.zoom) * (reduced ? 1 : 1 - Math.exp(-ZOOM_RATE * dt));
+        const want = Math.min(
+          MAX_ZOOM,
+          Math.max(1, camera.position.distanceTo(goal) / ZOOM_REF_DIST),
+        );
+        camera.zoom +=
+          (want - camera.zoom) * (reduced ? 1 : 1 - Math.exp(-ZOOM_RATE * dt));
         camera.updateProjectionMatrix();
       }
     };
@@ -156,7 +264,11 @@ function Room() {
       {/* Anti-static slate floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, cz]}>
         <planeGeometry args={[w, d]} />
-        <meshStandardMaterial color={SCENE_COLORS.steelDark} roughness={0.75} metalness={0.15} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.steelDark}
+          roughness={0.75}
+          metalness={0.15}
+        />
       </mesh>
       {/* Center NASA Blue aisle walkway */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, -0.5]}>
@@ -166,10 +278,17 @@ function Room() {
       {/* Acoustic light ceiling with recessed lighting panels */}
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, h, cz]}>
         <planeGeometry args={[w, d]} />
-        <meshStandardMaterial color={SCENE_COLORS.cleanroomWallLower} roughness={0.8} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.cleanroomWallLower}
+          roughness={0.8}
+        />
       </mesh>
       {[-3.2, 0, 3.2].map((x) => (
-        <mesh key={x} rotation={[Math.PI / 2, 0, 0]} position={[x, h - 0.02, -0.6]}>
+        <mesh
+          key={x}
+          rotation={[Math.PI / 2, 0, 0]}
+          position={[x, h - 0.02, -0.6]}
+        >
           <planeGeometry args={[1.6, 0.5]} />
           <meshBasicMaterial color={SCENE_COLORS.spaceWhite} />
         </mesh>
@@ -177,16 +296,26 @@ function Room() {
       {/* Raised back tier the director sits on */}
       <mesh position={[0, TIER.y / 2, (TIER.frontZ + ROOM.maxZ) / 2]}>
         <boxGeometry args={[w, TIER.y, ROOM.maxZ - TIER.frontZ]} />
-        <meshStandardMaterial color={SCENE_COLORS.steelMid} roughness={0.65} metalness={0.25} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.steelMid}
+          roughness={0.65}
+          metalness={0.25}
+        />
       </mesh>
-      <mesh position={[0, TIER.y + 0.01, TIER.frontZ + 0.05]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh
+        position={[0, TIER.y + 0.01, TIER.frontZ + 0.05]}
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
         <planeGeometry args={[w, 0.1]} />
         <meshBasicMaterial color={SCENE_COLORS.solarGold} />
       </mesh>
       {/* Front wall: bright aerospace wall panel with NASA blue dado & dark window frame */}
       <mesh position={[0, WINDOW.bottom / 2, ROOM.minZ]}>
         <boxGeometry args={[w, WINDOW.bottom, 0.2]} />
-        <meshStandardMaterial color={SCENE_COLORS.cleanroomWallLower} roughness={0.6} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.cleanroomWallLower}
+          roughness={0.6}
+        />
       </mesh>
       {/* NASA Blue & Red racing stripe along lower wall */}
       <mesh position={[0, WINDOW.bottom - 0.18, ROOM.minZ + 0.11]}>
@@ -200,45 +329,90 @@ function Room() {
       {/* Upper header wall */}
       <mesh position={[0, (WINDOW.top + h) / 2, ROOM.minZ]}>
         <boxGeometry args={[w, h - WINDOW.top, 0.2]} />
-        <meshStandardMaterial color={SCENE_COLORS.cleanroomWall} roughness={0.6} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.cleanroomWall}
+          roughness={0.6}
+        />
       </mesh>
       {[-1, 1].map((s) => (
-        <mesh key={s} position={[s * (WINDOW.maxX + sideW / 2), (WINDOW.bottom + WINDOW.top) / 2, ROOM.minZ]}>
+        <mesh
+          key={s}
+          position={[
+            s * (WINDOW.maxX + sideW / 2),
+            (WINDOW.bottom + WINDOW.top) / 2,
+            ROOM.minZ,
+          ]}
+        >
           <boxGeometry args={[sideW, WINDOW.top - WINDOW.bottom, 0.2]} />
-          <meshStandardMaterial color={SCENE_COLORS.cleanroomWall} roughness={0.6} />
+          <meshStandardMaterial
+            color={SCENE_COLORS.cleanroomWall}
+            roughness={0.6}
+          />
         </mesh>
       ))}
       {/* Brushed steel window mullions */}
       {[-2.4, 2.6].map((x) => (
-        <mesh key={x} position={[x, (WINDOW.bottom + WINDOW.top) / 2, ROOM.minZ]}>
+        <mesh
+          key={x}
+          position={[x, (WINDOW.bottom + WINDOW.top) / 2, ROOM.minZ]}
+        >
           <boxGeometry args={[0.12, WINDOW.top - WINDOW.bottom, 0.14]} />
-          <meshStandardMaterial color={SCENE_COLORS.steelDark} metalness={0.6} roughness={0.3} />
+          <meshStandardMaterial
+            color={SCENE_COLORS.steelDark}
+            metalness={0.6}
+            roughness={0.3}
+          />
         </mesh>
       ))}
       {/* Side and back walls */}
       {[ROOM.minX, ROOM.maxX].map((x) => (
-        <mesh key={x} position={[x, h / 2, cz]} rotation={[0, x < 0 ? Math.PI / 2 : -Math.PI / 2, 0]}>
+        <mesh
+          key={x}
+          position={[x, h / 2, cz]}
+          rotation={[0, x < 0 ? Math.PI / 2 : -Math.PI / 2, 0]}
+        >
           <planeGeometry args={[d, h]} />
-          <meshStandardMaterial color={SCENE_COLORS.cleanroomWallLower} roughness={0.7} />
+          <meshStandardMaterial
+            color={SCENE_COLORS.cleanroomWallLower}
+            roughness={0.7}
+          />
         </mesh>
       ))}
       <mesh position={[0, h / 2, ROOM.maxZ]} rotation={[0, Math.PI, 0]}>
         <planeGeometry args={[w, h]} />
-        <meshStandardMaterial color={SCENE_COLORS.cleanroomWallLower} roughness={0.7} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.cleanroomWallLower}
+          roughness={0.7}
+        />
       </mesh>
     </group>
   );
 }
 
 /** A realistic multi-monitor flight controller console desk with keyboards, switches & chairs. */
-function Desk({ position, width, screens }: { position: [number, number, number]; width: number; screens: number }) {
-  const slots = Array.from({ length: screens }, (_, i) => (i + 0.5) * (width / screens) - width / 2);
+function Desk({
+  position,
+  width,
+  screens,
+}: {
+  position: [number, number, number];
+  width: number;
+  screens: number;
+}) {
+  const slots = Array.from(
+    { length: screens },
+    (_, i) => (i + 0.5) * (width / screens) - width / 2,
+  );
   return (
     <group position={position}>
       {/* Sleek charcoal metallic cabinet base */}
       <mesh position={[0, 0.4, 0]}>
         <boxGeometry args={[width, 0.8, 0.7]} />
-        <meshStandardMaterial color={SCENE_COLORS.steelDark} metalness={0.35} roughness={0.55} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.steelDark}
+          metalness={0.35}
+          roughness={0.55}
+        />
       </mesh>
       {/* NASA Blue front accent band */}
       <mesh position={[0, 0.65, 0.355]}>
@@ -248,7 +422,11 @@ function Desk({ position, width, screens }: { position: [number, number, number]
       {/* Crisp white worktop */}
       <mesh position={[0, 0.82, 0]}>
         <boxGeometry args={[width + 0.1, 0.05, 0.84]} />
-        <meshStandardMaterial color={SCENE_COLORS.spaceWhite} roughness={0.4} metalness={0.05} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.spaceWhite}
+          roughness={0.4}
+          metalness={0.05}
+        />
       </mesh>
       {/* Desk props: keyboards, status lamps, red abort button & coffee mug */}
       {slots.map((x, i) => (
@@ -257,7 +435,11 @@ function Desk({ position, width, screens }: { position: [number, number, number]
           <group position={[x, 1.1, -0.18]} rotation={[-0.18, 0, 0]}>
             <mesh>
               <boxGeometry args={[0.66, 0.44, 0.06]} />
-              <meshStandardMaterial color={SCENE_COLORS.steelDark} metalness={0.4} roughness={0.5} />
+              <meshStandardMaterial
+                color={SCENE_COLORS.steelDark}
+                metalness={0.4}
+                roughness={0.5}
+              />
             </mesh>
             {/* Dark glass screen */}
             <mesh position={[0, 0, 0.032]}>
@@ -271,11 +453,21 @@ function Desk({ position, width, screens }: { position: [number, number, number]
             </mesh>
             <mesh position={[0.18, 0.1, 0.035]}>
               <planeGeometry args={[0.1, 0.03]} />
-              <meshBasicMaterial color={i % 2 === 0 ? SCENE_COLORS.screenGreen : SCENE_COLORS.screenAmber} />
+              <meshBasicMaterial
+                color={
+                  i % 2 === 0
+                    ? SCENE_COLORS.screenGreen
+                    : SCENE_COLORS.screenAmber
+                }
+              />
             </mesh>
             <mesh position={[0, 0.01, 0.035]}>
               <planeGeometry args={[0.46, 0.02]} />
-              <meshBasicMaterial color={i % 3 === 0 ? SCENE_COLORS.solarGold : SCENE_COLORS.screenCyan} />
+              <meshBasicMaterial
+                color={
+                  i % 3 === 0 ? SCENE_COLORS.solarGold : SCENE_COLORS.screenCyan
+                }
+              />
             </mesh>
             <mesh position={[-0.08, -0.07, 0.035]}>
               <planeGeometry args={[0.3, 0.025]} />
@@ -290,12 +482,17 @@ function Desk({ position, width, screens }: { position: [number, number, number]
           {/* Keyboard pad */}
           <mesh position={[x, 0.855, 0.15]} rotation={[0.06, 0, 0]}>
             <boxGeometry args={[0.36, 0.02, 0.14]} />
-            <meshStandardMaterial color={SCENE_COLORS.steelMid} roughness={0.6} />
+            <meshStandardMaterial
+              color={SCENE_COLORS.steelMid}
+              roughness={0.6}
+            />
           </mesh>
           {/* Red & Green physical switches next to keyboard */}
           <mesh position={[x + 0.24, 0.855, 0.14]}>
             <boxGeometry args={[0.04, 0.025, 0.04]} />
-            <meshBasicMaterial color={i === 1 ? SCENE_COLORS.nasaRed : SCENE_COLORS.screenGreen} />
+            <meshBasicMaterial
+              color={i === 1 ? SCENE_COLORS.nasaRed : SCENE_COLORS.screenGreen}
+            />
           </mesh>
         </group>
       ))}
@@ -303,7 +500,10 @@ function Desk({ position, width, screens }: { position: [number, number, number]
       <group position={[0, 0, 0.65]}>
         <mesh position={[0, 0.45, 0]}>
           <boxGeometry args={[0.48, 0.07, 0.46]} />
-          <meshStandardMaterial color={SCENE_COLORS.steelDark} roughness={0.7} />
+          <meshStandardMaterial
+            color={SCENE_COLORS.steelDark}
+            roughness={0.7}
+          />
         </mesh>
         <mesh position={[0, 0.78, 0.2]}>
           <boxGeometry args={[0.44, 0.56, 0.07]} />
@@ -311,7 +511,11 @@ function Desk({ position, width, screens }: { position: [number, number, number]
         </mesh>
         <mesh position={[0, 0.22, 0]}>
           <cylinderGeometry args={[0.04, 0.04, 0.42, 8]} />
-          <meshStandardMaterial color={SCENE_COLORS.steelLight} metalness={0.7} roughness={0.3} />
+          <meshStandardMaterial
+            color={SCENE_COLORS.steelLight}
+            metalness={0.7}
+            roughness={0.3}
+          />
         </mesh>
       </group>
     </group>
@@ -336,9 +540,24 @@ function MissionStaff() {
   return (
     <group>
       {/* Seated flight controllers operating the consoles with headsets */}
-      <SeatedOperator position={[-3.4, 0, -0.95]} shirtColor={SCENE_COLORS.spaceWhite} tieColor={SCENE_COLORS.nasaBlue} phase={0} />
-      <SeatedOperator position={[0, 0, -0.95]} shirtColor={SCENE_COLORS.nasaBlue} tieColor={SCENE_COLORS.nasaRed} phase={1.7} />
-      <SeatedOperator position={[3.4, 0, -0.95]} shirtColor={SCENE_COLORS.spaceWhite} tieColor={SCENE_COLORS.steelDark} phase={3.1} />
+      <SeatedOperator
+        position={[-3.4, 0, -0.95]}
+        shirtColor={SCENE_COLORS.spaceWhite}
+        tieColor={SCENE_COLORS.nasaBlue}
+        phase={0}
+      />
+      <SeatedOperator
+        position={[0, 0, -0.95]}
+        shirtColor={SCENE_COLORS.nasaBlue}
+        tieColor={SCENE_COLORS.nasaRed}
+        phase={1.7}
+      />
+      <SeatedOperator
+        position={[3.4, 0, -0.95]}
+        shirtColor={SCENE_COLORS.spaceWhite}
+        tieColor={SCENE_COLORS.steelDark}
+        phase={3.1}
+      />
 
       {/* Walking engineers patrolling the main aisle and window corridor */}
       <WalkingStaff
@@ -379,6 +598,8 @@ function MissionStaff() {
 }
 
 /** Flight controller seated on a console chair, typing and checking monitors. */
+const binocularGeo = binocularGeometry();
+
 function SeatedOperator({
   position,
   shirtColor,
@@ -393,17 +614,96 @@ function SeatedOperator({
   const head = useRef<Group>(null);
   const leftArm = useRef<Group>(null);
   const rightArm = useRef<Group>(null);
+  const binoculars = useRef<Group>(null);
   const reduced = useReducedMotion();
 
   useFrame(({ clock }) => {
+    if (binoculars.current)
+      binoculars.current.visible =
+        mood.hush > 0 && mood.joy === 0 && mood.dismay === 0;
     if (mood.dismay > 0) {
       // Work stops: head drops forward, both hands come up to the face.
       if (head.current) {
-        head.current.rotation.x = MathUtils.lerp(head.current.rotation.x, 0.55, 0.08);
-        head.current.rotation.y = MathUtils.lerp(head.current.rotation.y, 0, 0.08);
+        head.current.rotation.x = MathUtils.lerp(
+          head.current.rotation.x,
+          0.55,
+          0.08,
+        );
+        head.current.rotation.y = MathUtils.lerp(
+          head.current.rotation.y,
+          0,
+          0.08,
+        );
       }
-      if (leftArm.current) leftArm.current.rotation.x = MathUtils.lerp(leftArm.current.rotation.x, -2.55, 0.08);
-      if (rightArm.current) rightArm.current.rotation.x = MathUtils.lerp(rightArm.current.rotation.x, -2.55, 0.08);
+      if (leftArm.current)
+        leftArm.current.rotation.x = MathUtils.lerp(
+          leftArm.current.rotation.x,
+          -2.55,
+          0.08,
+        );
+      if (rightArm.current)
+        rightArm.current.rotation.x = MathUtils.lerp(
+          rightArm.current.rotation.x,
+          -2.55,
+          0.08,
+        );
+      return;
+    }
+    if (mood.joy > 0) {
+      // Standing ovation in the chair: arms thrown up, head back.
+      const t = clock.elapsedTime * 7 + phase;
+      if (head.current) {
+        head.current.rotation.x = MathUtils.lerp(
+          head.current.rotation.x,
+          -0.35,
+          0.12,
+        );
+        head.current.rotation.y = MathUtils.lerp(
+          head.current.rotation.y,
+          0,
+          0.1,
+        );
+      }
+      if (leftArm.current)
+        leftArm.current.rotation.x = MathUtils.lerp(
+          leftArm.current.rotation.x,
+          -3.0 + Math.sin(t) * 0.25,
+          0.15,
+        );
+      if (rightArm.current)
+        rightArm.current.rotation.x = MathUtils.lerp(
+          rightArm.current.rotation.x,
+          -3.0 + Math.cos(t * 1.1) * 0.25,
+          0.15,
+        );
+      return;
+    }
+    if (mood.hush > 0) {
+      // Work stops. Eyes front on the window, both hands clasped at the mouth.
+      if (head.current) {
+        head.current.rotation.x = MathUtils.lerp(
+          head.current.rotation.x,
+          -0.08,
+          0.06,
+        );
+        head.current.rotation.y = MathUtils.lerp(
+          head.current.rotation.y,
+          0,
+          0.06,
+        );
+      }
+      if (leftArm.current)
+        leftArm.current.rotation.x = MathUtils.lerp(
+          leftArm.current.rotation.x,
+          -2.0,
+          0.05,
+        );
+      if (rightArm.current)
+        rightArm.current.rotation.x = MathUtils.lerp(
+          rightArm.current.rotation.x,
+          -2.0,
+          0.05,
+        );
       return;
     }
     if (reduced) return;
@@ -412,8 +712,10 @@ function SeatedOperator({
       head.current.rotation.y = Math.sin(t * 0.75) * 0.24;
       head.current.rotation.x = Math.sin(t * 1.1) * 0.05;
     }
-    if (leftArm.current) leftArm.current.rotation.x = -0.75 + Math.sin(t * 6.5) * 0.06;
-    if (rightArm.current) rightArm.current.rotation.x = -0.75 + Math.cos(t * 7.2) * 0.06;
+    if (leftArm.current)
+      leftArm.current.rotation.x = -0.75 + Math.sin(t * 6.5) * 0.06;
+    if (rightArm.current)
+      rightArm.current.rotation.x = -0.75 + Math.cos(t * 7.2) * 0.06;
   });
 
   return (
@@ -423,11 +725,17 @@ function SeatedOperator({
         <group key={lx} position={[lx, 0.45, -0.05]}>
           <mesh position={[0, 0, -0.15]} rotation={[Math.PI / 2, 0, 0]}>
             <boxGeometry args={[0.13, 0.34, 0.13]} />
-            <meshStandardMaterial color={SCENE_COLORS.steelDark} roughness={0.8} />
+            <meshStandardMaterial
+              color={SCENE_COLORS.steelDark}
+              roughness={0.8}
+            />
           </mesh>
           <mesh position={[0, -0.22, -0.28]}>
             <boxGeometry args={[0.12, 0.42, 0.12]} />
-            <meshStandardMaterial color={SCENE_COLORS.steelDark} roughness={0.8} />
+            <meshStandardMaterial
+              color={SCENE_COLORS.steelDark}
+              roughness={0.8}
+            />
           </mesh>
         </group>
       ))}
@@ -451,6 +759,52 @@ function SeatedOperator({
           <boxGeometry args={[0.21, 0.08, 0.22]} />
           <meshStandardMaterial color="#1E293B" roughness={0.85} />
         </mesh>
+        {/* Binoculars, raised to the eyes while the room holds its breath, both hands on them */}
+        <group ref={binoculars} visible={false}>
+          <group position={[0, 0.02, -0.13]} rotation={[0, Math.PI, 0]}>
+            <mesh geometry={binocularGeo}>
+              <meshStandardMaterial
+                vertexColors
+                metalness={0.55}
+                roughness={0.35}
+              />
+            </mesh>
+          </group>
+          {[-1, 1].map((side) => {
+            const hand: [number, number, number] = [side * 0.1, 0.0, -0.17];
+            const elbow: [number, number, number] = [side * 0.21, -0.23, -0.04];
+            const d: [number, number, number] = [
+              elbow[0] - hand[0],
+              elbow[1] - hand[1],
+              elbow[2] - hand[2],
+            ];
+            const len = Math.hypot(...d);
+            return (
+              <group key={side}>
+                <mesh position={hand}>
+                  <boxGeometry args={[0.055, 0.05, 0.06]} />
+                  <meshStandardMaterial color="#E2B49A" roughness={0.6} />
+                </mesh>
+                <mesh
+                  position={[
+                    (hand[0] + elbow[0]) / 2,
+                    (hand[1] + elbow[1]) / 2,
+                    (hand[2] + elbow[2]) / 2,
+                  ]}
+                  rotation={[
+                    -Math.asin(d[1] / len),
+                    Math.atan2(d[0], d[2]),
+                    0,
+                    "YXZ",
+                  ]}
+                >
+                  <boxGeometry args={[0.07, 0.07, len]} />
+                  <meshStandardMaterial color={shirtColor} roughness={0.65} />
+                </mesh>
+              </group>
+            );
+          })}
+        </group>
         {/* Headset band & ear cups */}
         <mesh position={[0, 0.12, 0]}>
           <boxGeometry args={[0.24, 0.03, 0.04]} />
@@ -514,12 +868,29 @@ function WalkingStaff({
 
   useFrame(({ clock }) => {
     if (!root.current) return;
-    if (mood.dismay > 0) {
-      // Freeze in place, turn toward the window, hands on head.
-      root.current.rotation.y = MathUtils.lerp(root.current.rotation.y, Math.PI, 0.06);
-      for (const leg of [leftLeg.current, rightLeg.current]) if (leg) leg.rotation.x = MathUtils.lerp(leg.rotation.x, 0, 0.1);
-      for (const arm of [leftArm.current, rightArm.current]) if (arm) arm.rotation.x = MathUtils.lerp(arm.rotation.x, -2.6, 0.08);
-      if (body.current) body.current.rotation.x = MathUtils.lerp(body.current.rotation.x, 0.18, 0.06);
+    if (mood.dismay > 0 || mood.hush > 0 || mood.joy > 0) {
+      // Freeze in place, turn toward the window, hands on head (or, once it works, thrown in the air).
+      root.current.rotation.y = MathUtils.lerp(
+        root.current.rotation.y,
+        Math.PI,
+        0.06,
+      );
+      for (const leg of [leftLeg.current, rightLeg.current])
+        if (leg) leg.rotation.x = MathUtils.lerp(leg.rotation.x, 0, 0.1);
+      const armUp =
+        mood.joy > 0
+          ? -3.0 + Math.sin(clock.elapsedTime * 8 + phase) * 0.25
+          : mood.hush > 0
+            ? -2.0
+            : -2.6;
+      for (const arm of [leftArm.current, rightArm.current])
+        if (arm) arm.rotation.x = MathUtils.lerp(arm.rotation.x, armUp, 0.08);
+      if (body.current)
+        body.current.rotation.x = MathUtils.lerp(
+          body.current.rotation.x,
+          0.18,
+          0.06,
+        );
       return;
     }
     const mid = (minX + maxX) / 2;
@@ -542,7 +913,9 @@ function WalkingStaff({
     const targetYaw = vel >= 0 ? Math.PI / 2 : -Math.PI / 2;
     root.current.rotation.y = targetYaw;
 
-    const stride = moving ? Math.sin(clock.elapsedTime * speed * 5.2 + phase) : 0;
+    const stride = moving
+      ? Math.sin(clock.elapsedTime * speed * 5.2 + phase)
+      : 0;
     const bob = moving ? Math.abs(stride) * 0.03 : 0;
 
     if (body.current) body.current.position.y = bob;
@@ -616,7 +989,9 @@ function WalkingStaff({
           </mesh>
           <mesh position={[0, -0.44, 0.14]} rotation={[Math.PI / 3, 0, 0]}>
             <boxGeometry args={[0.22, 0.28, 0.03]} />
-            <meshStandardMaterial color={prop === "tablet" ? SCENE_COLORS.steelDark : "#92400E"} />
+            <meshStandardMaterial
+              color={prop === "tablet" ? SCENE_COLORS.steelDark : "#92400E"}
+            />
           </mesh>
           {prop === "tablet" && (
             <mesh position={[0, -0.43, 0.155]} rotation={[Math.PI / 3, 0, 0]}>
@@ -636,7 +1011,12 @@ function Outside() {
   return (
     <group>
       {/* Real dawn-sky HDRI (background + image-based light) and the ocean horizon */}
-      <Environment files="/assets/env/sky_day.hdr" background environmentIntensity={1.0} backgroundIntensity={1} />
+      <Environment
+        files="/assets/env/sky_day.hdr"
+        background
+        environmentIntensity={1.0}
+        backgroundIntensity={1}
+      />
       <Ocean />
 
       {/* Coastal Florida Space Coast Terrain */}
@@ -645,9 +1025,15 @@ function Outside() {
         <meshStandardMaterial color={SCENE_COLORS.grass} roughness={0.95} />
       </mesh>
       {/* Lighter coastal grass / sand dunes near shore */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-45, GROUND_Y + 0.008, -145]}>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[-45, GROUND_Y + 0.008, -145]}
+      >
         <planeGeometry args={[240, 80]} />
-        <meshStandardMaterial color={SCENE_COLORS.grassLight} roughness={0.95} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.grassLight}
+          roughness={0.95}
+        />
       </mesh>
 
       {/* Roadways, Crawlerway & Concrete Apron */}
@@ -667,67 +1053,114 @@ function Ocean() {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, GROUND_Y - 0.05, -260]}>
       <planeGeometry args={[900, 120]} />
-      <meshStandardMaterial color="#1E4B7A" roughness={0.25} metalness={0.3} envMapIntensity={1.4} />
+      <meshStandardMaterial
+        color="#1E4B7A"
+        roughness={0.25}
+        metalness={0.3}
+        envMapIntensity={1.4}
+      />
     </mesh>
   );
 }
 
 /** Main highway, cross service road, perimeter loop, crawlerway, and dashed markings. */
 function RoadNetwork() {
-  const dashes = useMemo(() => Array.from({ length: 14 }, (_, i) => -22 - i * 5), []);
-  const crossDashes = useMemo(() => Array.from({ length: 24 }, (_, i) => -58 + i * 5), []);
+  const dashes = useMemo(
+    () => Array.from({ length: 14 }, (_, i) => -22 - i * 5),
+    [],
+  );
+  const crossDashes = useMemo(
+    () => Array.from({ length: 24 }, (_, i) => -58 + i * 5),
+    [],
+  );
 
   return (
     <group>
       {/* Concrete Launch Pad Apron */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[PAD[0], GROUND_Y + 0.018, PAD[2]]}>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[PAD[0], GROUND_Y + 0.018, PAD[2]]}
+      >
         <planeGeometry args={[46, 38]} />
-        <meshStandardMaterial color={SCENE_COLORS.concreteFloor} roughness={0.85} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.concreteFloor}
+          roughness={0.85}
+        />
       </mesh>
       {/* Pad Apron Perimeter Curb / Yellow Safety Border */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[PAD[0], GROUND_Y + 0.022, PAD[2] + 18.8]}>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[PAD[0], GROUND_Y + 0.022, PAD[2] + 18.8]}
+      >
         <planeGeometry args={[46, 0.35]} />
         <meshBasicMaterial color={SCENE_COLORS.safetyYellow} />
       </mesh>
 
       {/* Main Asphalt Access Road leading straight from Control Room to Pad */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[3, GROUND_Y + 0.02, -62]}>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[3, GROUND_Y + 0.02, -62]}
+      >
         <planeGeometry args={[4.4, 92]} />
         <meshStandardMaterial color={SCENE_COLORS.asphalt} roughness={0.9} />
       </mesh>
       {/* Road concrete shoulders */}
       {[-2.4, 2.4].map((dx) => (
-        <mesh key={dx} rotation={[-Math.PI / 2, 0, 0]} position={[3 + dx, GROUND_Y + 0.019, -62]}>
+        <mesh
+          key={dx}
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[3 + dx, GROUND_Y + 0.019, -62]}
+        >
           <planeGeometry args={[0.45, 92]} />
-          <meshStandardMaterial color={SCENE_COLORS.concreteFloor} roughness={0.85} />
+          <meshStandardMaterial
+            color={SCENE_COLORS.concreteFloor}
+            roughness={0.85}
+          />
         </mesh>
       ))}
       {/* Dashed yellow center line on Main Road */}
       {dashes.map((z) => (
-        <mesh key={z} rotation={[-Math.PI / 2, 0, 0]} position={[3, GROUND_Y + 0.025, z]}>
+        <mesh
+          key={z}
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[3, GROUND_Y + 0.025, z]}
+        >
           <planeGeometry args={[0.15, 2.4]} />
           <meshBasicMaterial color={SCENE_COLORS.safetyYellow} />
         </mesh>
       ))}
 
       {/* Cross Service Road running East-West across the Spaceport (z = -56) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, GROUND_Y + 0.022, -56]}>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, GROUND_Y + 0.022, -56]}
+      >
         <planeGeometry args={[180, 4.6]} />
         <meshStandardMaterial color={SCENE_COLORS.asphalt} roughness={0.9} />
       </mesh>
       {crossDashes.map((x) => (
-        <mesh key={x} rotation={[-Math.PI / 2, 0, 0]} position={[x, GROUND_Y + 0.026, -56]}>
+        <mesh
+          key={x}
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[x, GROUND_Y + 0.026, -56]}
+        >
           <planeGeometry args={[2.4, 0.15]} />
           <meshBasicMaterial color={SCENE_COLORS.safetyYellow} />
         </mesh>
       ))}
 
       {/* Service Road branch to Cryogenic Fuel Farm & Radar Station */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-26, GROUND_Y + 0.021, -70]}>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[-26, GROUND_Y + 0.021, -70]}
+      >
         <planeGeometry args={[3.4, 28]} />
         <meshStandardMaterial color={SCENE_COLORS.asphalt} roughness={0.9} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[34, GROUND_Y + 0.021, -64]}>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[34, GROUND_Y + 0.021, -64]}
+      >
         <planeGeometry args={[3.4, 16]} />
         <meshStandardMaterial color={SCENE_COLORS.asphalt} roughness={0.9} />
       </mesh>
@@ -770,8 +1203,10 @@ function SpaceportFacilities() {
   useFrame(({ clock }) => {
     if (reduced) return;
     const t = clock.elapsedTime;
-    if (dish1.current) dish1.current.rotation.y = Math.sin(t * 0.35) * 0.45 - 0.5;
-    if (dish2.current) dish2.current.rotation.y = Math.cos(t * 0.28) * 0.4 + 0.4;
+    if (dish1.current)
+      dish1.current.rotation.y = Math.sin(t * 0.35) * 0.45 - 0.5;
+    if (dish2.current)
+      dish2.current.rotation.y = Math.cos(t * 0.28) * 0.4 + 0.4;
   });
 
   return (
@@ -780,26 +1215,41 @@ function SpaceportFacilities() {
       <group position={[-26, GROUND_Y, -78]}>
         <mesh position={[0, 0.15, 0]}>
           <boxGeometry args={[14, 0.3, 10]} />
-          <meshStandardMaterial color={SCENE_COLORS.concreteFloor} roughness={0.85} />
+          <meshStandardMaterial
+            color={SCENE_COLORS.concreteFloor}
+            roughness={0.85}
+          />
         </mesh>
         {[-3.4, 3.4].map((dx, i) => (
           <group key={dx} position={[dx, 0, 0]}>
             <mesh position={[0, 3.2, 0]}>
               <sphereGeometry args={[2.5, 20, 14]} />
-              <meshStandardMaterial color={SCENE_COLORS.spaceWhite} roughness={0.35} metalness={0.15} />
+              <meshStandardMaterial
+                color={SCENE_COLORS.spaceWhite}
+                roughness={0.35}
+                metalness={0.15}
+              />
             </mesh>
             {/* NASA Blue equator band on fuel tank */}
             <mesh position={[0, 3.2, 0]} rotation={[Math.PI / 2, 0, 0]}>
               <torusGeometry args={[2.51, 0.12, 8, 24]} />
-              <meshStandardMaterial color={i === 0 ? SCENE_COLORS.nasaBlue : SCENE_COLORS.nasaRed} />
+              <meshStandardMaterial
+                color={i === 0 ? SCENE_COLORS.nasaBlue : SCENE_COLORS.nasaRed}
+              />
             </mesh>
             {/* Support legs */}
             {[0, 1, 2, 3].map((k) => {
               const a = (k * Math.PI) / 2 + Math.PI / 4;
               return (
-                <mesh key={k} position={[Math.cos(a) * 1.6, 1.5, Math.sin(a) * 1.6]}>
+                <mesh
+                  key={k}
+                  position={[Math.cos(a) * 1.6, 1.5, Math.sin(a) * 1.6]}
+                >
                   <cylinderGeometry args={[0.14, 0.18, 3.0, 8]} />
-                  <meshStandardMaterial color={SCENE_COLORS.steelLight} metalness={0.5} />
+                  <meshStandardMaterial
+                    color={SCENE_COLORS.steelLight}
+                    metalness={0.5}
+                  />
                 </mesh>
               );
             })}
@@ -808,7 +1258,11 @@ function SpaceportFacilities() {
         {/* Cryo pipeline connecting fuel farm to launch pad */}
         <mesh position={[15, 0.65, -5]} rotation={[0, 0, Math.PI / 2]}>
           <cylinderGeometry args={[0.2, 0.2, 20, 10]} />
-          <meshStandardMaterial color={SCENE_COLORS.aluminum} metalness={0.7} roughness={0.25} />
+          <meshStandardMaterial
+            color={SCENE_COLORS.aluminum}
+            metalness={0.7}
+            roughness={0.25}
+          />
         </mesh>
       </group>
 
@@ -816,7 +1270,10 @@ function SpaceportFacilities() {
       <group position={[34, GROUND_Y, -68]}>
         <mesh position={[0, 1.4, 0]}>
           <boxGeometry args={[9, 2.8, 6]} />
-          <meshStandardMaterial color={SCENE_COLORS.cleanroomWallLower} roughness={0.7} />
+          <meshStandardMaterial
+            color={SCENE_COLORS.cleanroomWallLower}
+            roughness={0.7}
+          />
         </mesh>
         <mesh position={[0, 2.85, 0]}>
           <boxGeometry args={[9.3, 0.2, 6.3]} />
@@ -828,10 +1285,18 @@ function SpaceportFacilities() {
               <cylinderGeometry args={[0.3, 0.45, 1.8, 10]} />
               <meshStandardMaterial color={SCENE_COLORS.steelMid} />
             </mesh>
-            <group ref={i === 0 ? dish1 : dish2} position={[0, 2.0, 0]} rotation={[-0.45, 0, 0]}>
+            <group
+              ref={i === 0 ? dish1 : dish2}
+              position={[0, 2.0, 0]}
+              rotation={[-0.45, 0, 0]}
+            >
               <mesh rotation={[Math.PI / 2, 0, 0]}>
                 <cylinderGeometry args={[1.6, 0.35, 0.7, 16, 1, true]} />
-                <meshStandardMaterial color={SCENE_COLORS.spaceWhite} side={DoubleSide} roughness={0.4} />
+                <meshStandardMaterial
+                  color={SCENE_COLORS.spaceWhite}
+                  side={DoubleSide}
+                  roughness={0.4}
+                />
               </mesh>
               <mesh position={[0, 0, 0.85]}>
                 <sphereGeometry args={[0.16, 8, 8]} />
@@ -852,7 +1317,10 @@ function SpaceportFacilities() {
         <group key={idx} position={[PAD[0] + dx, GROUND_Y, PAD[2] + dz]}>
           <mesh position={[0, 7.5, 0]}>
             <cylinderGeometry args={[0.14, 0.25, 15, 8]} />
-            <meshStandardMaterial color={SCENE_COLORS.steelLight} metalness={0.6} />
+            <meshStandardMaterial
+              color={SCENE_COLORS.steelLight}
+              metalness={0.6}
+            />
           </mesh>
           <mesh position={[0, 15.1, 0]}>
             <boxGeometry args={[1.6, 0.7, 0.5]} />
@@ -870,7 +1338,11 @@ function SpaceportFacilities() {
           </mesh>
           <mesh position={[0, t.h * 0.75, 0]}>
             <coneGeometry args={[t.h * 0.42, t.h * 0.7, 7]} />
-            <meshStandardMaterial color={i % 2 === 0 ? "#1B4332" : "#2D6A4F"} roughness={0.9} flatShading />
+            <meshStandardMaterial
+              color={i % 2 === 0 ? "#1B4332" : "#2D6A4F"}
+              roughness={0.9}
+              flatShading
+            />
           </mesh>
         </group>
       ))}
@@ -896,8 +1368,14 @@ function SupportVehicles() {
       }
       // Emergency Fire Truck flashing beacons
       const flash = Math.sin(t * 9) > 0;
-      if (strobe1.current) strobe1.current.color.set(flash ? SCENE_COLORS.nasaRed : SCENE_COLORS.solarGold);
-      if (strobe2.current) strobe2.current.color.set(flash ? SCENE_COLORS.solarGold : SCENE_COLORS.nasaRed);
+      if (strobe1.current)
+        strobe1.current.color.set(
+          flash ? SCENE_COLORS.nasaRed : SCENE_COLORS.solarGold,
+        );
+      if (strobe2.current)
+        strobe2.current.color.set(
+          flash ? SCENE_COLORS.solarGold : SCENE_COLORS.nasaRed,
+        );
     }
   });
 
@@ -908,7 +1386,11 @@ function SupportVehicles() {
         {/* Main steel platform */}
         <mesh position={[0, 1.15, 0]}>
           <boxGeometry args={[6.2, 0.85, 7.6]} />
-          <meshStandardMaterial color={SCENE_COLORS.steelMid} metalness={0.45} roughness={0.5} />
+          <meshStandardMaterial
+            color={SCENE_COLORS.steelMid}
+            metalness={0.45}
+            roughness={0.5}
+          />
         </mesh>
         {/* Yellow hazard trim */}
         <mesh position={[0, 1.35, 3.82]}>
@@ -925,7 +1407,10 @@ function SupportVehicles() {
           [-2.6, 2.6].map((tz) => (
             <mesh key={`${tx}${tz}`} position={[tx, 0.45, tz]}>
               <boxGeometry args={[1.2, 0.9, 2.2]} />
-              <meshStandardMaterial color={SCENE_COLORS.steelDark} roughness={0.85} />
+              <meshStandardMaterial
+                color={SCENE_COLORS.steelDark}
+                roughness={0.85}
+              />
             </mesh>
           )),
         )}
@@ -936,14 +1421,25 @@ function SupportVehicles() {
       <FuelTanker position={[-13, GROUND_Y, -75]} rotationY={-0.3} />
 
       {/* Two NASA Emergency Fire & Rescue Crash Trucks standing by */}
-      <FireTruck position={[-8, GROUND_Y, -56]} rotationY={Math.PI / 2} strobeRef={strobe1} />
-      <FireTruck position={[18, GROUND_Y, -64]} rotationY={-0.6} strobeRef={strobe2} />
+      <FireTruck
+        position={[-8, GROUND_Y, -56]}
+        rotationY={Math.PI / 2}
+        strobeRef={strobe1}
+      />
+      <FireTruck
+        position={[18, GROUND_Y, -64]}
+        rotationY={-0.6}
+        strobeRef={strobe2}
+      />
 
       {/* Moving Silver/White NASA Crew Transport Astrovan on the cross service road */}
       <group ref={astrovan} position={[0, GROUND_Y, -54.8]}>
         <mesh position={[0, 0.85, 0]}>
           <boxGeometry args={[4.2, 1.3, 1.7]} />
-          <meshStandardMaterial color={SCENE_COLORS.spaceWhite} roughness={0.35} />
+          <meshStandardMaterial
+            color={SCENE_COLORS.spaceWhite}
+            roughness={0.35}
+          />
         </mesh>
         {/* NASA Blue stripe */}
         <mesh position={[0, 0.72, 0]}>
@@ -953,7 +1449,11 @@ function SupportVehicles() {
         {/* Tinted panoramic cabin windows */}
         <mesh position={[0.4, 1.1, 0]}>
           <boxGeometry args={[2.8, 0.45, 1.73]} />
-          <meshStandardMaterial color={SCENE_COLORS.steelDark} metalness={0.6} roughness={0.2} />
+          <meshStandardMaterial
+            color={SCENE_COLORS.steelDark}
+            metalness={0.6}
+            roughness={0.2}
+          />
         </mesh>
         {/* Glowing yellow headlights */}
         <mesh position={[2.12, 0.55, 0.55]}>
@@ -967,7 +1467,11 @@ function SupportVehicles() {
         {/* 4 Wheels */}
         {[-1.3, 1.3].flatMap((wx) =>
           [-0.82, 0.82].map((wz) => (
-            <mesh key={`${wx}${wz}`} position={[wx, 0.32, wz]} rotation={[Math.PI / 2, 0, 0]}>
+            <mesh
+              key={`${wx}${wz}`}
+              position={[wx, 0.32, wz]}
+              rotation={[Math.PI / 2, 0, 0]}
+            >
               <cylinderGeometry args={[0.32, 0.32, 0.24, 12]} />
               <meshStandardMaterial color="#111827" roughness={0.9} />
             </mesh>
@@ -978,7 +1482,13 @@ function SupportVehicles() {
   );
 }
 
-function FuelTanker({ position, rotationY }: { position: [number, number, number]; rotationY: number }) {
+function FuelTanker({
+  position,
+  rotationY,
+}: {
+  position: [number, number, number];
+  rotationY: number;
+}) {
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
       {/* Cab */}
@@ -993,7 +1503,11 @@ function FuelTanker({ position, rotationY }: { position: [number, number, number
       {/* Cylindrical aluminum cryo tank */}
       <mesh position={[0, 1.15, -0.6]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.78, 0.78, 3.9, 14]} />
-        <meshStandardMaterial color={SCENE_COLORS.aluminum} metalness={0.65} roughness={0.25} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.aluminum}
+          metalness={0.65}
+          roughness={0.25}
+        />
       </mesh>
       {/* NASA Blue & Red hazard placard */}
       <mesh position={[0, 1.15, -0.6]} rotation={[Math.PI / 2, 0, 0]}>
@@ -1003,7 +1517,11 @@ function FuelTanker({ position, rotationY }: { position: [number, number, number
       {/* Wheels */}
       {[-0.82, 0.82].flatMap((wx) =>
         [-1.8, -0.4, 2.2].map((wz) => (
-          <mesh key={`${wx}${wz}`} position={[wx, 0.32, wz]} rotation={[Math.PI / 2, 0, 0]}>
+          <mesh
+            key={`${wx}${wz}`}
+            position={[wx, 0.32, wz]}
+            rotation={[Math.PI / 2, 0, 0]}
+          >
             <cylinderGeometry args={[0.32, 0.32, 0.24, 10]} />
             <meshStandardMaterial color="#111827" />
           </mesh>
@@ -1046,7 +1564,11 @@ function FireTruck({
       {/* Wheels */}
       {[-0.86, 0.86].flatMap((wx) =>
         [-1.4, 1.4].map((wz) => (
-          <mesh key={`${wx}${wz}`} position={[wx, 0.35, wz]} rotation={[Math.PI / 2, 0, 0]}>
+          <mesh
+            key={`${wx}${wz}`}
+            position={[wx, 0.35, wz]}
+            rotation={[Math.PI / 2, 0, 0]}
+          >
             <cylinderGeometry args={[0.35, 0.35, 0.25, 10]} />
             <meshStandardMaterial color="#111827" />
           </mesh>
@@ -1057,21 +1579,38 @@ function FireTruck({
 }
 
 /** The pad, its umbilical tower, and the vehicle standing on it. */
-function LaunchPad({ ignitionAt, burnEndT }: { ignitionAt: number | null; burnEndT: number }) {
+function LaunchPad({
+  ignitionAt,
+  burnEndT,
+}: {
+  ignitionAt: number | null;
+  burnEndT: number;
+}) {
   return (
     <group position={PAD}>
+      <HoldDownClamps ignitionAt={ignitionAt} />
       {/* Concrete flame trench & steel launch pedestal with angled ramps */}
       <mesh position={[0, 1, 0]}>
         <boxGeometry args={[12, 2, 12]} />
-        <meshStandardMaterial color={SCENE_COLORS.concreteDark} roughness={0.85} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.concreteDark}
+          roughness={0.85}
+        />
       </mesh>
       <mesh position={[0, 0.65, 8.2]} rotation={[0.25, 0, 0]}>
         <boxGeometry args={[6.5, 1.2, 6]} />
-        <meshStandardMaterial color={SCENE_COLORS.concreteFloor} roughness={0.85} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.concreteFloor}
+          roughness={0.85}
+        />
       </mesh>
       <mesh position={[0, 2.1, 0]}>
         <boxGeometry args={[5.5, 0.3, 5.5]} />
-        <meshStandardMaterial color={SCENE_COLORS.steelDark} metalness={0.5} roughness={0.4} />
+        <meshStandardMaterial
+          color={SCENE_COLORS.steelDark}
+          metalness={0.5}
+          roughness={0.4}
+        />
       </mesh>
       {/* Iconic NASA Red Steel Umbilical Launch Tower with Cross-Bracing & Crew Access Arm */}
       <group position={[-5.5, 0, 0]}>
@@ -1079,7 +1618,11 @@ function LaunchPad({ ignitionAt, burnEndT }: { ignitionAt: number | null; burnEn
           [-0.9, 0.9].map((z) => (
             <mesh key={`${x}${z}`} position={[x, 18, z]}>
               <boxGeometry args={[0.32, 36, 0.32]} />
-              <meshStandardMaterial color={SCENE_COLORS.nasaRed} roughness={0.45} metalness={0.3} />
+              <meshStandardMaterial
+                color={SCENE_COLORS.nasaRed}
+                roughness={0.45}
+                metalness={0.3}
+              />
             </mesh>
           )),
         )}
@@ -1092,7 +1635,10 @@ function LaunchPad({ ignitionAt, burnEndT }: { ignitionAt: number | null; burnEn
           <group key={y}>
             <mesh position={[0, y, 0]}>
               <boxGeometry args={[2.1, 0.28, 2.1]} />
-              <meshStandardMaterial color={SCENE_COLORS.spaceWhite} roughness={0.5} />
+              <meshStandardMaterial
+                color={SCENE_COLORS.spaceWhite}
+                roughness={0.5}
+              />
             </mesh>
             {/* Diagonal X-bracing truss */}
             <mesh position={[0, y - 2, 0.92]} rotation={[0, 0, 0.52]}>
@@ -1105,10 +1651,12 @@ function LaunchPad({ ignitionAt, burnEndT }: { ignitionAt: number | null; burnEn
             </mesh>
             {/* Umbilical swing arms */}
             {(y === 12 || y === 16 || y === 20) && (
-              <mesh position={[2.2, y, 0]}>
-                <boxGeometry args={[2.7, 0.22, 0.38]} />
-                <meshStandardMaterial color={SCENE_COLORS.steelLight} metalness={0.5} />
-              </mesh>
+              <group position={[0.5, y, 0]}>
+                <SwingArm
+                  ignitionAt={ignitionAt}
+                  delay={((y - 12) / 8) * 0.35}
+                />
+              </group>
             )}
           </group>
         ))}
@@ -1129,6 +1677,7 @@ function LaunchPad({ ignitionAt, burnEndT }: { ignitionAt: number | null; burnEn
       </group>
 
       <LaunchVehicle ignitionAt={ignitionAt} burnEndT={burnEndT} />
+      <Warmup />
     </group>
   );
 }

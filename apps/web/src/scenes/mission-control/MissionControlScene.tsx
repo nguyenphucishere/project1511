@@ -24,7 +24,7 @@ import { BRIEFINGS } from "@/game/script";
 import { useGameStore } from "@/game/gameStore";
 import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
-import { playSfx, startLoop } from "@/game/sfx";
+import { playSfx, startRumble, type Rumble } from "@/game/sfx";
 import {
   fetchLaunchTelemetryFromServer,
   launchSimulator,
@@ -42,25 +42,84 @@ import { CountdownPanel, FlightPanel, PollPanel } from "./LaunchPanels";
 import { formatMissionTime } from "@/lib/format";
 import { VIEWPOINTS } from "./layout";
 import { realSecondsAt } from "./flight";
-import { consoleSeed, engineOption, tankOption } from "@/scenes/workshop/loadout";
+import {
+  ADAPTER_T,
+  CUTOFF_T,
+  DOCK_T,
+  EPILOGUE,
+  FILM_END,
+  HOLD_DOWN,
+  LES_T,
+  SEP2_T,
+  SEPARATION_T,
+  STAGE2_T,
+  STAGE3_T,
+} from "./ascent";
+import { shotAt } from "./launchShots";
+import {
+  startCalmScore,
+  startRockScore,
+  type RockScore,
+} from "@/game/rockScore";
+import {
+  consoleSeed,
+  engineOption,
+  tankOption,
+} from "@/scenes/workshop/loadout";
 
-/** How long the liftoff roar lasts, in real time (the climb out of sight). */
-const ROAR_MS = 8000;
+/**
+ * How loud the engines are at film time `t`: full while a stage burns, a low ring-down in the
+ * coast between stages, and a fade once the last engine cuts off.
+ */
+function thrustLevel(t: number): number {
+  const burns: [number, number][] = [
+    [0, SEPARATION_T - 1.4],
+    [STAGE2_T, SEP2_T - 1.4],
+    [STAGE3_T, CUTOFF_T],
+  ];
+  for (const [a, b] of burns) {
+    if (t >= a && t <= b)
+      return (
+        Math.min(1, 0.7 + (t - a) * 0.3) *
+        (t > b - 0.6 ? Math.max(0, (b - t) / 0.6) : 1)
+      );
+  }
+  const coast = t < STAGE3_T ? 0.1 : Math.max(0, 0.1 - (t - CUTOFF_T) * 0.03);
+  return t < 0 ? 0 : coast;
+}
 
-type Phase = "config" | "poll" | "countdown" | "flight" | "failure-pov" | "explosion" | "anomaly" | "orbit";
+type Phase =
+  | "config"
+  | "poll"
+  | "countdown"
+  | "flight"
+  | "failure-pov"
+  | "explosion"
+  | "anomaly"
+  | "orbit";
 
 /**
  * First attempt as the player finds it: the heavy rocket, the right payload, but 90 % fuel and
  * the windy first window. The poll teaches the weather rule; the flight teaches the fuel one.
  */
-const INITIAL_CONFIG: LaunchConfig = { vehicle: "saros", payload: "standard", fuelPct: 90, orbitKm: 185, window: "w1" };
+const INITIAL_CONFIG: LaunchConfig = {
+  vehicle: "saros",
+  payload: "standard",
+  fuelPct: 90,
+  orbitKm: 185,
+  window: "w1",
+};
 
 /**
  * Scene 3 — mission control (flight director POV).
  * Loop: configure → GO/NO-GO poll → countdown → liftoff and flight playback → on failure the
  * ANOMALY report and back to configure; on success orbit, then the launch video.
  */
-export function MissionControlScene({ onComplete }: { onComplete: () => void }) {
+export function MissionControlScene({
+  onComplete,
+}: {
+  onComplete: () => void;
+}) {
   const t = useT();
   const m = t.missionControl;
   const localize = useLocalized();
@@ -103,6 +162,7 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
   }, [config.orbitKm, serverTelemetry.weather.wind_speed_kmh, validateLaunchWasm]);
   // The liftoff roar is heard while the rocket is low; stopped early on adjust or leaving.
   const roar = useRef<() => void>(() => {});
+  const rumbleRef = useRef<Rumble | null>(null);
   useEffect(() => () => roar.current(), []);
   useEffect(() => {
     const timers = cinematicTimers.current;
@@ -139,9 +199,10 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
     setIgnitionAt(performance.now());
     addTrauma(0.45);
     playSfx("ignition");
-    const stop = startLoop("engine", { gain: 0.3 });
-    roar.current = stop;
-    window.setTimeout(stop, ROAR_MS);
+    // The roar lasts the whole burn: the interval below sets its level from the film clock.
+    const rumble = startRumble();
+    rumbleRef.current = rumble;
+    roar.current = rumble.stop;
     setPhase("flight");
   }, []);
 
@@ -164,7 +225,8 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
     const at = performance.now();
     setExplodeAt(at);
     setPhase("explosion");
-    const later = (ms: number, fn: () => void) => cinematicTimers.current.push(window.setTimeout(fn, ms));
+    const later = (ms: number, fn: () => void) =>
+      cinematicTimers.current.push(window.setTimeout(fn, ms));
     // Light arrives first, then the shockwave, then the room goes quiet.
     later(FLY_SECONDS * 1000, () => setBoomFlash(true));
     later(FLY_SECONDS * 1000 + 90, () => setBoomFlash(false));
@@ -181,7 +243,11 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
 
   if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
     // Dev-only: window.__mc.explode() plays the failure cutscene from anywhere.
-    (window as unknown as { __mc?: unknown }).__mc = { explode: () => startExplosion() };
+    (window as unknown as { __mc?: unknown }).__mc = {
+      explode: () => startExplosion(),
+      // Jumps the launch film to `t` seconds after ignition (use with a frozen performance.now).
+      seek: (t: number) => setIgnitionAt(performance.now() - t * 1000),
+    };
   }
 
   const finishExplosion = useCallback(() => {
@@ -205,6 +271,108 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
     setPhase("config");
   }, []);
 
+  // The launch score: a held organ at the countdown, building to full band and orchestra at
+  // staging, then fading as the capsule reaches orbit. Cut off quickly if the flight fails.
+  const score = useRef<RockScore | null>(null);
+  const calmStop = useRef<((s?: number) => void) | null>(null);
+  useEffect(() => {
+    if (phase === "countdown") {
+      if (!score.current) score.current = startRockScore(0.15);
+      return;
+    }
+    if (phase === "flight" && ignitionAt !== null) {
+      const pastBand =
+        (performance.now() - ignitionAt) / 1000 >= FILM_END + 0.6;
+      if (!pastBand) {
+        score.current ??= startRockScore(0.3);
+        score.current.hit();
+      }
+      // The score follows the film: it builds with the climb, drops to a held organ for half a beat
+      // before every separation and whenever the film cuts to the people waiting, then hits hard as
+      // the bolts fire. The room goes quiet from release and erupts a moment before orbit.
+      const beats = [
+        SEPARATION_T,
+        STAGE2_T,
+        LES_T,
+        SEP2_T,
+        STAGE3_T,
+        ADAPTER_T,
+      ];
+      const hits = new Set<number>();
+      const risers = new Set<number>();
+      let calm: { stop: (s?: number) => void } | null = calmStop.current
+        ? { stop: calmStop.current }
+        : null;
+      const id = window.setInterval(() => {
+        const t = (performance.now() - ignitionAt) / 1000;
+        const climb = Math.min(1, t / SEPARATION_T);
+        const late = Math.min(
+          1,
+          Math.max(0, (t - SEPARATION_T) / (ADAPTER_T - SEPARATION_T)),
+        );
+        let level = 0.45 + 0.4 * climb + 0.15 * late;
+        const cut = shotAt(t).id;
+        const people = cut.startsWith("room-") || cut.startsWith("crowd-");
+        if (people) level = cut.endsWith("cheer") ? 1 : Math.min(level, 0.24);
+        for (const b of beats) {
+          // The stage separations are twenty operations long: the tension climbs through all of them.
+          const long = b === SEPARATION_T || b === SEP2_T;
+          const lead = long ? 6.6 : 2;
+          if (t >= b - lead && t < b - lead + 0.1 && !risers.has(b)) {
+            risers.add(b);
+            score.current?.riser(lead - 0.3); // tremolo strings, noise sweep and a timpani roll building to the cut
+          }
+          if (t >= b - 0.35 && t < b - 0.1) level = 0; // total drop-out, then the hit
+          if (t >= b - 0.1 && !hits.has(b) && t < b + 1) {
+            hits.add(b);
+            score.current?.hit();
+          }
+        }
+        if (t > ADAPTER_T + 3 && !people && t < DOCK_T - 3)
+          level = Math.max(level, 0.85); // the long chase out of the atmosphere
+        // After the last step the band falls away and a quiet pad takes over for the epilogue.
+        if (t >= FILM_END + 0.6 && !calm) {
+          score.current?.stop(2.5);
+          score.current = null;
+          calm = startCalmScore();
+          calmStop.current = calm.stop;
+        }
+        if (!calm) score.current?.setIntensity(level);
+        rumbleRef.current?.setLevel(thrustLevel(t) * (people ? 0.7 : 1));
+        const cheer = t >= DOCK_T && t < FILM_END + 0.6;
+        mood.hush = t > HOLD_DOWN - 1 && !cheer ? 1 : 0;
+        mood.joy = cheer ? 1 : 0;
+      }, 100);
+      return () => window.clearInterval(id);
+    }
+    if (phase === "orbit") {
+      roar.current();
+      calmStop.current?.(4);
+      calmStop.current = null;
+      mood.hush = 0;
+      mood.joy = 1;
+      score.current?.setIntensity(0.35);
+      score.current?.stop(5);
+      score.current = null;
+      return;
+    }
+    mood.hush = 0;
+    mood.joy = 0;
+    score.current?.stop(phase === "failure-pov" ? 0.6 : 1.2);
+    score.current = null;
+    calmStop.current?.(1);
+    calmStop.current = null;
+  }, [phase, ignitionAt]);
+  useEffect(
+    () => () => {
+      score.current?.stop(0.3);
+      score.current = null;
+      calmStop.current?.(0.3);
+      calmStop.current = null;
+    },
+    [],
+  );
+
   const briefing = BRIEFINGS["mission-control"];
   const titles: Record<Phase, string> = {
     config: m.configTitle,
@@ -216,24 +384,39 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
     anomaly: m.flightTitle,
     orbit: m.flightTitle,
   };
-  const worldIgnition = useMemo(() => (explodeAt !== null ? explodeAt - 60000 : ignitionAt), [explodeAt, ignitionAt]);
+  const worldIgnition = useMemo(
+    () => (explodeAt !== null ? explodeAt - 60000 : ignitionAt),
+    [explodeAt, ignitionAt],
+  );
   const cinematic = phase === "failure-pov" || phase === "explosion";
   // What the capsule POV plays: the engines quit at the end of the recorded flight.
   const failure = useMemo<AscentFailure | undefined>(() => {
     if (!result || result.isSuccess) return undefined;
-    return { met: Math.max(60, result.endSec), code: result.failureTrace[0]?.code ?? "fuel-depleted" };
+    return {
+      met: Math.max(60, result.endSec),
+      code: result.failureTrace[0]?.code ?? "fuel-depleted",
+    };
   }, [result]);
   // From the launch command until orbit, the camera is outside watching the rocket. The failure
   // cutscene and the anomaly report are seen from the control room again.
-  const launchView = phase === "countdown" || phase === "flight" || phase === "orbit";
+  const launchView =
+    phase === "countdown" || phase === "flight" || phase === "orbit";
   // While the vehicle flies (and on the report after), the console shrinks to a corner HUD.
-  const flightHud = phase === "countdown" || phase === "flight" || phase === "orbit" || phase === "anomaly";
+  const flightHud =
+    phase === "countdown" ||
+    phase === "flight" ||
+    phase === "orbit" ||
+    phase === "anomaly";
   // When the last engine stops in the 3D view: orbit insertion, or stage 2 running dry.
   const burnEndT = result ? realSecondsAt(result.endSec) : Infinity;
-  const overweight = result?.failureTrace.some((s) => s.code === "slow-climb") ?? false;
+  const overweight =
+    result?.failureTrace.some((s) => s.code === "slow-climb") ?? false;
 
   return (
-    <section className="relative h-dvh w-full overflow-hidden" aria-label={m.sceneLabel}>
+    <section
+      className="relative h-dvh w-full overflow-hidden"
+      aria-label={m.sceneLabel}
+    >
       {phase !== "failure-pov" && (
         <WorldCanvas label={m.sceneLabel}>
           {/* After a failure the rocket is long gone from the pad: start the explosion with it out of sight. */}
@@ -247,7 +430,11 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
       )}
       {phase === "failure-pov" && failure && (
         <div className="absolute inset-0 z-30">
-          <AscentScene failure={failure} orbitKm={config.orbitKm} onComplete={startExplosion} />
+          <AscentScene
+            failure={failure}
+            orbitKm={config.orbitKm}
+            onComplete={startExplosion}
+          />
         </div>
       )}
       {phase === "explosion" && (
@@ -255,7 +442,10 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 z-20 bg-white"
-            style={{ opacity: boomFlash ? 0.7 : 0, transition: boomFlash ? "none" : "opacity 1400ms ease-out" }}
+            style={{
+              opacity: boomFlash ? 0.7 : 0,
+              transition: boomFlash ? "none" : "opacity 1400ms ease-out",
+            }}
           />
           <div
             role="status"
@@ -271,8 +461,32 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
         </>
       )}
 
+      {phase === "flight" && result && ignitionAt !== null && (
+        <div className="absolute bottom-6 left-1/2 z-20 -translate-x-1/2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() =>
+              setIgnitionAt(
+                performance.now() -
+                  (realSecondsAt(result.endSec) +
+                    (result.isSuccess ? EPILOGUE : 0) +
+                    0.3) *
+                    1000,
+              )
+            }
+          >
+            {m.skipCinematic}
+          </Button>
+        </div>
+      )}
+
       {alarm > 0 && (
-        <div key={alarm} aria-hidden className="pointer-events-none absolute inset-0 animate-alarm-flash bg-warning/35" />
+        <div
+          key={alarm}
+          aria-hidden
+          className="pointer-events-none absolute inset-0 animate-alarm-flash bg-warning/35"
+        />
       )}
 
       {/* Hidden in the failure cutscene; on phones also while the corner flight HUD needs the space. */}
@@ -286,8 +500,16 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
         <ObjectivePanel
           className="pointer-events-auto"
           items={[
-            { id: "configure", label: localize(briefing.objectives[0]), done: configured },
-            { id: "launch", label: localize(briefing.objectives[1]), done: phase === "orbit" },
+            {
+              id: "configure",
+              label: localize(briefing.objectives[0]),
+              done: configured,
+            },
+            {
+              id: "launch",
+              label: localize(briefing.objectives[1]),
+              done: phase === "orbit",
+            },
           ]}
         />
       </div>
@@ -299,9 +521,19 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
           aria-label={m.consoleLabel}
           className="absolute right-3 top-16 flex w-[15.5rem] flex-col gap-2 sm:right-8 sm:top-20"
         >
-          {phase === "countdown" && <CountdownPanel onIgnition={ignite} onHold={() => setPhase("poll")} />}
+          {phase === "countdown" && (
+            <CountdownPanel
+              onIgnition={ignite}
+              onHold={() => setPhase("poll")}
+            />
+          )}
           {phase !== "countdown" && result && ignitionAt !== null && (
-            <FlightPanel config={config} result={result} ignitionAt={ignitionAt} onEnd={endFlight} />
+            <FlightPanel
+              config={config}
+              result={result}
+              ignitionAt={ignitionAt}
+              onEnd={endFlight}
+            />
           )}
         </aside>
       ) : (
@@ -314,10 +546,17 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
             collapsed ? "max-h-none" : "max-h-[50dvh]",
           )}
         >
-          <header className={cn("flex items-center justify-between gap-2", !collapsed && "mb-3")}>
+          <header
+            className={cn(
+              "flex items-center justify-between gap-2",
+              !collapsed && "mb-3",
+            )}
+          >
             <h2 className="text-base font-semibold">{titles[phase]}</h2>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-foreground/70">{format(m.attempt, { n: attempt })}</span>
+              <span className="font-mono text-xs text-foreground/70">
+                {format(m.attempt, { n: attempt })}
+              </span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -327,7 +566,11 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
                 aria-label={collapsed ? m.expand : m.collapse}
                 title={collapsed ? m.expand : m.collapse}
               >
-                {collapsed ? <ChevronDown className="h-4 w-4" aria-hidden /> : <ChevronUp className="h-4 w-4" aria-hidden />}
+                {collapsed ? (
+                  <ChevronDown className="h-4 w-4" aria-hidden />
+                ) : (
+                  <ChevronUp className="h-4 w-4" aria-hidden />
+                )}
               </Button>
             </div>
           </header>
@@ -354,11 +597,20 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
                   <span>TWR / MAX-Q: {(wasmValidation?.liftoff_twr ?? serverTelemetry.vehicle.liftoff_twr).toFixed(3)} / {(wasmValidation?.max_q_kpa ?? serverTelemetry.vehicle.max_q_kpa).toFixed(1)} kPa</span>
                 </div>
               </div>
-              <ConfigPanel config={config} onChange={setConfig} assessment={assessment} onProceed={() => setPhase("poll")} />
+              <ConfigPanel
+                config={config}
+                onChange={setConfig}
+                assessment={assessment}
+                onProceed={() => setPhase("poll")}
+              />
             </>
           )}
           {!collapsed && phase === "poll" && (
-            <PollPanel assessment={assessment} onLaunch={startCountdown} onBack={() => setPhase("config")} />
+            <PollPanel
+              assessment={assessment}
+              onLaunch={startCountdown}
+              onBack={() => setPhase("config")}
+            />
           )}
         </aside>
       )}
@@ -372,19 +624,30 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
             <DialogTitle className="text-2xl">{m.anomalyTitle}</DialogTitle>
             <DialogDescription>{m.anomalyBody}</DialogDescription>
           </DialogHeader>
-          <section aria-labelledby="trace-title" className="bg-space-blue/35 px-4 py-3">
+          <section
+            aria-labelledby="trace-title"
+            className="bg-space-blue/35 px-4 py-3"
+          >
             <h3 id="trace-title" className="mb-2 text-sm font-medium">
               {m.traceTitle}
             </h3>
             <ol className="flex flex-col gap-2 text-sm">
               {result?.failureTrace.map((s) => (
-                <li key={`${s.code}-${s.timestampSec}`} className="grid grid-cols-[4.5rem_1fr] gap-x-3">
-                  <span className="font-mono text-xs leading-5">{formatMissionTime(s.timestampSec)}</span>
+                <li
+                  key={`${s.code}-${s.timestampSec}`}
+                  className="grid grid-cols-[4.5rem_1fr] gap-x-3"
+                >
+                  <span className="font-mono text-xs leading-5">
+                    {formatMissionTime(s.timestampSec)}
+                  </span>
                   <span>
                     <span className="font-medium">
-                      {localize(TRACE_TEXT[s.code].subsystem)}: {localize(TRACE_TEXT[s.code].anomaly)}
+                      {localize(TRACE_TEXT[s.code].subsystem)}:{" "}
+                      {localize(TRACE_TEXT[s.code].anomaly)}
                     </span>
-                    <span className="block text-foreground/75">{localize(TRACE_TEXT[s.code].consequence)}</span>
+                    <span className="block text-foreground/75">
+                      {localize(TRACE_TEXT[s.code].consequence)}
+                    </span>
                   </span>
                 </li>
               ))}
@@ -392,7 +655,9 @@ export function MissionControlScene({ onComplete }: { onComplete: () => void }) 
           </section>
           <div>
             <h3 className="text-sm font-medium">{m.whatToChange}</h3>
-            <p className="mt-1 text-sm text-foreground/85">{overweight ? m.adviceOverweight : m.adviceFuel}</p>
+            <p className="mt-1 text-sm text-foreground/85">
+              {overweight ? m.adviceOverweight : m.adviceFuel}
+            </p>
             <p className="mt-2 text-xs text-foreground/65">{m.replacement}</p>
           </div>
           <StatusBadge status="demo" className="w-fit">

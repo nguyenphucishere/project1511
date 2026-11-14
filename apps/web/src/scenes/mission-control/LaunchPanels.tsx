@@ -14,7 +14,8 @@ import { TRACE_TEXT } from "@/lib/simulation/launch.mock";
 import { WIND_LIMIT_KMH } from "@/mocks/launch-options";
 import type { LaunchAssessment, LaunchConfig, LaunchResult } from "@/lib/simulation/launch.types";
 import { formatMissionTime } from "@/lib/format";
-import { NOMINAL_EVENTS, altitudeKm, missionSecondsAt, speedKms } from "./flight";
+import { NOMINAL_EVENTS, altitudeKm, missionSecondsAt, realSecondsAt, speedKms } from "./flight";
+import { EPILOGUE } from "./ascent";
 
 /* ---------------------------------------------------------------- GO / NO-GO poll */
 
@@ -188,9 +189,12 @@ export function FlightPanel({
     let ended = false;
     let endTimer = 0;
     const tick = () => {
-      const now = Math.min(missionSecondsAt((performance.now() - ignitionAt) / 1000), result.endSec);
+      const real = (performance.now() - ignitionAt) / 1000;
+      const now = Math.min(missionSecondsAt(real), result.endSec);
       setSec(now);
-      if (now >= result.endSec && !ended) {
+      // A successful flight stays on screen for the quiet epilogue before the dialog takes over.
+      const hold = result.isSuccess ? EPILOGUE : 0;
+      if (real >= realSecondsAt(result.endSec) + hold && !ended) {
         ended = true;
         // Hold the final readout for a beat before the dialog takes over.
         endTimer = window.setTimeout(() => endRef.current(), 900);
@@ -203,7 +207,7 @@ export function FlightPanel({
       cancelAnimationFrame(raf);
       window.clearTimeout(endTimer);
     };
-  }, [ignitionAt, result.endSec]);
+  }, [ignitionAt, result.endSec, result.isSuccess]);
 
   const rows = [
     // Every nominal event is listed (an aborted flight leaves the rest greyed out); trace
