@@ -196,11 +196,15 @@ describe("Tier 1 Feature 8: Full-Stack End-to-End Wiring & Integrated Workflow",
     assert.equal(session.getCurrentStepId(), "landing-decision");
     session.makeDecision("landing_approach", "p66_redesignation");
 
-    // Advance through celebratory cutscenes and epilogue to ending
+    // Advance through celebratory cutscenes, epilogue, and return chapter to ending
     session.advance(); // flag-video
     assert.equal(session.getCurrentStepId(), "flag-video");
     session.advance(); // epilogue
     assert.equal(session.getCurrentStepId(), "epilogue");
+    session.advance(); // return-briefing
+    assert.equal(session.getCurrentStepId(), "return-briefing");
+    session.advance(); // return-scene
+    assert.equal(session.getCurrentStepId(), "return-scene");
     session.advance(); // end
     assert.equal(session.getCurrentStepId(), "end");
 

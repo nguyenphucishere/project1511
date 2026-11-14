@@ -104,8 +104,10 @@ describe("Tier 4 Scenario 1: Historical Apollo 11 Mission Playthrough to Histori
     assert.equal(session.getState().narrative.penalties.deltaVPenaltyPct, 0);
 
     // -------------------------------------------------------------------------
-    // Phase 5: Lunar Powered Descent & AGC 1202 Alarm Call
+    // Phase 5: Translunar Coast, Lunar Powered Descent & AGC 1202 Alarm Call
     // -------------------------------------------------------------------------
+    assert.equal(session.advance(), "translunar-briefing");
+    assert.equal(session.advance(), "translunar-scene");
     session.advance(); // lunar-descent-briefing
     const stepAgc = session.advance(); // agc-alarm-decision
     assert.equal(stepAgc, "agc-alarm-decision");
@@ -157,6 +159,8 @@ describe("Tier 4 Scenario 1: Historical Apollo 11 Mission Playthrough to Histori
     assert.equal(stepFlag, "flag-video");
     const stepEpilogue = session.advance();
     assert.equal(stepEpilogue, "epilogue");
+    assert.equal(session.advance(), "return-briefing");
+    assert.equal(session.advance(), "return-scene");
     const stepEnd = session.advance();
     assert.equal(stepEnd, "end");
 
