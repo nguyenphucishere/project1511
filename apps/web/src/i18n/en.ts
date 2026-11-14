@@ -24,6 +24,8 @@ export const en = {
     title: "Beyond The Earth",
     subtitle: "Four crew members, one rocket, and the long way to the Moon.",
     start: "Start mission",
+    pressStart: "Press to start",
+    chaptersShort: "Chapters",
     continue: "Continue",
     resumeAt: "Resume at {chapter}",
     newGame: "New game",

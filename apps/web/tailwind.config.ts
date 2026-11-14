@@ -59,6 +59,8 @@ const config: Config = {
         "count-pop": { from: { transform: "scale(1.18)", opacity: "0.55" }, to: { transform: "scale(1)", opacity: "1" } },
         // Anomaly alarm: a single orange flash that fades back to nothing.
         "alarm-flash": { "0%": { opacity: "0" }, "15%": { opacity: "1" }, "100%": { opacity: "0" } },
+        // Title screen stars: fade down and up.
+        twinkle: { "0%, 100%": { opacity: "0.25", transform: "scale(0.8)" }, "50%": { opacity: "1", transform: "scale(1.25)" } },
         // Nebula background: very slow zoom and pan.
         "nebula-pan": {
           "0%": { transform: "scale(1.08) translate(-1.5%, -1%)" },
@@ -77,6 +79,7 @@ const config: Config = {
         "fade-in": "fade-in 200ms ease-out",
         "count-pop": "count-pop 320ms cubic-bezier(0.22, 1, 0.36, 1)",
         "alarm-flash": "alarm-flash 1100ms ease-out forwards",
+        twinkle: "twinkle 4s ease-in-out infinite",
         "nebula-pan": "nebula-pan 70s ease-in-out infinite alternate",
         float: "float 6s ease-in-out infinite",
         caret: "caret 1s steps(1) infinite",
