@@ -7,6 +7,7 @@ import {
   LUNAR_G,
   NO_INPUT,
   RCS_THRUST_N,
+  THROTTLE_SLEW,
   ROD_MAX,
   THROTTLE_MAX,
   THROTTLE_MIN,
@@ -115,7 +116,7 @@ describe("flight model", () => {
     for (let i = 0; i < 10; i++) nudgeTargetVs(s, -1);
     const before = s.throttle;
     stepFlight(s, NO_INPUT, 0.1);
-    expect(Math.abs(s.throttle - before)).toBeLessThanOrEqual(0.121);
+    expect(Math.abs(s.throttle - before)).toBeLessThanOrEqual(THROTTLE_SLEW * 0.1 + 0.001);
   });
 
   it("burns fuel, and more of it the harder the engine works", () => {
@@ -304,5 +305,28 @@ describe("flight model", () => {
     expect(recommendedVs(150)).toBe(-3);
     expect(recommendedVs(20)).toBeGreaterThan(recommendedVs(60));
     expect(recommendedVs(0)).toBeCloseTo(-0.4, 6);
+  });
+});
+
+describe("analog stick input", () => {
+  it("pushes the thrusters in proportion to the stick", () => {
+    const half = createFlight("A");
+    const full = createFlight("A");
+    half.hsMs = full.hsMs = 0;
+    const accel = RCS_THRUST_N / massAt(full.fuelPct);
+    stepFlight(half, { rcs: 0.5, nullDrift: false }, 1);
+    stepFlight(full, { rcs: 1, nullDrift: false }, 1);
+    expect(full.hsMs).toBeCloseTo(accel, 2);
+    expect(half.hsMs).toBeCloseTo(accel / 2, 2);
+    expect(half.fuelPct).toBeCloseTo(full.fuelPct, 9);
+  });
+
+  it("slides the commanded rate of descent with the vertical stick, inside its limits", () => {
+    const s = createFlight("A");
+    s.targetVs = -3;
+    stepFlight(s, { rcs: 0, nullDrift: false, rod: 1 }, 0.2);
+    expect(s.targetVs).toBeGreaterThan(-3);
+    stepFlight(s, { rcs: 0, nullDrift: false, rod: -1 }, 10);
+    expect(s.targetVs).toBe(ROD_MIN);
   });
 });

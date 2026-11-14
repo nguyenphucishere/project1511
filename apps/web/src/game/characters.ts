@@ -151,7 +151,7 @@ export const CHARACTERS: Record<CharacterId, Character> = {
   doctor: {
     id: "doctor",
     portraitId: "doctor",
-    name: { en: "Dr. Charles Berry", vi: "Bác sĩ Charles Berry" },
+    name: { en: "Dr. Lin", vi: "Bác sĩ Lin" },
     role: { en: "Director of Medical Operations", vi: "Giám đốc Y tế Hàng không" },
     placeholder: "headset",
     title: "Flight Surgeon, Apollo Program",

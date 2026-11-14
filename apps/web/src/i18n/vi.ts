@@ -2,7 +2,7 @@ import type { Dictionary } from "./en";
 
 export const vi: Dictionary = {
   meta: {
-    title: "Moonbound: Trung tâm điều khiển",
+    title: "Beyond The Earth: Trung tâm điều khiển",
     description: "Chuẩn bị, phóng và đưa phi hành đoàn đáp xuống Mặt Trăng.",
   },
   common: {
@@ -19,7 +19,7 @@ export const vi: Dictionary = {
     off: "Tắt",
   },
   home: {
-    title: "Moonbound",
+    title: "Beyond The Earth",
     subtitle: "Bốn thành viên, một tên lửa, và chặng đường dài tới Mặt Trăng.",
     start: "Bắt đầu nhiệm vụ",
     continue: "Chơi tiếp",
@@ -317,7 +317,12 @@ export const vi: Dictionary = {
     driftLeft: "Trôi sang trái",
     driftRight: "Trôi sang phải",
     nullDrift: "Dừng trôi",
-    keysHint: "↑/W chậm lại · ↓/S nhanh hơn · ←/→ hoặc A/D trôi ngang · X dừng trôi · E tắt động cơ",
+    stick: "Cần điều khiển",
+    stickUp: "Chậm",
+    stickDown: "Nhanh",
+    stickLeft: "◀",
+    stickRight: "▶",
+    keysHint: "Cần điều khiển hoặc cần analog tay cầm: ↔ trôi ngang, ↕ tốc độ hạ · phím: ↑/W chậm lại · ↓/S nhanh hơn · ←/→ hoặc A/D trôi ngang · X dừng trôi · E tắt động cơ",
     engineStopWait: "Nút tắt động cơ mở khi đèn tiếp đất sáng.",
     throttle: "Ga",
     hSpeed: "Ngang",
@@ -364,6 +369,10 @@ export const vi: Dictionary = {
     tip1: "Mẹo: cần trục xếp tên lửa từng tầng một. Cứ từ từ thôi.",
     tip2: "Mẹo: chế độ quét nhìn bên trong cho thấy lỗi mà bên ngoài không thấy được.",
     tip3: "Mẹo: duyệt vội sẽ tốn nhiên liệu ở các chặng sau.",
+    genericSubtitle: "Đang chuẩn bị mọi thứ để cảnh chạy thật mượt",
+    genericTip1: "Mọi thứ được tải trước khi vào cảnh, nên cảnh sẽ chạy mượt.",
+    genericTip2: "Âm thanh là một phần của nhiệm vụ: hãy bật tiếng để trọn vẹn.",
+    genericTip3: "Bấm Bỏ qua trong phim để nhảy tới cuối.",
   },
   consequence: {
     yourCall: "Quyết định của bạn",

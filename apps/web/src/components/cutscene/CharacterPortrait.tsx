@@ -26,6 +26,7 @@ export function CharacterPortrait({ character, className, avatar = false }: Char
   const [failed, setFailed] = useState(false);
   const name = localize(info.name);
 
+  const [fx, fy] = asset?.focus ?? [52, 20];
   if (asset?.status === "final" && !failed && avatar) {
     return (
       <span className="block h-full w-full overflow-hidden">
@@ -34,7 +35,12 @@ export function CharacterPortrait({ character, className, avatar = false }: Char
           src={asset.src}
           alt={name}
           onError={() => setFailed(true)}
-          className={cn("h-full w-full origin-[52%_20%] scale-[2.1] select-none object-cover object-[52%_12%]", className)}
+          className={cn("h-full w-full select-none object-cover", className)}
+          style={{
+            transformOrigin: `${fx}% ${fy}%`,
+            transform: `scale(${asset.zoom ?? 2.1})`,
+            objectPosition: `${fx}% ${Math.max(0, fy - 8)}%`,
+          }}
           draggable={false}
         />
       </span>

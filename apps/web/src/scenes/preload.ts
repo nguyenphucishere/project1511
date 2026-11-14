@@ -1,4 +1,5 @@
 import { FLOW, stepIndex, type SceneId } from "@/game/flow";
+import { SCENE_ASSETS } from "./assets";
 import { WORKSHOP_FILES, WORKSHOP_TEXTURE_GROUPS, STUDIO_HDR } from "./workshop/assets";
 
 /**
@@ -26,7 +27,23 @@ interface Job {
   fillCaches: () => Promise<void>;
 }
 
-const JOBS: Partial<Record<SceneId, Job>> = {
+/** The preload job for a scene that has only plain data (see ./assets.ts) and a code chunk. */
+function assetJob(scene: keyof typeof SCENE_ASSETS, loadChunk: () => Promise<unknown>): Job {
+  const a = SCENE_ASSETS[scene]!;
+  return {
+    files: a.files,
+    chunkWeight: 4,
+    loadChunk,
+    fillCaches: async () => {
+      const { useTexture, useEnvironment } = await import("@react-three/drei");
+      for (const group of a.textures) useTexture.preload(group as string[]);
+      for (const files of a.hdr) useEnvironment.preload({ files });
+    },
+  };
+}
+
+const JOBS: Record<SceneId, Job> = {
+  medical: assetJob("medical", () => import("./medical/MedicalScene")),
   workshop: {
     files: WORKSHOP_FILES,
     chunkWeight: 4,
@@ -37,6 +54,11 @@ const JOBS: Partial<Record<SceneId, Job>> = {
       useEnvironment.preload({ files: STUDIO_HDR });
     },
   },
+  "mission-control": assetJob("mission-control", () => import("./mission-control/MissionControlScene")),
+  ascent: assetJob("ascent", () => import("./ascent/AscentScene")),
+  translunar: assetJob("translunar", () => import("./translunar/TranslunarScene")),
+  return: assetJob("return", () => import("./translunar/TranslunarScene")),
+  "lunar-descent": assetJob("lunar-descent", () => import("./lunar-descent/LunarDescentScene")),
 };
 
 const states = new Map<SceneId, PreloadState>();
@@ -59,8 +81,8 @@ export function getPreloadState(scene: SceneId): PreloadState {
 
 export const getServerPreloadState = (): PreloadState => IDLE;
 
-/** Scenes with a preload job that sit within `lookahead` steps from (and including) `stepId`. */
-export function scenesToPreload(stepId: string, lookahead = 4): SceneId[] {
+/** Scenes that sit within `lookahead` steps from (and including) `stepId`, in the order they come up. */
+export function scenesToPreload(stepId: string, lookahead = FLOW.length): SceneId[] {
   const from = stepIndex(stepId);
   if (from < 0) return [];
   const out: SceneId[] = [];
@@ -103,18 +125,32 @@ export function preloadScene(scene: SceneId): Promise<void> {
   return promise;
 }
 
+/** The scenes still to warm, one after another so they never fight over the connection. */
+let chain: Promise<void> = Promise.resolve();
+const queued = new Set<SceneId>();
+
 /**
- * Called as the player moves through the flow: quietly warms the heavy scenes that are about to
- * come up. Waits for an idle moment so it does not stutter the current scene, and skips on
- * data-saver connections (the loading screen then does the work on arrival).
+ * Called as the player moves through the flow (and from the title screen): quietly warms every
+ * scene still ahead, nearest first, one at a time. Waits for an idle moment so it does not
+ * stutter the current scene, and skips on data-saver connections (the loading screen then does
+ * the work on arrival).
  */
 export function preloadUpcoming(stepId: string): void {
   if (typeof window === "undefined") return;
   const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
   if (saveData) return;
-  const scenes = scenesToPreload(stepId);
+  const scenes = scenesToPreload(stepId).filter((s) => !queued.has(s));
   if (scenes.length === 0) return;
-  const start = () => scenes.forEach((s) => void preloadScene(s));
+  for (const s of scenes) queued.add(s);
+  const start = () => {
+    for (const s of scenes) chain = chain.then(() => preloadScene(s));
+  };
   if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(start, { timeout: 2000 });
   else setTimeout(start, 300);
+}
+
+/** Overall progress (0..100) across every scene that will be played, for the title screen. */
+export function overallProgress(): number {
+  const all = Object.keys(JOBS) as SceneId[];
+  return Math.round(all.reduce((n, s) => n + getPreloadState(s).progress, 0) / all.length);
 }

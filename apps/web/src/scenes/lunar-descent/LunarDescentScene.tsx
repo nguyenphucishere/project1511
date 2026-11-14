@@ -44,6 +44,7 @@ import {
   type SiteId,
   type Touchdown,
 } from "./flight";
+import type { StickValue } from "./Joystick";
 import { LandingRadarProfile } from "./LandingRadarProfile";
 import { LunarWorld } from "./LunarWorld";
 import { radarInputAt, terrainOffsetAt } from "./radar";
@@ -140,6 +141,40 @@ function writeFlightView(v: FlightView, f: FlightState): void {
  * real flight model (lunar gravity, finite fuel, rate-of-descent hold and sideways thrusters),
  * cut the engine at the contact light, and be judged on speed, position and fuel.
  */
+/** Stick values inside this fraction of full travel read as zero (gamepad sticks never rest at exactly 0). */
+const PAD_DEAD_ZONE = 0.15;
+
+interface PadReading {
+  /** Left stick, -1 (left) .. 1 (right). */
+  x: number;
+  /** Left stick pushed up (slower descent) is positive. */
+  y: number;
+  /** A / cross held: null the drift. */
+  nullDrift: boolean;
+  /** B / circle held: engine stop. */
+  cut: boolean;
+}
+
+const NO_PAD: PadReading = { x: 0, y: 0, nullDrift: false, cut: false };
+
+const axis = (v: number) => {
+  const a = Math.abs(v);
+  return a < PAD_DEAD_ZONE ? 0 : Math.sign(v) * ((a - PAD_DEAD_ZONE) / (1 - PAD_DEAD_ZONE));
+};
+
+/** The first connected gamepad's left stick and two buttons; nothing when there is none (or no Gamepad API). */
+function readGamepad(): PadReading {
+  if (typeof navigator === "undefined" || typeof navigator.getGamepads !== "function") return NO_PAD;
+  const g = Array.from(navigator.getGamepads()).find((p): p is Gamepad => !!p && p.connected);
+  if (!g) return NO_PAD;
+  return {
+    x: axis(g.axes[0] ?? 0),
+    y: -axis(g.axes[1] ?? 0),
+    nullDrift: !!g.buttons[0]?.pressed,
+    cut: !!g.buttons[1]?.pressed,
+  };
+}
+
 export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
   const t = useT();
   const d = t.lunarDescent;
@@ -174,6 +209,9 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
   const phaseRef = useRef(phase);
   const siteRef = useRef(siteId);
   const held = useRef({ left: false, right: false, stop: false });
+  // The on-screen joystick (-1..1 on each axis) and the last gamepad engine-stop button state.
+  const stick = useRef({ x: 0, y: 0 });
+  const padStop = useRef(false);
   const traceRef = useRef<Trace>({ xs: [], alt: [], vs: [] });
   const timers = useRef<number[]>([]);
   // The descent engine burns from powered descent to engine stop.
@@ -196,6 +234,7 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
   }, []);
   const clearHeld = useCallback(() => {
     held.current.left = held.current.right = held.current.stop = false;
+    stick.current.x = stick.current.y = 0;
   }, []);
   const stopEngine = useCallback(() => {
     engine.current();
@@ -273,7 +312,13 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
 
       if (ph === "manual" && f) {
         const h = held.current;
-        stepFlight(f, { rcs: ((h.right ? 1 : 0) - (h.left ? 1 : 0)) as -1 | 0 | 1, nullDrift: h.stop }, dt);
+        const pad = readGamepad();
+        // Keys, the on-screen stick and a gamepad all add up; the model clamps the sum.
+        const rcs = (h.right ? 1 : 0) - (h.left ? 1 : 0) + stick.current.x + pad.x;
+        const rod = stick.current.y + pad.y;
+        stepFlight(f, { rcs, rod, nullDrift: h.stop || pad.nullDrift }, dt);
+        if (pad.cut && !padStop.current) pressRef.current(3);
+        padStop.current = pad.cut;
         writeFlightView(v, f);
         if (f.status !== "flying") finishFlight(f, now);
       } else if (ph === "hold" || ph === "playing") {
@@ -309,15 +354,18 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
     };
   }, [phase]);
 
+  const onStick = useCallback((v: StickValue) => {
+    stick.current.x = v.x;
+    stick.current.y = v.y;
+  }, []);
+
   const nudge = useCallback((dir: 1 | -1) => {
     const f = flight.current;
     if (f && phaseRef.current === "manual") nudgeTargetVs(f, dir);
   }, []);
 
-  const hold = useCallback((control: "left" | "right" | "null", on: boolean) => {
-    if (control === "left") held.current.left = on;
-    else if (control === "right") held.current.right = on;
-    else held.current.stop = on;
+  const hold = useCallback((_control: "null", on: boolean) => {
+    held.current.stop = on;
   }, []);
 
   const press = useCallback(
@@ -596,7 +644,7 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
             onPress={onPress}
           >
             {choosingSite && <SitePicker siteId={siteId} onSelect={chooseSite} />}
-            {manual && <FlightControls targetVs={snap.targetVs} disabled={!snap.engineOn} onNudge={nudge} onHold={hold} />}
+            {manual && <FlightControls targetVs={snap.targetVs} disabled={!snap.engineOn} onStick={onStick} onHold={hold} />}
           </DescentCommand>
         </div>
         <div className="bezel bezel-sm shrink-0 bg-space-deep/85 px-3 py-2.5 backdrop-blur-sm">

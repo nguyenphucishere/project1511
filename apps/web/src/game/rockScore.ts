@@ -51,7 +51,7 @@ export function startRockScore(initial = 0.15): RockScore {
   comp.attack.value = 0.005;
   comp.release.value = 0.2;
   master.connect(comp).connect(out);
-  master.gain.setTargetAtTime(0.55, c.currentTime, 1.2);
+  master.gain.setTargetAtTime(0.85, c.currentTime, 1.2);
 
   const noiseBuf = noise(c);
   const shaper = c.createWaveShaper();
@@ -347,7 +347,7 @@ export function startCalmScore(): { stop: (seconds?: number) => void } {
 
   const master = c.createGain();
   master.gain.value = 0.0001;
-  master.gain.setTargetAtTime(0.5, c.currentTime, 1.6);
+  master.gain.setTargetAtTime(0.75, c.currentTime, 1.6);
   const lp = c.createBiquadFilter();
   lp.type = "lowpass";
   lp.frequency.value = 1800;

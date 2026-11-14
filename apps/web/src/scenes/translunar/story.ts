@@ -12,7 +12,7 @@ export interface Caption {
 /** The title of each stretch of the flight, shown small above the letterbox. */
 export const PHASES: Caption[] = [
   { from: 0, to: T.TLI_END, text: { en: "Translunar injection: leaving Earth orbit", vi: "Đốt đẩy rời quỹ đạo Trái Đất" } },
-  { from: T.TLI_END, to: T.COAST, text: { en: "Separation, and one last look back", vi: "Tách tầng, và một lần ngoảnh nhìn lại" } },
+  { from: T.TLI_END, to: T.COAST, text: { en: "Eagle in tow: one last look back", vi: "Eagle đã gắn liền: ngoảnh nhìn lại lần cuối" } },
   { from: T.COAST, to: 66, text: { en: "Three days of silence", vi: "Ba ngày trong im lặng" } },
   { from: 66, to: T.LOS, text: { en: "The Moon fills the sky", vi: "Mặt Trăng choán cả bầu trời" } },
   { from: T.LOS, to: T.AOS, text: { en: "Behind the Moon: orbit insertion burn", vi: "Sau lưng Mặt Trăng: đốt nhập quỹ đạo" } },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getPreloadState, scenesToPreload } from "./preload";
+import { getPreloadState, overallProgress, scenesToPreload } from "./preload";
 import { WORKSHOP_FILES, WORKSHOP_TEXTURE_GROUPS, hallTextureUrls } from "./workshop/assets";
 
 describe("scene preloading", () => {
@@ -10,14 +10,22 @@ describe("scene preloading", () => {
     expect(scenesToPreload("workshop-briefing")).toContain("workshop");
   });
 
-  it("does not preload scenes far away or without a job", () => {
-    expect(scenesToPreload("ascent-scene")).toEqual([]);
-    expect(scenesToPreload("mission-control-scene")).toEqual([]);
+  it("lists every scene still ahead, nearest first, without repeats", () => {
+    const all = scenesToPreload("intro-video");
+    expect(all.slice(0, 3)).toEqual(["medical", "workshop", "mission-control"]);
+    expect(all).toContain("lunar-descent");
+    expect(all).toContain("return");
+    expect(new Set(all).size).toBe(all.length);
+  });
+
+  it("skips scenes already behind the player and unknown steps", () => {
+    expect(scenesToPreload("translunar-scene")).not.toContain("workshop");
     expect(scenesToPreload("unknown-step")).toEqual([]);
   });
 
   it("reports idle before any job runs", () => {
     expect(getPreloadState("workshop")).toEqual({ progress: 0, done: false });
+    expect(overallProgress()).toBe(0);
   });
 
   it("texture groups match what the hall asks useTexture for", () => {
