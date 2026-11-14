@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge, type Status } from "@/components/ui/StatusBadge";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,8 @@ interface SignOffDialogProps {
   onContinue: () => void;
   /** Show the DEMO badge (the details are mocked values). */
   demo?: boolean;
+  /** Tone of the badge. "fault" is for a failed attempt: no fanfare, and the button retries. */
+  status?: Status;
   /** Optional details between the text and the button, e.g. a results list. */
   children?: React.ReactNode;
 }
@@ -42,21 +44,22 @@ export function SignOffDialog({
   continueLabel,
   onContinue,
   demo = false,
+  status = "go",
   children,
 }: SignOffDialogProps) {
   const t = useT();
   useEffect(() => {
-    if (open) playSfx("success");
-  }, [open]);
+    if (open && status === "go") playSfx("success");
+  }, [open, status]);
   return (
     <Dialog open={open}>
       <DialogContent locked>
         <DialogHeader>
           <div className="mb-2 flex items-end gap-4">
             <div className="h-20 w-16 shrink-0">
-              <CharacterPortrait character={character} />
+              <CharacterPortrait character={character} avatar />
             </div>
-            <StatusBadge status="go" className="mb-1">
+            <StatusBadge status={status} className="mb-1">
               {badge}
             </StatusBadge>
           </div>

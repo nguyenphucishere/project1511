@@ -76,7 +76,7 @@ export function DialogueOverlay({ briefing, chapter, onDone }: DialogueOverlayPr
 
       {/* Atmosphere: a blue nebula behind the speaker, a warm glow from below, and a vignette to frame the scene. */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -right-[10%] top-[5%] h-[80vh] w-[70vw] rounded-full bg-[radial-gradient(closest-side,rgb(var(--nasa-blue)/0.45),transparent)] blur-2xl" />
+        <div className="absolute left-1/2 top-[5%] h-[80vh] w-[70vw] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(var(--nasa-blue)/0.45),transparent)] blur-2xl" />
         <div className="absolute -left-[15%] -top-[20%] h-[60vh] w-[55vw] rounded-full bg-[radial-gradient(closest-side,rgb(var(--space-cyan)/0.10),transparent)] blur-2xl" />
         <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-space-deep via-space-deep/70 to-transparent" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgb(0_0_0/0.55))]" />
@@ -84,7 +84,7 @@ export function DialogueOverlay({ briefing, chapter, onDone }: DialogueOverlayPr
 
       <header
         key={`header-${briefing}`}
-        className="absolute left-4 top-16 flex max-w-[min(36rem,calc(100%-2rem))] animate-rise-in flex-col gap-3 border-l-2 border-primary/80 pl-4 sm:left-10 sm:top-20 sm:pl-6"
+        className="absolute left-4 top-16 flex max-w-[min(36rem,calc(100%-2rem))] animate-rise-in flex-col gap-3 border-l-2 border-primary/80 pl-4 sm:left-10 sm:top-20 sm:max-w-[min(36rem,calc(50%-8rem))] sm:pl-6"
       >
         <div className="flex flex-wrap items-center gap-3">
           <p className="font-mono text-xs uppercase tracking-[0.25em] text-primary/90">
@@ -110,7 +110,7 @@ export function DialogueOverlay({ briefing, chapter, onDone }: DialogueOverlayPr
         </div>
         <h1
           id="briefing-title"
-          className="text-4xl font-bold tracking-tight drop-shadow-[0_4px_24px_rgb(var(--nasa-blue)/0.6)] sm:text-5xl"
+          className="text-2xl font-bold tracking-tight drop-shadow-[0_4px_24px_rgb(var(--nasa-blue)/0.6)] sm:text-3xl"
         >
           {chapterInfo ? localize(chapterInfo.title) : t.play.epilogue}
         </h1>
@@ -124,8 +124,8 @@ export function DialogueOverlay({ briefing, chapter, onDone }: DialogueOverlayPr
       </header>
 
       <div className="absolute inset-x-3 bottom-3 animate-rise-in sm:inset-x-10 sm:bottom-8">
-        {/* Portrait stands on the box's top edge at the right, floating in front of a soft halo. */}
-        <div className="pointer-events-none absolute bottom-full right-2 h-[min(28dvh,14rem)] sm:right-12 sm:h-[min(38dvh,26rem)]">
+        {/* Portrait stands centre-stage, large, its feet tucked behind the dialogue box, in front of a soft halo. */}
+        <div className="pointer-events-none absolute bottom-[calc(100%-2.5rem)] left-1/2 h-[min(40dvh,18rem)] -translate-x-1/2 sm:h-[min(52dvh,36rem)]">
           <div
             aria-hidden
             className="absolute left-1/2 top-[42%] aspect-square h-[95%] -translate-x-1/2 -translate-y-1/2"

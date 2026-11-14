@@ -80,6 +80,30 @@ export const OFFLINE_APOLLO11_TELEMETRY: ServerLaunchTelemetry = {
   source: "offline_fallback",
 };
 
+type ServerSite = ServerLaunchTelemetry["launch_site"];
+
+/**
+ * The server names a site's coordinates `lat`/`lon`; this app reads `latitude_deg`/`longitude_deg`.
+ * Accepts either, and falls back field by field so a partial or odd payload can never leave a
+ * coordinate undefined (the panel formats them with toFixed).
+ */
+export function normalizeSite(raw: unknown, fallback: ServerSite): ServerSite {
+  const s = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const num = (...keys: string[]): number | undefined => {
+    for (const key of keys) {
+      const v = s[key];
+      if (typeof v === "number" && Number.isFinite(v)) return v;
+    }
+    return undefined;
+  };
+  return {
+    name: typeof s.name === "string" ? s.name : fallback.name,
+    latitude_deg: num("latitude_deg", "lat") ?? fallback.latitude_deg,
+    longitude_deg: num("longitude_deg", "lon", "lng") ?? fallback.longitude_deg,
+    elevation_m: num("elevation_m") ?? fallback.elevation_m,
+  };
+}
+
 function getServerBaseUrl(overrideUrl?: string): string {
   if (overrideUrl) return overrideUrl.replace(/\/$/, "");
   if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) {
@@ -104,8 +128,8 @@ export async function fetchLaunchTelemetryFromServer(baseUrl?: string): Promise<
     return {
       ...OFFLINE_APOLLO11_TELEMETRY,
       ...data,
-      launch_site: data.launch_site ?? data.site ?? OFFLINE_APOLLO11_TELEMETRY.launch_site,
-      landing_site: data.landing_site ?? data.lunar_target ?? OFFLINE_APOLLO11_TELEMETRY.landing_site,
+      launch_site: normalizeSite(data.launch_site ?? data.site, OFFLINE_APOLLO11_TELEMETRY.launch_site),
+      landing_site: normalizeSite(data.landing_site ?? data.lunar_target, OFFLINE_APOLLO11_TELEMETRY.landing_site),
       vehicle: {
         ...OFFLINE_APOLLO11_TELEMETRY.vehicle,
         ...(data.vehicle ?? {}),

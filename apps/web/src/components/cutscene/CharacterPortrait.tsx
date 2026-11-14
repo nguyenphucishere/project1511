@@ -10,19 +10,36 @@ import { cn } from "@/lib/utils";
 interface CharacterPortraitProps {
   character: CharacterId;
   className?: string;
+  /** Small head-and-shoulders crop for tiny boxes (HUD chips, dialog headers): zooms in on the face. */
+  avatar?: boolean;
 }
 
 /**
  * Shows the artist's PNG when assets.json marks it "final"; otherwise (or if the file fails
  * to load) a built-in pixel bust in palette colours, so layouts are final before the art is.
  */
-export function CharacterPortrait({ character, className }: CharacterPortraitProps) {
+export function CharacterPortrait({ character, className, avatar = false }: CharacterPortraitProps) {
   const t = useT();
   const localize = useLocalized();
   const info = CHARACTERS[character];
   const asset = getPortrait(info.portraitId);
   const [failed, setFailed] = useState(false);
   const name = localize(info.name);
+
+  if (asset?.status === "final" && !failed && avatar) {
+    return (
+      <span className="block h-full w-full overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element -- artist PNGs are pre-sized, static, and swapped via the manifest */}
+        <img
+          src={asset.src}
+          alt={name}
+          onError={() => setFailed(true)}
+          className={cn("h-full w-full origin-[52%_20%] scale-[2.1] select-none object-cover object-[52%_12%]", className)}
+          draggable={false}
+        />
+      </span>
+    );
+  }
 
   if (asset?.status === "final" && !failed) {
     return (

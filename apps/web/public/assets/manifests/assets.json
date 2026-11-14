@@ -32,8 +32,8 @@
   },
   "portraits": {
     "astronaut": {
-      "status": "placeholder",
-      "src": "/assets/characters/portraits/astronaut.png",
+      "status": "final",
+      "src": "/assets/characters/portraits/astronaut.webp",
       "displayName": "ArmStrong",
       "usage": "Briefings for Scene 1 and Scene 4 (player POV)",
       "credit": "Character artist"

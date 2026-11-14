@@ -32,11 +32,15 @@ export interface DescentStep {
   label: LocalizedText;
   /** What the crew calls when the switch becomes the next one to press. */
   cue: LocalizedText;
-  /** Real seconds the segment this switch starts takes to play. */
-  playSec: number;
+  /**
+   * Real seconds the scripted segment this switch starts takes to play. Null for the two steps that
+   * hand the lander to the player (site choice and the manual descent, then engine stop): those
+   * run on the flight model, not on this profile.
+   */
+  playSec: number | null;
 }
 
-/** The four controls, in the only order they work. Step i plays keyframe i → i+1. */
+/** The four controls, in the only order they work. Steps 0 and 1 play keyframe i → i+1; 2 and 3 are flown. */
 export const DESCENT_STEPS: DescentStep[] = [
   {
     id: "pdi",
@@ -60,10 +64,10 @@ export const DESCENT_STEPS: DescentStep[] = [
     id: "site",
     label: { en: "Confirm landing site", vi: "Chốt điểm đáp" },
     cue: {
-      en: "Low gate, 150 m. Boulders ahead. Pick the clear patch beside them.",
-      vi: "Mốc thấp, 150 m. Phía trước có đá tảng. Chọn khoảng trống bên cạnh.",
+      en: "Low gate, 150 m. Boulders dead ahead. Pick a landing site, then fly us onto it.",
+      vi: "Mốc thấp, 150 m. Ngay phía trước toàn đá tảng. Chọn điểm đáp rồi lái tàu tới đó.",
     },
-    playSec: 6,
+    playSec: null,
   },
   {
     id: "engine-stop",
@@ -72,7 +76,7 @@ export const DESCENT_STEPS: DescentStep[] = [
       en: "Contact light! The probes touched the ground. Engine stop.",
       vi: "Đèn tiếp đất sáng! Các que dò đã chạm mặt đất. Tắt động cơ.",
     },
-    playSec: 1.6,
+    playSec: null,
   },
 ];
 
@@ -110,7 +114,10 @@ export function sampleAt(t: number): DescentSample {
 export function missionTimeAt(index: number, realSec: number): number {
   const a = KEYFRAMES[index];
   const b = KEYFRAMES[index + 1];
-  const p = Math.min(1, Math.max(0, realSec / DESCENT_STEPS[index].playSec));
+  const playSec = DESCENT_STEPS[index].playSec;
+  // A flown step has no scripted segment: the clock stays at its starting keyframe.
+  if (playSec === null) return a.t;
+  const p = Math.min(1, Math.max(0, realSec / playSec));
   // Ease out so each segment settles into its hold point instead of stopping dead.
   const eased = 1 - (1 - p) * (1 - p);
   return a.t + (b.t - a.t) * eased;
