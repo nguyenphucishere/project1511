@@ -10,6 +10,7 @@ import { DECISIONS, type DecisionId } from "@/game/decisions";
 import { ROCKET_PARTS } from "@/mocks/rocket-parts";
 import { PAYLOADS, VEHICLES } from "@/mocks/launch-options";
 import { ParallaxCanvas } from "./ParallaxCanvas";
+import { EndingDiagnostics, EndingScene } from "./EndingScene";
 
 /**
  * Apollo 11 Multiple Ending Screen:
@@ -71,6 +72,9 @@ export function EndScreen() {
             </p>
           </div>
 
+          {/* Dedicated per-ending scene */}
+          <EndingScene ending={ending} />
+
           {/* Historical Transmission Quote */}
           <div className="bezel bezel-gold w-full bg-space-deep/95 p-4 sm:p-5 text-left">
             <p className="font-mono text-xs text-primary mb-1">HISTORICAL TRANSMISSION ARCHIVE:</p>
@@ -106,6 +110,9 @@ export function EndScreen() {
               </div>
             )}
           </div>
+
+          {/* Failure / abort diagnostics (non-nominal endings only) */}
+          <EndingDiagnostics ending={ending} />
 
           {/* Decision Log Audit Trail */}
           <div className="bezel w-full bg-space-deep/90 p-4 sm:p-5 text-left">
