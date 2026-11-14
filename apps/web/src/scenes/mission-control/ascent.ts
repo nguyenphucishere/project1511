@@ -7,12 +7,14 @@ import {
   STAGE3_IGNITION_SEC,
   STAGING_SEC,
   STRETCH,
+  FILM_END_SEC,
   realSecondsAt,
 } from "./flight";
 
 /**
  * Visual ascent of the 3D rocket, in real seconds after ignition and metres above the pad.
- * Not physics: tuned so the stack reads as heavy at liftoff, every separation is easy to see, and
+ * The event times are the engine's (see ./flight); the on-screen climb is a scaled film move, not
+ * the 185 km trajectory (which cannot fit in the sky dome): tuned so the stack reads as heavy at liftoff, every separation is easy to see, and
  * the upper stage stays inside the sky dome until orbit insertion.
  *
  * Three stages: stage 1 burns to SEPARATION_T, stage 2 lights at STAGE2_T, the escape tower leaves
@@ -38,8 +40,8 @@ export const FLIP_FROM = CUTOFF_T + 3.5;
 export const FLIP_TO = CUTOFF_T + 7.5;
 export const DOCK_T = CUTOFF_T + 11.5;
 export const TOW_T = CUTOFF_T + 12.5;
-/** When the film ends: orbit insertion, the capsule at the edge of space. */
-export const FILM_END = realSecondsAt(540);
+/** When the film ends: in parking orbit after the docking, the capsule at the edge of space. */
+export const FILM_END = realSecondsAt(FILM_END_SEC);
 /** After the last step the film stays quiet for a while: the view from inside the capsule, the Earth below. */
 export const EPILOGUE = 13;
 export const FILM_TOTAL = FILM_END + EPILOGUE;

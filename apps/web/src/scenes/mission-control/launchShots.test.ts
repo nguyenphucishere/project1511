@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { realSecondsAt } from "./flight";
+import { FILM_END_SEC, realSecondsAt } from "./flight";
 import { ADAPTER_T, EPILOGUE, FILM_END, LES_T, SEP2_T, SEPARATION_T, STAGE2_T, STAGE3_T, rocketRise, rocketSpeed } from "./ascent";
 import { SHOTS, shotAt } from "./launchShots";
 
@@ -27,12 +27,12 @@ describe("launch shots", () => {
   });
 
   it("run for over a minute", () => {
-    expect(realSecondsAt(540)).toBeGreaterThan(45);
+    expect(realSecondsAt(FILM_END_SEC)).toBeGreaterThan(45);
     expect(SHOTS.length).toBeGreaterThan(35);
   });
 
   it("give every shot a finite frame for the whole flight", () => {
-    const end = realSecondsAt(540);
+    const end = realSecondsAt(FILM_END_SEC);
     const pad: [number, number, number] = [5, -14, -85];
     for (let t = 0; t <= end; t += 0.25) {
       const f = shotAt(t).frame({ t, rise: rocketRise(t), speed: rocketSpeed(t), pad });

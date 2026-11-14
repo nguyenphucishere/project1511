@@ -1,7 +1,7 @@
 import type { LocalizedText } from "@/i18n";
 import type { RadioVoice } from "@/game/radio";
 import { ADAPTER_T, CUTOFF_T, DOCK_T, HOLD_DOWN, LES_T, SEP2_T, SEPARATION_T, STAGE2_T, STAGE3_T } from "./ascent";
-import { realSecondsAt } from "./flight";
+import { MAX_Q_SEC, realSecondsAt } from "./flight";
 
 /**
  * What launch control says over the radio as the rocket climbs, and the one keyword shown on screen
@@ -20,7 +20,7 @@ export interface Callout {
 const c = (t: number, voice: RadioVoice, keyword: LocalizedText, line: LocalizedText): Callout => ({ t, voice, keyword, line });
 const l = (en: string, vi: string): LocalizedText => ({ en, vi });
 
-export const MAX_Q_T = realSecondsAt(72);
+export const MAX_Q_T = realSecondsAt(MAX_Q_SEC);
 
 export const CALLOUTS: Callout[] = [
   c(0.4, "capcom", l("Ignition", "Đánh lửa"), l("Ignition sequence start. We have ignition.", "Bắt đầu đánh lửa. Động cơ đã nổ.")),

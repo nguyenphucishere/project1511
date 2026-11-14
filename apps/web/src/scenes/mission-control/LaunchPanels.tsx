@@ -245,7 +245,7 @@ export function FlightPanel({
           </div>
           <div className="flex gap-1.5">
             <dt className="text-foreground/65">{m.speed}</dt>
-            <dd>{speedKms(sec).toFixed(1)} km/s</dd>
+            <dd>{speedKms(sec, config.orbitKm).toFixed(1)} km/s</dd>
           </div>
         </dl>
       </HudCard>
