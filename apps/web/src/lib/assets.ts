@@ -23,6 +23,9 @@ const portraitSchema = z.object({
   displayName: z.string(),
   usage: z.string(),
   credit: z.string(),
+  /** Where the face is in the picture (x, y as % of its size) and how far to zoom in for avatars. */
+  focus: z.tuple([z.number(), z.number()]).optional(),
+  zoom: z.number().optional(),
 });
 
 const manifestSchema = z.object({

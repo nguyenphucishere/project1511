@@ -10,6 +10,7 @@ import { PALETTE, SCENE_COLORS } from "@/lib/palette";
 import { VITAL_STATIONS, type StationId } from "@/mocks/vitals";
 import type { LocalizedText } from "@/i18n";
 import { BACK_Z, CORRIDOR_LENGTH, DOOR, DOOR_PANEL, ROOM, STATIONS } from "./layout";
+import { DoctorSprite } from "./DoctorSprite";
 
 interface MedicalWorldProps {
   doorOpen: boolean;
@@ -58,7 +59,7 @@ export function MedicalWorld({ doorOpen, checked, onOpenDoor, onInspect }: Medic
       <WallBiometricsScreen />
 
       {/* Lively Staff */}
-      <FlightSurgeon />
+      <DoctorSprite position={[-0.95, 0, BACK_Z + 1.4]} />
       <MedicalTechnician />
 
       {(
@@ -691,131 +692,6 @@ function WallBiometricsScreen() {
             </mesh>
           </group>
         ))}
-      </group>
-    </group>
-  );
-}
-
-/** Animated NASA Lead Flight Surgeon examining the astronaut / reviewing tablet */
-function FlightSurgeon() {
-  const root = useRef<Group>(null);
-  const head = useRef<Group>(null);
-  const rightArm = useRef<Group>(null);
-  const leftArm = useRef<Group>(null);
-  const reduced = useReducedMotion();
-
-  useFrame(({ clock }) => {
-    if (reduced) return;
-    const t = clock.elapsedTime;
-    // Breathing & subtle weight shifts
-    if (root.current) {
-      root.current.position.y = Math.sin(t * 1.8) * 0.012;
-    }
-    // Head reviewing tablet and looking up at the patient bed
-    if (head.current) {
-      head.current.rotation.y = Math.sin(t * 0.6) * 0.25;
-      head.current.rotation.x = 0.15 + Math.sin(t * 1.2) * 0.08;
-    }
-    // Right arm with stylus interacting with tablet
-    if (rightArm.current) {
-      rightArm.current.rotation.x = -0.7 + Math.sin(t * 3.5) * 0.08;
-      rightArm.current.rotation.z = -0.2 + Math.cos(t * 3.5) * 0.05;
-    }
-  });
-
-  return (
-    <group ref={root} position={[-0.95, 0, BACK_Z + 1.4]} rotation={[0, -Math.PI / 2.6, 0]}>
-      {/* Shoes */}
-      {[-0.1, 0.1].map((x) => (
-        <mesh key={x} position={[x, 0.05, 0]}>
-          <boxGeometry args={[0.12, 0.1, 0.24]} />
-          <meshStandardMaterial color="#1E293B" />
-        </mesh>
-      ))}
-      {/* Navy blue hospital scrub trousers */}
-      <mesh position={[0, 0.44, 0]}>
-        <boxGeometry args={[0.34, 0.72, 0.22]} />
-        <meshStandardMaterial color={SCENE_COLORS.nasaBlue} roughness={0.7} />
-      </mesh>
-      {/* Torso: White Doctor's Lab Coat over NASA Blue Scrubs */}
-      <mesh position={[0, 1.08, 0]}>
-        <boxGeometry args={[0.42, 0.62, 0.26]} />
-        <meshStandardMaterial color={SCENE_COLORS.spaceWhite} roughness={0.6} />
-      </mesh>
-      {/* Lab coat open lapel revealing NASA blue scrub shirt */}
-      <mesh position={[0, 1.15, 0.132]}>
-        <planeGeometry args={[0.16, 0.44]} />
-        <meshStandardMaterial color={SCENE_COLORS.nasaBlue} />
-      </mesh>
-      {/* NASA ID Badge clip on coat pocket */}
-      <mesh position={[-0.14, 1.2, 0.134]}>
-        <planeGeometry args={[0.07, 0.09]} />
-        <meshBasicMaterial color={SCENE_COLORS.solarGold} />
-      </mesh>
-      <mesh position={[-0.14, 1.2, 0.136]}>
-        <planeGeometry args={[0.05, 0.03]} />
-        <meshBasicMaterial color={SCENE_COLORS.nasaRed} />
-      </mesh>
-
-      {/* Stethoscope around neck */}
-      <mesh position={[0, 1.34, 0.08]} rotation={[0.4, 0, 0]}>
-        <torusGeometry args={[0.12, 0.016, 8, 16, Math.PI * 1.2]} />
-        <meshStandardMaterial color={SCENE_COLORS.steelDark} metalness={0.5} />
-      </mesh>
-      <mesh position={[0.06, 1.16, 0.14]}>
-        <cylinderGeometry args={[0.025, 0.025, 0.02, 12]} />
-        <meshStandardMaterial color={SCENE_COLORS.aluminum} metalness={0.9} />
-      </mesh>
-
-      {/* Head */}
-      <group ref={head} position={[0, 1.52, 0]}>
-        {/* Face */}
-        <mesh>
-          <sphereGeometry args={[0.13, 14, 14]} />
-          <meshStandardMaterial color="#FBBF24" roughness={0.8} />
-        </mesh>
-        {/* Hair */}
-        <mesh position={[0, 0.05, -0.02]}>
-          <sphereGeometry args={[0.135, 12, 12]} />
-          <meshStandardMaterial color="#451A03" roughness={0.9} />
-        </mesh>
-        {/* Doctor's spectacles */}
-        <mesh position={[0, 0.02, 0.12]}>
-          <boxGeometry args={[0.18, 0.04, 0.04]} />
-          <meshStandardMaterial color={SCENE_COLORS.steelDark} metalness={0.7} />
-        </mesh>
-      </group>
-
-      {/* Left arm holding tablet */}
-      <group ref={leftArm} position={[-0.24, 1.28, 0]}>
-        <mesh position={[0.08, -0.22, 0.18]} rotation={[-0.7, 0.3, 0]}>
-          <boxGeometry args={[0.1, 0.42, 0.1]} />
-          <meshStandardMaterial color={SCENE_COLORS.spaceWhite} roughness={0.6} />
-        </mesh>
-        {/* Illuminated Medical Tablet */}
-        <group position={[0.12, -0.36, 0.36]} rotation={[-0.5, 0.2, 0]}>
-          <mesh>
-            <boxGeometry args={[0.26, 0.36, 0.02]} />
-            <meshStandardMaterial color={SCENE_COLORS.steelDark} />
-          </mesh>
-          <mesh position={[0, 0, 0.012]}>
-            <planeGeometry args={[0.22, 0.32]} />
-            <meshBasicMaterial color={SCENE_COLORS.screenCyan} />
-          </mesh>
-        </group>
-      </group>
-
-      {/* Right arm taking notes with stylus */}
-      <group ref={rightArm} position={[0.24, 1.28, 0]}>
-        <mesh position={[-0.04, -0.22, 0.18]} rotation={[-0.7, -0.3, 0]}>
-          <boxGeometry args={[0.1, 0.42, 0.1]} />
-          <meshStandardMaterial color={SCENE_COLORS.spaceWhite} roughness={0.6} />
-        </mesh>
-        {/* Stylus Pen */}
-        <mesh position={[-0.08, -0.38, 0.34]} rotation={[0.4, 0, 0]}>
-          <cylinderGeometry args={[0.008, 0.008, 0.14, 8]} />
-          <meshStandardMaterial color={SCENE_COLORS.aluminum} metalness={0.8} />
-        </mesh>
       </group>
     </group>
   );
