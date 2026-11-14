@@ -8,6 +8,7 @@ import { useTypewriter } from "@/hooks/useTypewriter";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { CHARACTERS } from "@/game/characters";
 import type { Interlude } from "@/game/interludes";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 import { CharacterPortrait } from "./CharacterPortrait";
 import { ParallaxCanvas } from "./ParallaxCanvas";
 
@@ -23,6 +24,8 @@ export function InterludeOverlay({ interlude, onDone }: { interlude: Interlude; 
   const [index, setIndex] = useState(0);
   const isLast = index === interlude.lines.length - 1;
   const text = localize(interlude.lines[index]!);
+  // The speaker says each line as it appears.
+  useVoiceLine(text);
   const { shown, hidden, done, complete } = useTypewriter(text, { instant: reduced, charsPerSecond: 38 });
   const primary = useRef<HTMLButtonElement>(null);
 

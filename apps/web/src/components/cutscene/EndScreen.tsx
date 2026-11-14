@@ -9,6 +9,7 @@ import { DECISIONS, type DecisionId } from "@/game/decisions";
 import { causeChain } from "@/game/consequences";
 import { EndingScene } from "./EndingScene";
 import { ParallaxCanvas } from "./ParallaxCanvas";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 
 const CALLS: { id: DecisionId; pointKey: string }[] = [
   { id: "workshop-decision", pointKey: "inspection" },
@@ -30,6 +31,9 @@ export function EndScreen() {
   const narrative = useGameStore((s) => s.narrative);
   const endingId = useGameStore((s) => s.endingId) ?? narrative.ending ?? "ending-1";
   const ending = getEnding(endingId) ?? ENDINGS["ending-1"];
+  // The closing quote, then the first line of the debrief, read in order.
+  useVoiceLine(ending.quote);
+  useVoiceLine(ending.debriefReport[0] ? localize(ending.debriefReport[0]) : null, { queue: true });
 
   // What each call cost or bought, plus the forced wave-off when earlier shortcuts ran out the fuel.
   const chain = causeChain(narrative);

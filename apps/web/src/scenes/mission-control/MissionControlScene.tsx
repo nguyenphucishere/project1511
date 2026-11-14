@@ -25,6 +25,7 @@ import { useGameStore } from "@/game/gameStore";
 import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
 import { playSfx, setMasterVolume, startRumble, type Rumble } from "@/game/sfx";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 import { preloadCrowd, startCrowdBed, type CrowdBed } from "@/game/crowdAudio";
 import {
   fetchLaunchPlan,
@@ -560,6 +561,11 @@ export function MissionControlScene({
   const burnEndT = result ? realSecondsAt(result.endSec) : Infinity;
   const overweight =
     result?.failureTrace.some((s) => s.code === "slow-climb") ?? false;
+
+  // After a failed launch the flight director reads the report, then what to change, then the replacement.
+  useVoiceLine(phase === "anomaly" ? m.anomalyBody : null);
+  useVoiceLine(phase === "anomaly" ? (overweight ? m.adviceOverweight : m.adviceFuel) : null, { queue: true });
+  useVoiceLine(phase === "anomaly" ? m.replacement : null, { queue: true });
 
   return (
     <section

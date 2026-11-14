@@ -1,4 +1,5 @@
 import { useSettingsStore } from "./settingsStore";
+import { createVoicePlayer, type PlayOptions, type PlayResult } from "./voicePlayer";
 
 /**
  * Procedural sound effects (Web Audio, no files). Every sound is a small recipe of oscillators
@@ -702,17 +703,21 @@ export function startRumble(): Rumble {
   };
 }
 
-/**
- * Speaks a short ship's-computer line with the browser's speech synthesis, if available.
- * Best-effort: no voice installed or sound muted simply means the caption stands alone.
- */
-export function speak(text: string, locale: "en" | "vi") {
-  if (
-    !enabled() ||
-    typeof window === "undefined" ||
-    !("speechSynthesis" in window)
-  )
-    return;
+const voicePlayer = createVoicePlayer({ audio, enabled, noise });
+let speakToken = 0;
+
+export interface SpeakOptions {
+  /** Wait for the line that is playing instead of cutting it off. */
+  queue?: boolean;
+  /** Called when a recorded line finishes (browser speech does not report it). */
+  onEnd?: () => void;
+  /** Force the radio filter on or off; by default it follows the speaker. */
+  radio?: boolean;
+}
+
+/** The fallback: the browser's speech synthesis, for a line with no recording. */
+function speakWithBrowser(text: string, locale: "en" | "vi") {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   const synth = window.speechSynthesis;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = locale === "vi" ? "vi-VN" : "en-US";
@@ -723,9 +728,37 @@ export function speak(text: string, locale: "en" | "vi") {
   synth.speak(u);
 }
 
-export function stopSpeaking() {
-  if (typeof window !== "undefined" && "speechSynthesis" in window)
-    window.speechSynthesis.cancel();
+/**
+ * Says a line aloud: the recorded voice (public/assets/voice, found by the language and exact
+ * words) when there is one, otherwise the browser's speech synthesis. Muted sound says nothing.
+ * Returns an id for stopSpeaking(id), so a caller can cut off only its own line.
+ */
+export function speak(text: string, locale: "en" | "vi", opts: SpeakOptions = {}): number {
+  if (!enabled() || typeof window === "undefined") return 0;
+  const id = ++speakToken;
+  void voicePlayer.play(text, locale, opts).then((result) => {
+    // Only when the recorded library itself is unavailable does the browser voice step in; a line
+    // that simply has no recording (a live number, say) stays silent rather than switch voices.
+    if (result === "unavailable" && id === speakToken) speakWithBrowser(text, locale);
+  });
+  return id;
+}
+
+/** Stops the voice. With an id, only if that line is still the latest one. */
+export function stopSpeaking(id?: number) {
+  if (id !== undefined && id !== speakToken) return;
+  speakToken++;
+  voicePlayer.stop();
+  if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+}
+
+/** Plays only the recording of a line (no browser fallback). */
+export function playVoiceLine(text: string, locale: "en" | "vi", opts: PlayOptions = {}): Promise<PlayResult> {
+  return voicePlayer.play(text, locale, opts);
+}
+
+export function stopVoiceLine() {
+  voicePlayer.stop();
 }
 
 export type ScoreMood = "ride" | "awe" | "dread" | "hush";

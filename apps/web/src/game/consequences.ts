@@ -106,7 +106,7 @@ export function resolveLanding(narrative: NarrativeLike, choice: string): "endin
 
 const L = (en: string, vi: string): LocalizedText => ({ en, vi });
 
-const CONSEQUENCES: Record<string, Consequence> = {
+export const CONSEQUENCES: Record<string, Consequence> = {
   "inspection:thorough": {
     met: "T-06:00:00",
     tone: "calm",

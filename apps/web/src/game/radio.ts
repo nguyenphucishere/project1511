@@ -1,4 +1,4 @@
-import { audio, enabled, liveLoops, noise } from "./sfx";
+import { audio, enabled, liveLoops, noise, playVoiceLine, stopVoiceLine } from "./sfx";
 
 /**
  * Launch-control chatter over the radio. The browser's speech synthesis cannot be run through an
@@ -70,7 +70,8 @@ export function stopRadio() {
  */
 export function radioCall(text: Record<"en" | "vi", string>, locale: "en" | "vi", voice: RadioVoice = "capcom") {
   const s = synth();
-  if (!enabled() || !s) return;
+  // A recorded voice needs no speech synthesis; the browser voice is only the fallback for a line with no recording.
+  if (!enabled()) return;
   const a = audio();
   if (!a) return;
   stopRadio();
@@ -110,15 +111,25 @@ export function radioCall(text: Record<"en" | "vi", string>, locale: "en" | "vi"
   };
   const stop = () => {
     if (done) return;
-    s.cancel();
+    s?.cancel();
+    stopVoiceLine();
     finish();
   };
   liveLoops.add(stop);
   stopCurrent = stop;
 
   // The voice starts a beat after the key-up beep.
-  timer = window.setTimeout(() => {
+  timer = window.setTimeout(async () => {
     if (done) return;
+    // The recorded voice first: the radio already supplies the beeps and the hiss, so the voice only gets the band-limited filter.
+    const result = await playVoiceLine(text[locale], locale, { radio: true, hiss: false, onEnd: finish });
+    if (done) {
+      if (result === "played") stopVoiceLine();
+      return;
+    }
+    if (result === "played") return;
+    // No recording for this call: close the channel quietly (the browser voice only steps in if the library is unavailable).
+    if (result === "missing" || !s) return finish();
     const u = new SpeechSynthesisUtterance(text[lang]);
     u.lang = lang === "vi" ? "vi-VN" : "en-US";
     const style = VOICE_STYLE[voice];

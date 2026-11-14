@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useGameStore } from "@/game/gameStore";
 import { ENDINGS_CATALOG, getEnding, type EndingDefinition } from "@/game/endings";
 import { DECISIONS, type DecisionId } from "@/game/decisions";
 import { useLocalized } from "@/i18n/useT";
+import { useSettingsStore } from "@/game/settingsStore";
+import { speak, stopSpeaking } from "@/game/sfx";
 
 export default function DebriefPage() {
   const localize = useLocalized();
@@ -17,6 +19,16 @@ export default function DebriefPage() {
   const [selectedEndingId, setSelectedEndingId] = useState<string>(currentEndingId);
 
   const ending: EndingDefinition = getEnding(selectedEndingId) ?? ENDINGS_CATALOG["ending-1"];
+
+  // "Listen": the closing quote, the analysis and (if there is one) the contingency speech, one after another.
+  const locale = useSettingsStore((s) => s.locale);
+  const listen = () => {
+    stopSpeaking();
+    speak(ending.quote, locale);
+    ending.debriefReport.forEach((p) => speak(p[locale], locale, { queue: true }));
+    if (ending.contingencySpeechText) speak(ending.contingencySpeechText[locale], locale, { queue: true });
+  };
+  useEffect(() => () => stopSpeaking(), []);
 
   const endingKeys = ["ending-1", "ending-2", "ending-3", "ending-4", "ending-5"] as const;
 
@@ -96,6 +108,14 @@ export default function DebriefPage() {
             <h2 className="mt-3 text-2xl sm:text-3xl font-bold text-foreground">
               {localize(ending.title)}
             </h2>
+            <div className="mt-2 flex gap-2">
+              <Button variant="secondary" size="sm" onClick={listen}>
+                🔊 {locale === "vi" ? "Nghe báo cáo" : "Listen to the report"}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => stopSpeaking()}>
+                {locale === "vi" ? "Dừng" : "Stop"}
+              </Button>
+            </div>
             <p className="text-sm font-medium text-primary mt-1">
               {localize(ending.subtitle)}
             </p>

@@ -12,6 +12,7 @@ import { CHARACTERS } from "@/game/characters";
 import type { RocketPart } from "@/mocks/rocket-parts";
 import { UI } from "./content";
 import { InsideView } from "./InsideView";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 
 interface PartPanelProps {
   part: RocketPart;
@@ -28,6 +29,8 @@ export function PartPanel({ part, next, onNext, onClose, onQuiz }: PartPanelProp
   const [inside, setInside] = useState(false);
   const t = useT();
   const localize = useLocalized();
+  // The chief explains each part aloud when it is opened (the inside-view quiz is silent).
+  useVoiceLine(inside ? null : localize(part.role));
   const locale = useSettingsStore((s) => s.locale);
   const primary = useRef<HTMLButtonElement>(null);
 

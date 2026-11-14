@@ -10,6 +10,7 @@ import { getCallbackLines, getConsequence, type Consequence } from "@/game/conse
 import { ConsequenceBeat } from "./ConsequenceBeat";
 import { CharacterPortrait } from "./CharacterPortrait";
 import { ParallaxCanvas } from "./ParallaxCanvas";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 
 export interface DecisionOverlayProps {
   decisionId: DecisionId;
@@ -32,6 +33,10 @@ export function DecisionOverlay({ decisionId, chapter, onDone }: DecisionOverlay
   const [beat, setBeat] = useState<{ consequence: Consequence; title: string } | null>(null);
   // At most one quiet hint that an earlier shortcut is still in play.
   const callback = getCallbackLines(decision.pointId, narrative)[0];
+  // The person asking reads the question; the quiet hint about an earlier shortcut follows it. Both stop
+  // once the player has picked and the aftermath beat takes over the screen.
+  useVoiceLine(beat ? null : localize(decision.prompt));
+  useVoiceLine(beat || !callback ? null : localize(callback), { queue: true });
 
   const handleSelect = useCallback(
     (optionId: string) => {

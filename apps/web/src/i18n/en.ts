@@ -351,6 +351,12 @@ export const en = {
       lowFuel: "Low fuel. {s} seconds left.",
       fuelOut: "Out of fuel! The engine is dead.",
     },
+    /** The same calls without the live numbers, for the recorded voice (a recording cannot say a changing number). */
+    callVoice: {
+      driftLeft: "Drifting left. Stop the drift.",
+      driftRight: "Drifting right. Stop the drift.",
+      lowFuel: "Low fuel. Watch your fuel.",
+    },
     sideSpeed: "Sideways speed",
     offsetFromSite: "Distance from site {id}",
     rating: "Rating",

@@ -13,6 +13,7 @@ import {
 import { CharacterPortrait } from "@/components/cutscene/CharacterPortrait";
 import { useEffect } from "react";
 import { useT } from "@/i18n/useT";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 import { playSfx } from "@/game/sfx";
 import type { CharacterId } from "@/game/characters";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,8 @@ export function SignOffDialog({
   children,
 }: SignOffDialogProps) {
   const t = useT();
+  // The narrator reads the result as the card opens.
+  useVoiceLine(open ? description : null);
   useEffect(() => {
     if (open && status === "go") playSfx("success");
   }, [open, status]);

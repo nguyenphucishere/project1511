@@ -6,6 +6,7 @@ import { ObjectivePanel } from "@/components/hud/ObjectivePanel";
 import { SignOffDialog, SignOffDetails } from "@/components/hud/SignOffDialog";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 import { BRIEFINGS } from "@/game/script";
 import { useGameStore } from "@/game/gameStore";
 import { inputLock, isTypingTarget } from "@/game/input";
@@ -571,6 +572,13 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
         : manual && snap.callout
           ? { text: callText(snap.callout.id), tone: snap.callout.tone }
           : { text: localize(DESCENT_STEPS[Math.min(armed ?? clock.stepsDone, ALL_STEPS - 1)].cue), tone: "info" };
+
+  // Armstrong says what is on the cue. A call that carries a live number on screen has a recording without
+  // the number (callVoice). The touchdown / crash line is read by the result card, so not twice. A short delay
+  // lets a flickering call settle before anything is said.
+  const voiceId = manual && snap.callout ? snap.callout.id : null;
+  const voiceAs = voiceId && voiceId in d.callVoice ? d.callVoice[voiceId as keyof typeof d.callVoice] : undefined;
+  useVoiceLine(phase === "landed" || phase === "crashed" ? null : cue.text, { as: voiceAs, delayMs: 350 });
 
   const buttonLabel = choosingSite
     ? format(d.confirmSite, { id: siteId })

@@ -15,6 +15,7 @@ import type { LaunchAssessment, LaunchConfig, LaunchResult } from "@/lib/simulat
 import { formatMissionTime } from "@/lib/format";
 import { NOMINAL_EVENTS, altitudeKm, missionSecondsAt, realSecondsAt, speedKms } from "./flight";
 import { EPILOGUE } from "./ascent";
+import { useVoiceLine } from "@/hooks/useVoiceLine";
 
 /* ---------------------------------------------------------------- GO / NO-GO poll */
 
@@ -58,6 +59,8 @@ export function PollPanel({
   }, [answered, items.length, reduced]);
 
   const done = answered >= items.length;
+  // Gene Kranz opens the poll. Weather is the player's call, so there is no automatic scrub line.
+  useVoiceLine(format(m.pollIntro, { name: localize(CHARACTERS["flight-director"].name) }));
 
   // Each station's answer is heard as it comes in.
   useEffect(() => {
