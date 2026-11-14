@@ -20,7 +20,9 @@ import {
   SEA,
   T,
   capsuleAltitude,
+  homePosition,
   norm,
+  sub,
   petals,
   plasma,
   reentryPosition,
@@ -244,7 +246,7 @@ export function Ship() {
     const t = filmClock.t;
     const g = group.current;
     if (!g) return;
-    g.visible = t < T.REENTRY && viewKind(t) !== "cabin";
+    g.visible = t < T.SM_SEP && viewKind(t) !== "cabin";
     if (g.visible) orient(g, shipPose(t));
     // Eagle rides on the nose until the descent (the way home is flown by the command module alone).
     if (eagle.current) eagle.current.visible = t < T.OUTBOUND_END;
@@ -328,7 +330,7 @@ function ExpandingRing() {
   const ring = useRef<Mesh>(null);
   useFrame(() => {
     const t = filmClock.t;
-    const k = (t - (T.FILM_END - 5.5)) / 4;
+    const k = (t - (T.TOUCHDOWN - 0.1)) / 4;
     const m = ring.current;
     if (!m) return;
     m.visible = k > 0 && k < 1.4;
@@ -390,11 +392,13 @@ export function ReentryCapsule() {
   const wake = useRef<Group>(null);
   const wakeMats = useRef<ShaderMaterial[]>([]);
   const chutes = useRef<Group>(null);
+  const sm = useRef<Group>(null);
   useFrame(({ clock }) => {
     const t = filmClock.t;
     const g = group.current;
     if (!g) return;
-    const burning = t >= T.REENTRY && t < T.CHUTES;
+    // From the service module's separation the command module flies alone, heat shield first, along the path home.
+    const burning = t >= T.SM_SEP && t < T.CHUTES;
     const landing = t >= T.CHUTES;
     g.visible = burning || landing;
     const alt0 = landing ? capsuleAltitude(t) : 0;
@@ -402,15 +406,27 @@ export function ReentryCapsule() {
       chutes.current.visible = landing && alt0 > 1.2;
       chutes.current.position.set(SEA[0], alt0 + 1.4, SEA[2]);
     }
+    if (sm.current && !burning) sm.current.visible = false;
     if (!g.visible) return;
     if (burning) {
-      const p = reentryPosition(t);
-      const d = norm([0, -1.9, -12]);
+      const p = homePosition(t);
+      const d = norm(sub(homePosition(t + 0.05), homePosition(t - 0.05)));
       // Heat shield (the -Z base of the cone) leads; the nose trails.
       orient(g, { pos: p, fwd: [-d[0], -d[1], -d[2]] as Vec, up: [0, 1, 0] });
+      // The service module drifts back and tumbles; in the air it glows and burns away.
+      const smNode = sm.current;
+      if (smNode) {
+        const q = t - T.SM_SEP;
+        smNode.visible = t < T.REENTRY + 14;
+        const dist = 3.2 + q * 0.35;
+        smNode.position.set(p[0] - d[0] * dist, p[1] - d[1] * dist + Math.sin(q * 0.2) * 0.3, p[2] - d[2] * dist);
+        smNode.rotation.set(q * 0.22, 0.4, q * 0.09);
+        smNode.scale.setScalar(Math.max(0.01, t < T.REENTRY ? 1 : 1 - (t - T.REENTRY) / 14));
+      }
       const hot = plasma(t);
       if (wake.current) {
-        wake.current.visible = hot > 0.02;
+        // From inside the cabin the fire is not a shape around you but light at the window (see the scene's overlay).
+        wake.current.visible = hot > 0.02 && viewKind(t) !== "cabin";
         const flick = 1 + Math.sin(clock.elapsedTime * 38) * 0.08;
         wake.current.scale.set(1, 1, hot * flick);
       }
@@ -425,6 +441,16 @@ export function ReentryCapsule() {
   });
   return (
     <>
+    <group ref={sm} visible={false}>
+      <mesh>
+        <cylinderGeometry args={[0.85, 0.85, 2.4, 24]} />
+        <meshStandardMaterial color="#cfcfcf" metalness={0.3} roughness={0.5} />
+      </mesh>
+      <mesh position={[0, -1.6, 0]}>
+        <coneGeometry args={[0.7, 1.0, 20, 1, true]} />
+        <meshStandardMaterial color="#2a2a2e" side={DoubleSide} />
+      </mesh>
+    </group>
     <group ref={chutes}>
       <Canopy x={-4.2} z={0} lean={0.12} />
       <Canopy x={4.2} z={0} lean={-0.12} />

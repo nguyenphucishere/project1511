@@ -76,14 +76,25 @@ export const T = {
   /** Christmas Eve in the cabin. */
   CABIN: 118,
   OUTBOUND_END: 140,
-  /** The way home. */
-  TEI_END: 150,
-  REENTRY: 150,
-  CHUTES: 158,
-  /** The capsule touches the sea (the touchdown sound plays here, five and a half seconds before the film ends). */
-  TOUCHDOWN: 166.6,
-  FILM_END: 172,
+  /** The way home (about four minutes in all): the engine burns for home... */
+  TEI_END: 158,
+  /** ...the command module sheds the service module... */
+  SM_SEP: 204,
+  /** ...meets the air at the entry interface... */
+  REENTRY: 226,
+  /** ...opens the drogue parachutes... */
+  CHUTES: 300,
+  /** ...and touches the sea (the touchdown sound plays here, twenty seconds before the film ends). */
+  TOUCHDOWN: 352,
+  FILM_END: 372,
 } as const;
+
+/** Seconds from the drogues to the main parachutes in the film (the real gap was 48 s). */
+export const MAIN_DELAY = 6;
+/** Film seconds of the entry, from the interface to the drogues. */
+export const ENTRY_SPAN = T.CHUTES - T.REENTRY;
+/** The film time a fraction (0 to 1) of the way through the entry. */
+export const entryAt = (f: number) => T.REENTRY + f * ENTRY_SPAN;
 
 export const OUTBOUND_END = T.OUTBOUND_END;
 export const FILM_END = T.FILM_END;
@@ -146,11 +157,29 @@ export function shipPosition(t: number): Vec {
     const phi = orbitAngle(t);
     return [MOON[0] + R_ORBIT * Math.sin(phi), 0, MOON[2] + R_ORBIT * Math.cos(phi)];
   }
-  // Homebound: leaves the orbit along the tangent, toward the Earth, and speeds up.
-  const dt = t - T.OUTBOUND_END;
-  const start = add(MOON, [-R_ORBIT, 0, 0]);
-  return [start[0], 0, start[2] + 1.5 * dt + 2.2 * dt * dt];
+  return homePosition(t);
 }
+
+/**
+ * Homebound: out of lunar orbit along the tangent, a long glide toward the Earth, and then the entry path
+ * over the top of the air. The command module takes over from the whole ship at the service module's
+ * separation, at the same place.
+ */
+export function homePosition(t: number): Vec {
+  if (t >= T.REENTRY) return reentryPosition(t);
+  const start = add(MOON, [-R_ORBIT, 0, 0]);
+  const end = reentryPosition(T.REENTRY);
+  const dur = T.REENTRY - T.OUTBOUND_END;
+  const s = clamp01((t - T.OUTBOUND_END) / dur);
+  // Slow off the burn, fast through the middle, easing to the entry's own pace.
+  return [
+    hermite(start[0], end[0], 0, 0, s),
+    hermite(start[1], end[1], 0, 0, s),
+    hermite(start[2], end[2], 3 * dur, 1.6 * dur, s),
+  ];
+}
+
+const WORLD_UP: Vec = [0, 1, 0];
 
 export interface Pose {
   pos: Vec;
@@ -171,7 +200,14 @@ export function shipPose(t: number): Pose {
     const phi = orbitAngle(t);
     return { pos, fwd: [Math.cos(phi), 0, -Math.sin(phi)], up: [Math.sin(phi), 0, Math.cos(phi)] };
   }
-  if (t > T.OUTBOUND_END) return { pos, fwd: [0, 0, 1], up: [-1, 0, 0] };
+  if (t > T.OUTBOUND_END) {
+    if (t < T.TEI_END) return { pos, fwd: [0, 0, 1], up: [-1, 0, 0] };
+    const ahead = homePosition(t + 0.05);
+    const along = sub(ahead, homePosition(t - 0.05));
+    // Once the capsule hangs under its parachutes it no longer travels: keep the last heading.
+    const still = Math.hypot(along[0], along[1], along[2]) < 1e-6;
+    return { pos, fwd: still ? [0, 0, 1] : norm(along), up: WORLD_UP };
+  }
   // Before the orbit: along the direction of travel, except during the flip.
   const e = 0.05;
   const ahead = shipPosition(Math.min(t + e, T.ORBIT_IN - 1e-6));
@@ -199,7 +235,7 @@ export function shipAt(pose: Pose, a: number, b: number, c: number): Vec {
 export function thrust(t: number) {
   if (t < T.TLI_END) return smooth(t / 1.2) * (1 - smooth((t - (T.TLI_END - 0.8)) / 0.8));
   if (t >= T.BURN_IN && t < T.BURN_IN_END) return smooth((t - T.BURN_IN) / 0.5) * (1 - smooth((t - (T.BURN_IN_END - 0.5)) / 0.5));
-  if (t >= T.OUTBOUND_END && t < T.TEI_END) return smooth((t - T.OUTBOUND_END) / 0.6) * (1 - smooth((t - (T.TEI_END - 1.2)) / 1.2));
+  if (t >= T.OUTBOUND_END && t < T.TEI_END) return smooth((t - T.OUTBOUND_END) / 1.2) * (1 - smooth((t - (T.TEI_END - 3)) / 3));
   return 0;
 }
 
@@ -210,8 +246,10 @@ export function petals(t: number) {
 
 /** Reentry path past the top of the Earth, and how hot the capsule glows. */
 export function reentryPosition(t: number): Vec {
-  const k = t - T.REENTRY;
-  return [0, 62 - 1.9 * k - 0.0 * k * k, 70 - 12 * k];
+  const u = clamp01((t - T.REENTRY) / ENTRY_SPAN);
+  // Height above the Earth follows the real altitude (0.18 world units a kilometre); it crosses the sky from -Z to +Z.
+  const { altKm } = entryState(Math.max(t, T.REENTRY));
+  return [0, R_EARTH + altKm * 0.18, lerp(-60, 60, u)];
 }
 /**
  * How hot the capsule glows, 0 to 1. Heating comes from compressing the air in front of the heat
@@ -248,7 +286,7 @@ export function skyAir(altKm: number): number {
  * The hard cuts of the flight home, each softened by dipping through black: the jump of two and a half
  * days to the top of the air, and the cut from space to the sea under the parachutes.
  */
-export const HOME_CUTS = [T.REENTRY, T.CHUTES];
+export const HOME_CUTS = [T.CHUTES];
 const DIP_IN = 0.8;
 const DIP_OUT = 1.0;
 
@@ -264,7 +302,7 @@ export function cutDip(t: number, cuts: number[] = HOME_CUTS): number {
 
 /** Parachute descent at the splashdown set. */
 export function capsuleAltitude(t: number) {
-  const k = clamp01((t - T.CHUTES) / (T.FILM_END - T.CHUTES - 3));
+  const k = clamp01((t - T.CHUTES) / (T.TOUCHDOWN - T.CHUTES));
   return lerp(34, 0.4, k * k * (3 - 2 * k) * 0.6 + k * 0.4);
 }
 
@@ -284,7 +322,6 @@ export interface Shot {
   shake: number;
 }
 
-const WORLD_UP: Vec = [0, 1, 0];
 
 export const SHOT_STARTS: [number, string][] = [
   [0, "tli-wide"],
@@ -302,16 +339,25 @@ export const SHOT_STARTS: [number, string][] = [
   [T.CABIN, "cabin-window"],
   [126, "cabin-crew"],
   [T.OUTBOUND_END, "tei"],
+  [T.OUTBOUND_END + 9, "tei-cabin"],
+  [T.TEI_END, "coast-fly"],
+  [T.SM_SEP, "sm-sep"],
   [T.REENTRY, "reentry"],
+  [entryAt(0.135), "entry-cabin"],
+  [entryAt(0.35), "entry-orbit"],
+  [entryAt(0.53), "reentry-low"],
+  [entryAt(0.73), "entry-cabin"],
+  [entryAt(0.92), "reentry"],
   [T.CHUTES, "chutes"],
-  [165, "splash"],
+  [T.CHUTES + 22, "heli"],
+  [T.CHUTES + 38, "splash"],
 ];
 
 /** Which set the camera is in: out in space, inside the cabin looking out, or at the sea. */
 export function viewKind(t: number): ViewKind {
   const id = shotIdAt(t);
-  if (id === "earthrise" || id === "cabin-window" || id === "cabin-crew") return "cabin";
-  if (id === "chutes" || id === "splash") return "sea";
+  if (id === "earthrise" || id === "cabin-window" || id === "cabin-crew" || id === "tei-cabin" || id === "entry-cabin") return "cabin";
+  if (id === "chutes" || id === "heli" || id === "splash") return "sea";
   return "space";
 }
 
@@ -334,6 +380,11 @@ function earthriseLook(t: number, pose: Pose) {
 
 /** The cabin looking out the window; looks along `look` with `up` overhead. */
 export function cabinLook(t: number, pose: Pose) {
+  if (t > T.OUTBOUND_END) {
+    // Burning for home: looking back over the stern at the Moon falling away. In the entry: forward and down, at the glow and the Earth.
+    if (t < T.REENTRY) return norm(add(mul(pose.fwd, -0.8), mul(pose.up, 0.25)));
+    return norm(add(mul(pose.fwd, 0.55), mul(pose.up, -0.5)));
+  }
   if (t < T.CABIN) return earthriseLook(t, pose);
   // Christmas Eve: the surface slides by below, tilting slowly back toward the horizon.
   return norm(add(mul(pose.fwd, 0.85), mul(pose.up, -0.4)));
@@ -415,18 +466,51 @@ export function frameAt(t: number): Shot {
       const q = t - T.OUTBOUND_END;
       return { ...base, kind: "space", pos: shipAt(pose, 3.6 + q * 0.25, 0.8, -0.2 - q * 0.15), aim: shipAt(pose, 0, 0, -0.5), fov: 38, shake: 0.01 };
     }
+    case "tei-cabin":
+    case "entry-cabin": {
+      return { ...base, kind: "cabin", pos: pose.pos, aim: add(pose.pos, cabinLook(t, pose)), up: pose.up, fov: id === "tei-cabin" ? 42 : 46 };
+    }
+    case "coast-fly": {
+      // A fly cam around the ship as it glides home: the Moon behind, the Earth growing ahead.
+      const q = t - T.TEI_END;
+      const ang = 0.4 + q * 0.05;
+      const r = 6 + q * 0.12;
+      return { ...base, kind: "space", pos: add(pose.pos, [Math.sin(ang) * r, 1.4 + Math.cos(ang) * 1.6, -Math.cos(ang) * r * 0.8]), aim: add(pose.pos, mul(pose.fwd, 2.5)), fov: 36 };
+    }
+    case "sm-sep": {
+      // Beside the command module as the service module falls away behind it.
+      const behind = mul(pose.fwd, -2.5);
+      return { ...base, kind: "space", pos: add(pose.pos, add([-12, 2.6, 0], mul(pose.fwd, -2))), aim: add(pose.pos, mul(pose.fwd, -2.2)), fov: 34, shake: 0.005 };
+    }
     case "reentry": {
       const p = reentryPosition(t);
-      return { ...base, kind: "space", pos: add(p, [-15, 2.2, 7]), aim: add(p, [0, 0, 3]), fov: 34, shake: 0.02 };
+      return { ...base, kind: "space", pos: add(p, [-15, 2.2, -7]), aim: add(p, [0, 0, -3]), fov: 34, shake: 0.02 };
+    }
+    case "entry-orbit": {
+      // A fly cam circling the capsule from above: the glow, and the Earth's curve and clouds below it.
+      const p = reentryPosition(t);
+      const ang = -2.2 + (t - entryAt(0.35)) * 0.11;
+      return { ...base, kind: "space", pos: add(p, [Math.cos(ang) * 11, 3.5 + Math.sin(t * 0.3) * 0.6, Math.sin(ang) * 11]), aim: p, fov: 34, shake: 0.012 };
+    }
+    case "reentry-low": {
+      // Low and ahead, looking back up at the heat shield taking the fire.
+      const p = reentryPosition(t);
+      return { ...base, kind: "space", pos: add(p, [-9, -3.6, 8]), aim: add(p, [0, 0.4, -0.5]), fov: 36, shake: 0.016 };
     }
     case "chutes": {
       const alt = capsuleAltitude(t);
       return { ...base, kind: "sea", pos: add(SEA, [10, 2.5, 18]), aim: add(SEA, [0, alt + 12, 0]), fov: 52 };
     }
+    case "heli": {
+      // The recovery helicopter's view: high over the water, drifting round to the capsule under its chutes.
+      const alt = capsuleAltitude(t);
+      const q = t - (T.CHUTES + 22);
+      return { ...base, kind: "sea", pos: add(SEA, [-70 + q * 1.4, 36 - q * 0.6, 90 - q * 1.8]), aim: add(SEA, [0, Math.max(alt, 2) * 0.8 + 1, 0]), fov: 40, shake: 0.03 };
+    }
     default: {
       // "splash": wide over the water as the capsule settles.
       const alt = capsuleAltitude(t);
-      return { ...base, kind: "sea", pos: add(SEA, [-22 + (t - 165) * 0.5, 4.2, 30]), aim: add(SEA, [0, Math.max(alt, 3) * 0.7 + 1.2, 0]), fov: 38 };
+      return { ...base, kind: "sea", pos: add(SEA, [-22 + (t - (T.CHUTES + 38)) * 0.3, 4.2, 30]), aim: add(SEA, [0, Math.max(alt, 3) * 0.7 + 1.2, 0]), fov: 38 };
     }
   }
 }
@@ -491,10 +575,10 @@ export const SIGNAL_LOST: [number, number] = [T.LOS, T.AOS];
  */
 const RETURN_MET_KEYS: [number, number][] = [
   [T.OUTBOUND_END, hms(135, 23, 42)], // TEI ignition
-  [T.OUTBOUND_END + 9, hms(135, 26, 14)], // cutoff, 151 s later
-  [T.REENTRY, hms(195, 3, 25)], // two and a half days in one second, then the air
+  [T.TEI_END - 1, hms(135, 26, 14)], // cutoff, 151 s later
+  [T.REENTRY, hms(195, 3, 25)], // two and a half days in the film's long glide, then the air
   [T.CHUTES, hms(195, 12, 4)], // drogue parachutes
-  [T.CHUTES + 0.75, hms(195, 12, 52)], // main parachutes
+  [T.CHUTES + MAIN_DELAY, hms(195, 12, 52)], // main parachutes
   [T.TOUCHDOWN, hms(195, 18, 35)], // splashdown
   [T.FILM_END, hms(195, 20, 30)],
 ];
@@ -512,7 +596,7 @@ export function returnMissionElapsed(t: number) {
 }
 
 /** The burn that takes the ship out of lunar orbit happens behind the Moon: no radio until it comes round. */
-export const TEI_LOS: [number, number] = [T.OUTBOUND_END, T.OUTBOUND_END + 9.3];
+export const TEI_LOS: [number, number] = [T.OUTBOUND_END, T.TEI_END + 2];
 /** The plasma around the capsule blocks radio: 195:03:25 to 195:06:56, about three and a half minutes. */
 export const ENTRY_BLACKOUT: [number, number] = [
   T.REENTRY,
@@ -537,15 +621,15 @@ export interface EntryState {
  */
 const ENTRY_KEYS: [number, EntryState][] = [
   [T.REENTRY, { altKm: 121.9, speedKms: 11.03, g: 0 }],
-  [T.REENTRY + 0.8, { altKm: 95, speedKms: 10.9, g: 1.4 }],
-  [T.REENTRY + 1.5, { altKm: 75, speedKms: 9.7, g: 6.5 }],
-  [T.REENTRY + 2.5, { altKm: 64, speedKms: 8.6, g: 3 }],
-  [T.REENTRY + 4, { altKm: 58, speedKms: 7.4, g: 1.4 }],
-  [T.REENTRY + 5.5, { altKm: 42, speedKms: 5, g: 4.8 }],
-  [T.REENTRY + 6.5, { altKm: 28, speedKms: 3.8, g: 6 }],
-  [T.REENTRY + 7.4, { altKm: 14, speedKms: 1.6, g: 3 }],
+  [entryAt(0.1), { altKm: 95, speedKms: 10.9, g: 1.4 }],
+  [entryAt(0.1875), { altKm: 75, speedKms: 9.7, g: 6.5 }],
+  [entryAt(0.3125), { altKm: 64, speedKms: 8.6, g: 3 }],
+  [entryAt(0.5), { altKm: 58, speedKms: 7.4, g: 1.4 }],
+  [entryAt(0.6875), { altKm: 42, speedKms: 5, g: 4.8 }],
+  [entryAt(0.8125), { altKm: 28, speedKms: 3.8, g: 6 }],
+  [entryAt(0.925), { altKm: 14, speedKms: 1.6, g: 3 }],
   [T.CHUTES, { altKm: 7.3, speedKms: 0.35, g: 1 }],
-  [T.CHUTES + 0.75, { altKm: 3, speedKms: 0.12, g: 1 }],
+  [T.CHUTES + MAIN_DELAY, { altKm: 3, speedKms: 0.12, g: 1 }],
   [T.TOUCHDOWN, { altKm: 0, speedKms: 0.009, g: 1 }],
 ];
 
@@ -568,11 +652,11 @@ export type ReturnLogId = "tei" | "teiEnd" | "entry" | "peak" | "signal" | "drog
 /** `approx`: the moment is an estimate from the entry profile, not a logged time (shown with a ≈). */
 export const RETURN_LOG: { id: ReturnLogId; t: number; get: string; approx?: boolean }[] = [
   { id: "tei", t: T.OUTBOUND_END, get: "135:23:42" },
-  { id: "teiEnd", t: T.OUTBOUND_END + 9, get: "135:26:14" },
+  { id: "teiEnd", t: T.TEI_END - 1, get: "135:26:14" },
   { id: "entry", t: T.REENTRY, get: "195:03:25" },
-  { id: "peak", t: T.REENTRY + 1.5, get: "195:05:02", approx: true },
+  { id: "peak", t: entryAt(0.1875), get: "195:05:02", approx: true },
   { id: "signal", t: ENTRY_BLACKOUT[1], get: "195:06:56" },
   { id: "drogue", t: T.CHUTES, get: "195:12:04" },
-  { id: "main", t: T.CHUTES + 0.75, get: "195:12:52" },
+  { id: "main", t: T.CHUTES + MAIN_DELAY, get: "195:12:52" },
   { id: "splash", t: T.TOUCHDOWN, get: "195:18:35" },
 ];

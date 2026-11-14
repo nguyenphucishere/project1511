@@ -6,12 +6,13 @@ import { SignOffDialog } from "@/components/hud/SignOffDialog";
 import { useVoiceLine } from "@/hooks/useVoiceLine";
 import { WorldCanvas } from "@/components/viewport/WorldCanvas";
 import { useSceneViewpoints } from "@/game/sceneStore";
+import { startCauseBed, type CauseBed } from "@/game/causeAudio";
 import { playSfx, startRumble, startScore, type Rumble, type Score } from "@/game/sfx";
 import { useLocalized, useT } from "@/i18n/useT";
 import { cn } from "@/lib/utils";
 import { filmClock } from "./clock";
-import { ATMOSPHERE, ENTRY_BLACKOUT, FILM_END, cutDip, OUTBOUND_END, RETURN_LOG, SIGNAL_LOST, T, TEI_LOS, atmosphereLayer, entryState, formatMet, skyAir, missionElapsed, thrust } from "./flight";
-import { CUES, PHASES, READING, captionAt, moodAt } from "./story";
+import { ATMOSPHERE, ENTRY_BLACKOUT, FILM_END, MAIN_DELAY, frameAt, homePosition, plasma, viewKind, cutDip, OUTBOUND_END, RETURN_LOG, SIGNAL_LOST, T, TEI_LOS, atmosphereLayer, entryState, formatMet, skyAir, missionElapsed, thrust } from "./flight";
+import { CUES, HOUSTON, PHASES, READING, captionAt, moodAt } from "./story";
 import { TranslunarWorld } from "./TranslunarWorld";
 
 /** The camera is a scripted rig; the store just needs a viewpoint to exist. */
@@ -48,6 +49,9 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
   const [done, setDone] = useState(false);
   const score = useRef<Score | null>(null);
   const rumble = useRef<Rumble | null>(null);
+  // Beds that belong to the entry: the dead radio of the blackout, and the wind once the air is thick.
+  const staticBed = useRef<CauseBed | null>(null);
+  const windBed = useRef<CauseBed | null>(null);
   const fired = useRef(new Set<number>());
   const mood = useRef<string>("");
 
@@ -66,6 +70,8 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
     () => () => {
       score.current?.stop();
       rumble.current?.stop();
+      staticBed.current?.stop(0.3);
+      windBed.current?.stop(0.3);
     },
     [],
   );
@@ -76,7 +82,22 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
     const id = window.setInterval(() => {
       const f = filmClock.t;
       setNow(f);
-      rumble.current?.setLevel(thrust(f) * 0.8);
+      // The roar is the engine at the burn and the air itself in the entry: it follows the fire.
+      rumble.current?.setLevel(Math.max(thrust(f) * 0.8, f >= T.REENTRY && f < T.CHUTES ? plasma(f) * 0.9 : 0));
+      const dead = f >= ENTRY_BLACKOUT[0] && f < ENTRY_BLACKOUT[1];
+      if (dead && !staticBed.current) staticBed.current = startCauseBed("static");
+      if (!dead && staticBed.current) {
+        staticBed.current.stop(1.2);
+        staticBed.current = null;
+      }
+      staticBed.current?.setLevel(0.35);
+      const windy = f >= T.REENTRY && f < T.CHUTES + MAIN_DELAY + 10 && entryState(f).altKm < 14;
+      if (windy && !windBed.current) windBed.current = startCauseBed("wind");
+      if (!windy && windBed.current) {
+        windBed.current.stop(2.5);
+        windBed.current = null;
+      }
+      windBed.current?.setLevel(Math.min(0.45, (14 - entryState(f).altKm) / 14));
       const m = moodAt(f);
       if (m !== mood.current) {
         mood.current = m;
@@ -103,7 +124,7 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
 
   if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
     // Dev-only: window.__tl.seek(t) jumps the film (use with a frozen performance.now).
-    (window as unknown as { __tl?: unknown }).__tl = { seek, t: () => filmClock.t };
+    (window as unknown as { __tl?: unknown }).__tl = { seek, t: () => filmClock.t, frame: (t: number) => frameAt(t), home: (t: number) => homePosition(t) };
   }
 
   const phase = captionAt(PHASES, now);
@@ -118,7 +139,7 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
   const lost = farSide || plasmaBlackout;
   // After the burn the only signal loss left is the plasma one, so the fade-out keeps its own words.
   const inEntry = part === "return" && now >= T.REENTRY;
-  const skipping = part === "return" && now >= T.OUTBOUND_END + 9 && now < T.REENTRY + 0.4;
+  const skipping = part === "return" && now >= T.TEI_END + 1 && now < T.TEI_END + 9;
   const entry = part === "return" && now >= T.REENTRY ? entryState(now) : null;
   const passed = part === "return" ? RETURN_LOG.filter((e) => now >= e.t).slice(-3) : [];
   const started = startAt !== null;
@@ -128,6 +149,54 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
       <WorldCanvas label={part === "outbound" ? s.sceneLabel : s.returnSceneLabel}>
         <TranslunarWorld startAt={startAt} from={from} to={to} onReady={begin} />
       </WorldCanvas>
+
+      {/* Inside the capsule in the entry the fire is light at the window: orange, brightest to one side, and flickering */}
+      {part === "return" && viewKind(now) === "cabin" && now >= T.REENTRY && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-[8]"
+          style={{
+            opacity: Math.min(1, plasma(now) * 1.3) * (0.78 + 0.22 * Math.sin(now * 41) * Math.sin(now * 13 + 1)),
+            background: "radial-gradient(ellipse 70% 60% at 72% 42%, rgba(255,170,80,0.85), rgba(255,110,40,0.4) 45%, rgba(120,40,10,0.35) 80%)",
+            mixBlendMode: "screen",
+          }}
+        />
+      )}
+
+      {/* Houston, while the capsule is cut off in the plasma and as the signal returns */}
+      {part === "return" && now >= ENTRY_BLACKOUT[0] && now < ENTRY_BLACKOUT[1] + 10 && (() => {
+        const dead = now < ENTRY_BLACKOUT[1];
+        const left = Math.max(0, missionElapsed(ENTRY_BLACKOUT[1]) - missionElapsed(now));
+        const mm = String(Math.floor(left / 60)).padStart(2, "0");
+        const ss = String(Math.floor(left % 60)).padStart(2, "0");
+        const sinceBack = now - ENTRY_BLACKOUT[1];
+        return (
+          <div aria-live="polite" className="pointer-events-none absolute bottom-[calc(8vh+4.2rem)] right-4 z-10 w-[min(17rem,calc(100%-2rem))] border border-white/25 bg-black/65 p-2.5 font-mono text-[11px] text-white/85 backdrop-blur-sm sm:right-10">
+            <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.18em]">
+              <span className="text-space-cyan">{localize(HOUSTON.title)}</span>
+              <span className={dead ? "animate-pulse text-red-400" : "text-emerald-300"}>{localize(dead ? HOUSTON.noSignal : HOUSTON.signal)}</span>
+            </div>
+            <div className="mt-2 flex gap-1" aria-hidden>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <span key={i} className={cn("h-1.5 flex-1 rounded-sm", dead ? "bg-white/15" : "bg-emerald-300/70")} style={dead ? undefined : { opacity: 0.4 + 0.6 * Math.abs(Math.sin(now * 3 + i)) }} />
+              ))}
+            </div>
+            <div className="mt-2 text-white/75">
+              {dead ? (
+                <>
+                  <div>{localize(HOUSTON.hold)}</div>
+                  <div className="mt-1 text-white">{localize(HOUSTON.waiting)} {mm}:{ss}</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-white">{localize(HOUSTON.call)}</div>
+                  {sinceBack > 4 && <div className="mt-1 text-amber-100">{localize(HOUSTON.reply)}</div>}
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* The cuts of the flight home dip through black instead of jumping */}
       {part === "return" && (
@@ -163,7 +232,7 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
       </div>
 
       {/* The air thickens as the capsule falls: a blue glow along the bottom edge, and the layers it passes through */}
-      {entry && now < T.CHUTES + 0.75 && (
+      {entry && now < T.CHUTES + MAIN_DELAY && (
         <>
           <div
             aria-hidden

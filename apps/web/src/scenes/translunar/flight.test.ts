@@ -10,6 +10,7 @@ import {
   SHOT_STARTS,
   T,
   TEI_LOS,
+  entryAt,
   entryState,
   formatMet,
   frameAt,
@@ -146,7 +147,7 @@ describe("the way home on the Apollo 11 clock", () => {
     let secondSpeed = 0;
     for (let t = T.REENTRY; t <= T.CHUTES; t += 0.05) {
       const e = entryState(t);
-      if (t < T.REENTRY + 3) first = Math.max(first, e.g);
+      if (t < entryAt(0.4)) first = Math.max(first, e.g);
       else if (e.g > second) {
         second = e.g;
         secondSpeed = e.speedKms;
