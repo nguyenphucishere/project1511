@@ -25,6 +25,7 @@ async function main() {
   const { CONSEQUENCES, getConsequence, getCallbackLines } = await load("game/consequences.ts");
   const { ENDINGS_CATALOG } = await load("game/endings.ts");
   const { CHARACTERS } = await load("game/characters.ts");
+  const { INTERLUDES } = await load("game/interludes.ts");
   const { SAY, PA_LINES, TOOL_NAME, STATION_NAME } = await load("scenes/workshop/content.ts");
   const { BOLT_LABEL, STAR_ORDER, FUEL_LINES } = await load("scenes/workshop/handworkRules.ts");
   const { ROCKET_PARTS } = await load("mocks/rocket-parts.ts");
@@ -65,6 +66,11 @@ async function main() {
   // 1. Chapter briefings: each line is said by its speaker.
   for (const [id, b] of Object.entries(BRIEFINGS) as [string, any][]) {
     b.lines.forEach((l: any) => add(roleOf(l.speaker), l.text, `briefing:${id}`));
+  }
+
+  // The spoken interlude before a chapter's briefing.
+  for (const [id, it] of Object.entries(INTERLUDES) as [string, any][]) {
+    it.lines.forEach((l: L) => add(roleOf(it.speaker), l, `interlude:${id}`));
   }
 
   // 2. Decisions: the person asking the question, the second opinion, and what happens after.

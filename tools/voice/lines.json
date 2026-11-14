@@ -98,6 +98,30 @@
       "src": "briefing:return"
     },
     {
+      "role": "armstrong",
+      "en": "To reach the Moon, we failed six times in a row. Six Ranger probes, and not one sent back a picture.",
+      "vi": "Để bay tới Mặt Trăng, chúng tôi đã thất bại sáu lần liên tiếp. Sáu tàu thăm dò Ranger, không chiếc nào gửi về được một bức ảnh.",
+      "src": "interlude:mission-control"
+    },
+    {
+      "role": "armstrong",
+      "en": "Then a fire on the pad took three of my friends.",
+      "vi": "Rồi một đám cháy trên bệ phóng đã lấy đi ba người bạn của tôi.",
+      "src": "interlude:mission-control"
+    },
+    {
+      "role": "armstrong",
+      "en": "Every time we fell, we got up and did it better.",
+      "vi": "Mỗi lần ngã xuống, chúng tôi lại đứng dậy và làm tốt hơn.",
+      "src": "interlude:mission-control"
+    },
+    {
+      "role": "armstrong",
+      "en": "And you? How long will it take you to reach the Moon?",
+      "vi": "Còn bạn? Bạn sẽ mất bao lâu để lên được Mặt Trăng?",
+      "src": "interlude:mission-control"
+    },
+    {
       "role": "rudolph",
       "en": "The LOX fill valve shows a slight pressure drop. Check it properly, or sign off and roll out?",
       "vi": "Van nạp oxy lỏng hơi tụt áp. Kiểm tra kỹ hay duyệt nhanh để lăn bánh?",
