@@ -1,43 +1,90 @@
+import { simulateAscent, type AscentProfile, type AscentSample } from "@/lib/simulation/trajectory.physics";
+
 /**
  * The crewed ascent as data: what the flight looks and feels like at each mission elapsed time
- * (MET, seconds). Pure functions, no React or three.js, so the 3D scene, the HUD and the tests all
- * read one source of truth. Numbers follow a typical heavy-lift launch to a low parking orbit.
+ * (MET, seconds). Altitude, speed, felt g-load, dynamic pressure and the event times are the
+ * engine's Saturn V AS-506 profile (sim-core `simulate_ascent`: stage-by-stage thrust, Isp and
+ * mass from the telemetry catalogue, a = (F_vac − P_amb·A_e − D)/m − g, q = ½ρv²). The scene
+ * installs the engine's own result on load; until then the identical TypeScript port is used.
+ * Pure functions, no React or three.js, so the 3D scene, the HUD and the tests share one source.
  */
 
-/** Mission seconds that pass per real second while riding up (a 9-minute climb plays in 90 s). */
+/** Mission seconds that pass per real second while riding up (a 12-minute climb plays in 2 min). */
 export const COMPRESS = 6;
-/** MET of main engine cutoff: the moment the ride ends and weightlessness begins. */
-export const INSERTION_MET = 540;
-/** Orbit altitude the table below was authored for; other altitudes scale it. */
-const BASE_ORBIT_KM = 188;
+/** The parking orbit used when a caller does not say. */
+const DEFAULT_ORBIT_KM = 185;
+
+const profiles = new Map<number, AscentProfile>();
+
+/** The engine's ascent profile to `orbitKm` (cached; the port computes it until the engine's arrives). */
+export function ascentProfile(orbitKm = DEFAULT_ORBIT_KM): AscentProfile {
+  let p = profiles.get(orbitKm);
+  if (!p) {
+    p = simulateAscent({ parking_orbit_km: orbitKm });
+    profiles.set(orbitKm, p);
+  }
+  return p;
+}
+
+/** Replaces the cached profile with the engine's answer (WASM worker or server). */
+export function installAscentProfile(orbitKm: number, profile: AscentProfile): void {
+  if (profile?.reached_orbit && Array.isArray(profile.samples) && profile.samples.length > 1) profiles.set(orbitKm, profile);
+}
+
+/** MET of parking-orbit insertion (S-IVB first cutoff): the ride ends and weightlessness begins. */
+export function insertionMet(orbitKm = DEFAULT_ORBIT_KM): number {
+  return ascentProfile(orbitKm).events.insertion_s ?? ascentProfile(orbitKm).samples.at(-1)!.met_s;
+}
+export const INSERTION_MET = insertionMet();
+
+/** Linear interpolation between the per-second samples; clamps to the first / last sample. */
+function at(orbitKm: number, met: number, pick: (s: AscentSample) => number): number {
+  const s = ascentProfile(orbitKm).samples;
+  if (met <= s[0]!.met_s) return pick(s[0]!);
+  const last = s[s.length - 1]!;
+  if (met >= last.met_s) return pick(last);
+  const i = Math.min(s.length - 2, Math.floor(met - s[0]!.met_s));
+  let a = s[i]!;
+  let b = s[i + 1]!;
+  if (met < a.met_s || met > b.met_s) {
+    const k = s.findIndex((x, n) => n < s.length - 1 && met >= x.met_s && met <= s[n + 1]!.met_s);
+    a = s[k]!;
+    b = s[k + 1]!;
+  }
+  const f = b.met_s > a.met_s ? (met - a.met_s) / (b.met_s - a.met_s) : 0;
+  return pick(a) + (pick(b) - pick(a)) * f;
+}
+
+/** Altitude in km above the pad, for the player's chosen parking orbit. */
+export function altitudeKm(met: number, orbitKm = DEFAULT_ORBIT_KM): number {
+  return Math.max(0, at(orbitKm, met, (x) => x.altitude_km));
+}
+/** Speed relative to the ground (Earth-fixed), km/s. */
+export const speedKms = (met: number, orbitKm = DEFAULT_ORBIT_KM) =>
+  met <= 0 ? 0 : at(orbitKm, met, (x) => x.relative_velocity_mps) / 1000;
+/** Inertial speed (what the guidance computer shows), km/s. */
+export const inertialSpeedKms = (met: number, orbitKm = DEFAULT_ORBIT_KM) => at(orbitKm, met, (x) => x.inertial_velocity_mps) / 1000;
+/** Felt (non-gravitational) acceleration in g: thrust minus drag over mass. Zero once in orbit. */
+export const gForce = (met: number, orbitKm = DEFAULT_ORBIT_KM) =>
+  met > insertionMet(orbitKm) ? 0 : at(orbitKm, met, (x) => x.sensed_accel_g);
+/** Dynamic pressure, kPa. */
+export const dynamicPressureKpa = (met: number, orbitKm = DEFAULT_ORBIT_KM) => at(orbitKm, met, (x) => x.dynamic_pressure_kpa);
+
+const engineBurning = (met: number, orbitKm: number) => at(orbitKm, met, (x) => (x.stage === 0 ? 0 : 1)) > 0.5;
+
+/**
+ * How hard the cabin shakes, 0..1: the liftoff rumble, then aerodynamic buffet that follows
+ * dynamic pressure; a quiet coast between stages; still in orbit.
+ */
+export function vibration(met: number, orbitKm = DEFAULT_ORBIT_KM): number {
+  if (met > insertionMet(orbitKm)) return 0;
+  if (!engineBurning(met, orbitKm)) return 0.05;
+  const qMax = ascentProfile(orbitKm).events.max_q_kpa;
+  const liftoff = met < 10 ? 0.7 * (1 - met / 10) : 0;
+  return Math.min(1, 0.18 + 0.8 * (dynamicPressureKpa(met, orbitKm) / qMax) + liftoff);
+}
 
 type Row = readonly [met: number, value: number];
-
-const ALTITUDE_KM: Row[] = [
-  [0, 0], [10, 0.25], [20, 1.2], [40, 5], [60, 10.5], [80, 17], [100, 26], [120, 37], [140, 50],
-  [170, 68], [200, 86], [240, 106], [300, 130], [380, 158], [460, 178], [520, 187], [540, BASE_ORBIT_KM],
-];
-
-const SPEED_KMS: Row[] = [
-  [0, 0], [10, 0.05], [30, 0.25], [60, 0.5], [80, 0.65], [130, 1.5], [200, 3], [300, 4.8], [400, 6.3],
-  [480, 7.4], [540, 7.8],
-];
-
-/** Felt acceleration in g. Drops to nearly nothing at stage separation, peaks just before cutoff. */
-const G_FORCE: Row[] = [
-  [0, 1], [5, 1.25], [40, 1.8], [75, 2.3], [125, 3.4], [129, 3.4], [131, 0.2], [138, 1.2], [200, 1.7],
-  [300, 2.4], [400, 3], [520, 3.7], [538, 3.9], [541, 0],
-];
-
-/** How hard the cabin shakes, 0..1. Peaks at liftoff and max dynamic pressure, then eases. */
-const VIBRATION: Row[] = [
-  [0, 0.25], [1.5, 0.95], [10, 0.55], [40, 0.7], [70, 0.9], [80, 1], [95, 0.5], [125, 0.45],
-  [129, 0.4], [131, 0.05], [133, 0.85], [142, 0.3], [200, 0.2], [400, 0.18], [520, 0.2], [538, 0.1], [541, 0],
-];
-
-/** Pitch-over of the view: how far the Earth swings into the window (radians). */
-const TILT: Row[] = [[0, 0.3], [12, 0.3], [60, 0.3], [130, 0.28], [300, 0.3], [540, 0.36]];
-
 function sample(table: Row[], met: number): number {
   if (met <= table[0][0]) return table[0][1];
   for (let i = 1; i < table.length; i++) {
@@ -50,13 +97,8 @@ function sample(table: Row[], met: number): number {
   return table[table.length - 1][1];
 }
 
-/** Altitude in km. `orbitKm` is the player's chosen parking orbit; the climb scales to reach it. */
-export function altitudeKm(met: number, orbitKm = BASE_ORBIT_KM): number {
-  return sample(ALTITUDE_KM, met) * (orbitKm / BASE_ORBIT_KM);
-}
-export const speedKms = (met: number) => sample(SPEED_KMS, met);
-export const gForce = (met: number) => sample(G_FORCE, met);
-export const vibration = (met: number) => sample(VIBRATION, met);
+/** Pitch-over of the view: how far the Earth swings into the window (radians). Camera framing only. */
+const TILT: Row[] = [[0, 0.3], [12, 0.3], [60, 0.3], [130, 0.28], [300, 0.3], [INSERTION_MET, 0.36]];
 export const tilt = (met: number) => sample(TILT, met);
 
 export type AscentEventId =
@@ -88,28 +130,40 @@ export interface AscentEvent {
   bang?: boolean;
 }
 
-export const EVENTS: AscentEvent[] = [
-  { id: "liftoff", met: 0, kick: 0.6 },
-  { id: "towerClear", met: 8 },
-  { id: "rollProgram", met: 20 },
-  { id: "mach1", met: 45, kick: 0.25 },
-  { id: "maxQ", met: 80, caution: true, kick: 0.3 },
-  { id: "throttleUp", met: 100 },
-  { id: "stageSep", met: 130, caution: true, kick: 0.9, bang: true },
-  { id: "stage2Ignition", met: 135, kick: 0.4 },
-  { id: "towerJettison", met: 150, kick: 0.35, bang: true },
-  { id: "space", met: 232 },
-  { id: "meco", met: INSERTION_MET, kick: 0.3 },
-];
+/** The S-IC pitch-and-roll program starts after the vertical rise (engine: 12 s). */
+const PITCH_PROGRAM_START_S = 12;
+
+/** Call-outs at the engine's event times for this parking orbit. */
+export function ascentEvents(orbitKm = DEFAULT_ORBIT_KM): AscentEvent[] {
+  const p = ascentProfile(orbitKm);
+  const e = p.events;
+  // "Through max Q": the first second after max Q at which the air load is back under half.
+  const past = p.samples.find((s) => s.met_s > e.max_q_s && s.dynamic_pressure_kpa < e.max_q_kpa / 2)?.met_s ?? e.max_q_s + 20;
+  const list: AscentEvent[] = [
+    { id: "liftoff", met: 0, kick: 0.6 },
+    { id: "towerClear", met: e.tower_clear_s ?? 10 },
+    { id: "rollProgram", met: PITCH_PROGRAM_START_S },
+    { id: "mach1", met: e.mach1_s ?? 70, kick: 0.25 },
+    { id: "maxQ", met: e.max_q_s, caution: true, kick: 0.3 },
+    { id: "throttleUp", met: past },
+    { id: "stageSep", met: e.s_ic_oeco_s ?? 161, caution: true, kick: 0.9, bang: true },
+    { id: "stage2Ignition", met: e.s_ii_ignition_s ?? 163, kick: 0.4 },
+    { id: "towerJettison", met: e.les_jettison_s ?? 198, kick: 0.35, bang: true },
+    { id: "space", met: e.space_100km_s ?? 186 },
+    { id: "meco", met: insertionMet(orbitKm), kick: 0.3 },
+  ];
+  return list.sort((a, b) => a.met - b.met);
+}
+export const EVENTS: AscentEvent[] = ascentEvents();
 
 /** Events whose time falls in (from, to]. Used to fire each one exactly once as the clock advances. */
-export function eventsBetween(from: number, to: number): AscentEvent[] {
-  return EVENTS.filter((e) => e.met > from && e.met <= to);
+export function eventsBetween(from: number, to: number, orbitKm = DEFAULT_ORBIT_KM): AscentEvent[] {
+  return ascentEvents(orbitKm).filter((e) => e.met > from && e.met <= to);
 }
 
-/** Air friction heating at the window, 0..1: builds toward max dynamic pressure, gone after staging. */
-const HEAT: Row[] = [[0, 0], [40, 0.12], [70, 0.7], [85, 1], [100, 0.6], [125, 0.5], [132, 0], [540, 0]];
-export const heating = (met: number) => sample(HEAT, met);
+/** Air friction heating at the window, 0..1: dynamic pressure as a fraction of max Q. */
+export const heating = (met: number, orbitKm = DEFAULT_ORBIT_KM) =>
+  Math.min(1, Math.max(0, dynamicPressureKpa(met, orbitKm) / ascentProfile(orbitKm).events.max_q_kpa));
 
 /** Mission seconds of warning before a failure, played at near real time so the dread has room. */
 export const TROUBLE_LEAD = 30;
@@ -121,7 +175,7 @@ export const FAIL_BOOM_AT = 6.8;
 export const FAIL_END_AT = 9.6;
 
 /** What went wrong, so the scene can say the right thing. */
-export type FailureCode = "slow-climb" | "fuel-depleted";
+export type FailureCode = "slow-climb" | "fuel-depleted" | "wind-shear" | "lightning" | "structural";
 export interface AscentFailure {
   /** Mission time (s) at which the engines quit. */
   met: number;

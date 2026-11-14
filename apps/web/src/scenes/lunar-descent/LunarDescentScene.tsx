@@ -18,7 +18,9 @@ import { useServerEngine } from "@/hooks/useServerEngine";
 import { DsnTrackingStatus } from "@/components/hud/DsnTrackingStatus";
 import { landingRadar } from "@/lib/simulation/nasa.physics";
 import type { DsnTelemetryResult, LandingRadarMeasurement } from "@/lib/simulation/nasa.types";
-import { DESCENT_STEPS, KEYFRAMES, sampleAt } from "@/mocks/descent";
+import { DESCENT_STEPS, KEYFRAMES, installDescentProfile, sampleAt } from "@/mocks/descent";
+import { DPS_CAPACITY_KG } from "./flight";
+import { LunarEnvironmentPanel } from "@/components/hud/LunarEnvironmentPanel";
 import {
   DescentCommand,
   DescentInstruments,
@@ -64,7 +66,8 @@ const DIALOG_DELAY_MS = 1600;
 const PANEL_TICK_MS = 80;
 /** Controls that are done once the lander is on the ground with the engine cut. */
 const ALL_STEPS = DESCENT_STEPS.length;
-const GATE_T = KEYFRAMES[2].t;
+/** Mission time of the low gate, where the player takes over (the engine profile's). */
+const gateT = () => KEYFRAMES[2]!.t;
 
 const EMPTY_TRACE: Trace = { xs: [], alt: [], vs: [] };
 
@@ -88,7 +91,7 @@ function makeSnap(v: FlightView, f: FlightState | null, live: boolean): PanelSna
   };
 }
 
-/** The scripted part: powered descent and pitch-over follow the demo profile. */
+/** The scripted part: powered descent and pitch-over follow the engine's descent profile. */
 function writeScriptedView(v: FlightView, clock: DescentClock, phase: Phase, siteId: SiteId, now: number): void {
   const t = missionTimeNow(clock, now);
   const s = sampleAt(t);
@@ -99,7 +102,7 @@ function writeScriptedView(v: FlightView, clock: DescentClock, phase: Phase, sit
   v.xM = 0;
   v.hsMs = 0;
   v.engineOn = burning;
-  v.throttle = burning ? 0.72 : 0;
+  v.throttle = burning ? s.throttle : 0;
   // Attitude jets pulse while the lander pitches over.
   v.rcs = phase === "playing" && clock.stepsDone === 2 && Math.sin(now * 0.008) > 0.45 ? 1 : 0;
   v.tilt = tiltAt(t);
@@ -113,7 +116,7 @@ function writeScriptedView(v: FlightView, clock: DescentClock, phase: Phase, sit
 
 /** The flown part: the 3D view mirrors the flight model. */
 function writeFlightView(v: FlightView, f: FlightState): void {
-  v.t = GATE_T + f.elapsed;
+  v.t = gateT() + f.elapsed;
   v.altM = f.altM;
   v.vsMs = f.vsMs;
   v.xM = f.xM;
@@ -151,7 +154,14 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
   const [trace, setTrace] = useState<Trace>(EMPTY_TRACE);
   const [result, setResult] = useState<Touchdown | null>(null);
   const [dialog, setDialog] = useState(false);
-  const { stepDescent, lastDescentState, calculateLandingRadar, calculateDsnTelemetry } = useSimulationWasm();
+  const { stepDescent, lastDescentState, calculateLandingRadar, calculateDsnTelemetry, simulateDescentProfile } =
+    useSimulationWasm();
+  // The descent profile: the simulation engine's, on the engine's own lunar gravity.
+  useEffect(() => {
+    simulateDescentProfile({})
+      .then((p) => installDescentProfile(p))
+      .catch(() => {});
+  }, [simulateDescentProfile]);
   const nasa = useNasaData();
   const serverEngine = useServerEngine({ apollo11: false });
   const [radar, setRadar] = useState<LandingRadarMeasurement>(() => landingRadar(radarInputAt(0)));
@@ -202,13 +212,13 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
       view.current.touchdownAt = now;
       view.current.crashed = !td.success;
       setResult(td);
-      // Report the touchdown to the simulation like the scripted stages do (≈178 kg of propellant per % of tank).
+      // Report the touchdown to the simulation engine.
       stepDescent({
         altitude_m: 0,
         vertical_velocity_mps: -td.vsMs,
         horizontal_velocity_mps: td.hsMs,
         throttle_pct: 0,
-        propellant_remaining_kg: Math.max(0, Math.round(td.fuelPct * 178)),
+        propellant_remaining_kg: Math.max(0, (td.fuelPct / 100) * DPS_CAPACITY_KG),
         agc_cpu_duty_pct: 72.0,
         is_bingo_fuel: td.fuelPct < 5,
         is_landed: td.success,
@@ -329,12 +339,14 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
       if (ph !== "hold" || clockRef.current.stepsDone !== index || index > 2) return;
       addTrauma(PRESS_TRAUMA[index]);
       playSfx("switch");
+      // The state the engine's profile is in at this switch (PDI, high gate, low gate).
+      const at = sampleAt(KEYFRAMES[index]!.t);
       stepDescent({
-        altitude_m: Math.max(0, 15240 - index * 3800),
-        vertical_velocity_mps: index === 0 ? 0 : -15 + index * 4,
-        horizontal_velocity_mps: Math.max(0.5, 1695 - index * 550),
-        throttle_pct: index === 0 ? 100.0 : index === 1 ? 55.0 : 27.0,
-        propellant_remaining_kg: Math.max(250, 8200 - index * 2500),
+        altitude_m: at.altM,
+        vertical_velocity_mps: at.vsMs,
+        horizontal_velocity_mps: at.hsMs,
+        throttle_pct: at.throttle * 100,
+        propellant_remaining_kg: (at.fuelPct / 100) * DPS_CAPACITY_KG,
         agc_cpu_duty_pct: index === 1 ? 85.0 : 72.0,
         is_bingo_fuel: false,
         is_landed: false,
@@ -605,6 +617,7 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
         <div className="bezel bezel-sm flex shrink-0 flex-col gap-2.5 bg-space-deep/85 px-3 py-2.5 backdrop-blur-sm">
           <LandingRadarProfile measurement={radar} />
           <DsnTrackingStatus status={nasa.dsn} link={serverEngine.dsnLink ?? dsnLink} compact className="border-t border-space-blue/60 pt-2" />
+          <LunarEnvironmentPanel data={nasa.lunarEnvironment} className="border-t border-space-blue/60 pt-2" />
         </div>
       </aside>
 

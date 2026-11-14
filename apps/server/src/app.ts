@@ -15,6 +15,8 @@ import {
 } from "./services/nasa/index.js";
 import { createNasaRouter } from "./routes/nasaRoutes.js";
 import { createEngineRouter } from "./routes/engineRoutes.js";
+import { createLaunchSiteRouter } from "./routes/launchRoutes.js";
+import { LaunchSiteService } from "./services/launchSiteService.js";
 import { EngineInputError, EngineUnavailableError } from "./services/simEngine.js";
 import type { RoomStore } from "./services/roomStore.js";
 import { parseRequestedRoles } from "./sync/roleLocks.js";
@@ -35,6 +37,7 @@ export interface ServerDeps {
   nasaDsn?: NasaDsnService;
   nasaSpaceWeather?: NasaSpaceWeatherService;
   nasaMdl?: NasaMdlService;
+  launchSites?: LaunchSiteService;
 }
 
 export interface AppServer {
@@ -47,6 +50,7 @@ export interface AppServer {
   nasaDsn: NasaDsnService;
   nasaSpaceWeather: NasaSpaceWeatherService;
   nasaMdl: NasaMdlService;
+  launchSites: LaunchSiteService;
   listen(port?: number): Promise<number>;
   shutdown(): Promise<void>;
 }
@@ -61,6 +65,7 @@ export function createAppServer(deps: ServerDeps): AppServer {
   const nasaDsn = deps.nasaDsn ?? new NasaDsnService();
   const nasaSpaceWeather = deps.nasaSpaceWeather ?? new NasaSpaceWeatherService();
   const nasaMdl = deps.nasaMdl ?? new NasaMdlService();
+  const launchSites = deps.launchSites ?? new LaunchSiteService();
   const rooms = new RoomManager(store, {
     snapshotDebounceMs: config.SNAPSHOT_DEBOUNCE_MS,
     idleTtlMs: config.ROOM_IDLE_TTL_MS,
@@ -127,6 +132,7 @@ export function createAppServer(deps: ServerDeps): AppServer {
   );
 
   app.use("/api/engine", createEngineRouter());
+  app.use("/api/launch", createLaunchSiteRouter(launchSites));
 
   // Malformed JSON bodies and similar: report as 400 rather than leaking a stack trace.
   app.use((error: Error & { status?: number }, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
@@ -200,6 +206,7 @@ export function createAppServer(deps: ServerDeps): AppServer {
     nasaDsn,
     nasaSpaceWeather,
     nasaMdl,
+    launchSites,
     listen: (port = config.PORT) =>
       new Promise((resolve, reject) => {
         server.once("error", reject);

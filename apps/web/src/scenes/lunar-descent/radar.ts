@@ -1,8 +1,5 @@
 import type { LandingRadarInput } from "@/lib/simulation/nasa.types";
-import { sampleAt, TOUCHDOWN } from "@/mocks/descent";
-
-/** Forward velocity at powered descent initiation (historical ≈ 1,695 m/s). */
-const PDI_FORWARD_MPS = 1_695;
+import { sampleAt } from "@/mocks/descent";
 
 /**
  * Terrain under the ground track, relative to the AGC's reference sphere (+ = higher). Mare
@@ -16,15 +13,14 @@ export function terrainOffsetAt(altM: number): number {
 }
 
 /**
- * Landing-radar input at mission time `t` (seconds since PDI), built from the scripted descent
+ * Landing-radar input at mission time `t` (seconds since PDI), from the engine's descent
  * profile. Early in the braking phase the LM flies nearly feet-first (pitched back past the
  * radar's 65° beam limit), so the radar only gets "data good" after the pitch-over.
  */
 export function radarInputAt(t: number): LandingRadarInput {
   const s = sampleAt(t);
-  const progress = Math.min(1, Math.max(0, t / TOUCHDOWN.t));
-  const forward = Math.max(0, PDI_FORWARD_MPS * (1 - progress) ** 1.6);
-  const pitch = s.altM > 12_000 ? 72 : s.altM > 2_300 ? 55 : 12;
+  const forward = Math.max(0, s.hsMs);
+  const pitch = s.pitchDeg;
   return {
     inertial_alt_m: s.altM,
     vertical_vel_mps: s.vsMs,

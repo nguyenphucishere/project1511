@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
 import { dsnTelemetry, landingRadar, missionDesignBudget } from "@/lib/simulation/nasa.physics";
+import { simulateAscent, simulatePoweredDescent } from "@/lib/simulation/trajectory.physics";
 
 export interface WorkerRequestMessage {
   id: string;
@@ -12,7 +13,9 @@ export interface WorkerRequestMessage {
     | "CALCULATE_SCORE"
     | "LANDING_RADAR"
     | "MISSION_DESIGN_BUDGET"
-    | "DSN_TELEMETRY";
+    | "DSN_TELEMETRY"
+    | "ASCENT_PROFILE"
+    | "DESCENT_PROFILE";
   payload?: unknown;
 }
 
@@ -34,6 +37,8 @@ interface SimWasmExports {
   calculate_landing_radar?: (jsonStr: string) => string;
   evaluate_mission_design_budget?: (jsonStr: string) => string;
   calculate_dsn_telemetry?: (jsonStr: string) => string;
+  simulate_ascent?: (jsonStr: string) => string;
+  simulate_powered_descent?: (jsonStr: string) => string;
 }
 
 /** Calls a WASM export, or the TypeScript mirror when the export is missing or rejects the input. */
@@ -260,6 +265,10 @@ export async function handleWorkerMessage(msg: WorkerRequestMessage): Promise<Wo
           type: "RESULT",
           result: callNasa(engine.calculate_dsn_telemetry, dsnTelemetry, msg.payload),
         };
+      case "ASCENT_PROFILE":
+        return { id: msg.id, type: "RESULT", result: callNasa(engine.simulate_ascent, simulateAscent, msg.payload) };
+      case "DESCENT_PROFILE":
+        return { id: msg.id, type: "RESULT", result: callNasa(engine.simulate_powered_descent, simulatePoweredDescent, msg.payload) };
       default:
         return { id: msg.id, type: "ERROR", error: `Unknown message type: ${String((msg as any).type)}` };
     }

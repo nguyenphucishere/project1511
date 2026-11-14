@@ -5,13 +5,18 @@ import { House } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useT } from "@/i18n/useT";
+import { useGameStore } from "@/game/gameStore";
 import { LocaleToggle } from "./LocaleToggle";
 import { PixelToggle } from "./PixelToggle";
 import { SoundToggle } from "./SoundToggle";
 
-/** In-game bar: back to the title screen, demo label, language. Progress is kept for Continue. */
+/** Scenes whose numbers come from the simulation engine (ascent, powered descent). */
+const CALCULATED_STEPS = new Set(["ascent-scene", "lunar-descent-scene"]);
+
+/** In-game bar: back to the title screen, data label, language. Progress is kept for Continue. */
 export function TopBar() {
   const t = useT();
+  const calculated = useGameStore((s) => (s.stepId ? CALCULATED_STEPS.has(s.stepId) : false));
   return (
     <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-3 px-3 py-3 sm:px-8 sm:py-4">
       <Button asChild variant="secondary" size="sm" className="pointer-events-auto bg-space-deep/80">
@@ -21,8 +26,8 @@ export function TopBar() {
         </Link>
       </Button>
       <div className="pointer-events-auto flex items-center gap-2">
-        <StatusBadge status="demo" className="whitespace-nowrap bg-space-deep/80">
-          {t.common.demoData}
+        <StatusBadge status={calculated ? "calculated" : "demo"} className="whitespace-nowrap bg-space-deep/80">
+          {calculated ? t.common.calculatedData : t.common.demoData}
         </StatusBadge>
         <SoundToggle />
         <PixelToggle />

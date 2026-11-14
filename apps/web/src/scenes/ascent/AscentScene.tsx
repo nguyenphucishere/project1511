@@ -6,8 +6,9 @@ import { ObjectivePanel } from "@/components/hud/ObjectivePanel";
 import { SignOffDialog } from "@/components/hud/SignOffDialog";
 import { WorldCanvas } from "@/components/viewport/WorldCanvas";
 import {
-  INSERTION_MET,
   altitudeKm,
+  installAscentProfile,
+  insertionMet,
   formatMet,
   gForce,
   speedKms,
@@ -17,6 +18,7 @@ import {
   type AscentFailure,
 } from "@/game/ascentFlight";
 import { useGameStore } from "@/game/gameStore";
+import { useSimulationWasm } from "@/hooks/useSimulationWasm";
 import { BRIEFINGS } from "@/game/script";
 import { useSettingsStore } from "@/game/settingsStore";
 import { addTrauma } from "@/game/shake";
@@ -100,6 +102,14 @@ export function AscentScene({ onComplete, failure, orbitKm: orbitOverride }: Asc
 
   const briefing = BRIEFINGS.ascent;
 
+  // The flight profile: the simulation engine's Saturn V ascent to this parking orbit.
+  const { simulateAscentProfile } = useSimulationWasm();
+  useEffect(() => {
+    simulateAscentProfile({ parking_orbit_km: orbitKm })
+      .then((p) => installAscentProfile(orbitKm, p))
+      .catch(() => {});
+  }, [orbitKm, simulateAscentProfile]);
+
   // Engine roar and the film score, from the moment the scene starts.
   useEffect(() => {
     rumble.current = startRumble();
@@ -121,12 +131,12 @@ export function AscentScene({ onComplete, failure, orbitKm: orbitOverride }: Asc
       setHud({
         met: f.met,
         alt: altitudeKm(f.met, orbitKm),
-        speed: speedKms(f.met),
-        g: f.mode === "failing" ? 0.2 : gForce(f.met),
+        speed: speedKms(f.met, orbitKm),
+        g: f.mode === "failing" ? 0.2 : gForce(f.met, orbitKm),
         alarm: f.alarm,
       });
       let level = 0;
-      if (f.mode === "ride") level = 0.25 + vibration(f.met) * 0.75;
+      if (f.mode === "ride") level = 0.25 + vibration(f.met, orbitKm) * 0.75;
       else if (f.mode === "trouble") level = 0.55 + Math.random() * 0.3;
       else if (f.mode === "failing" && !f.boom) {
         // Engines quit, a moment of eerie quiet, then the roar of the air as it tumbles.
@@ -203,13 +213,13 @@ export function AscentScene({ onComplete, failure, orbitKm: orbitOverride }: Asc
   const skip = useCallback(() => {
     const f = flight.current;
     if (f.mode !== "ride") return;
-    f.met = INSERTION_MET;
+    f.met = insertionMet(orbitKm);
     f.mode = "orbit";
     rumble.current?.setLevel(0);
     score.current?.setMood("awe");
     announce("meco", false);
     setPhase("orbit");
-  }, [announce]);
+  }, [announce, orbitKm]);
 
   const release = useCallback(() => {
     const f = flight.current;

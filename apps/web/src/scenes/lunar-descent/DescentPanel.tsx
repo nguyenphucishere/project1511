@@ -446,7 +446,7 @@ export function DescentInstruments({ snap, siteId, trace, flightMode }: DescentI
       <details className="group text-xs">
         <summary className="flex cursor-pointer items-center justify-between text-foreground/75">
           {d.chartsToggle}
-          <StatusBadge status="demo">{tr.common.demoData}</StatusBadge>
+          <StatusBadge status="calculated">{tr.common.calculatedData}</StatusBadge>
         </summary>
         <div className="mt-2 flex flex-col gap-2">
           <TelemetryChart

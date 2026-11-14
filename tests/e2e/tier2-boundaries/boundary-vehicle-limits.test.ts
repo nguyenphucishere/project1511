@@ -15,7 +15,7 @@ import {
   wasmRunDescentStep,
   wasmValidateLaunch,
 } from "../harness/wasmHarness.ts";
-import { gForce, INSERTION_MET } from "../../../apps/web/src/game/ascentFlight.ts";
+import { EVENTS, gForce, INSERTION_MET } from "../../../apps/web/src/game/ascentFlight.ts";
 
 describe("Tier 2 Boundary Suite: Vehicle Mass & Flight Envelope Limits", () => {
   const simBridge = new SimulationValidatorBridge();
@@ -140,7 +140,7 @@ describe("Tier 2 Boundary Suite: Vehicle Mass & Flight Envelope Limits", () => {
   });
 
   it("4. verifies maximum ascent acceleration limits against human and structural tolerances", () => {
-    // Sample Saturn V ascent acceleration profile across MET 0 to 541 seconds
+    // Sample the engine's Saturn V ascent acceleration profile from liftoff to parking-orbit insertion
     let maxG = 0;
     let maxGMet = 0;
 
@@ -159,16 +159,18 @@ describe("Tier 2 Boundary Suite: Vehicle Mass & Flight Envelope Limits", () => {
       );
     }
 
-    // Historical peak acceleration on Saturn V was ~3.9g just before S-IC / S-II staging and MECO
-    assertInRange(maxG, 3.8, 4.0, "Peak felt g-force must fall in calibrated Apollo 11 envelope [3.8, 4.0]");
-    assertInRange(maxGMet, 530, 540, "Peak g-force occurs right before main engine cutoff (MECO)");
+    // The peak comes at the end of the S-IC burn (S-IC CECO at T+135.2 s caps it), from the
+    // catalogue's S-IC thrust, Isp and mass: a = (F_vac − P_amb·A_e − D)/m.
+    assertInRange(maxG, 3.2, 4.2, "Peak felt g-force must fall in the Saturn V envelope [3.2, 4.2]");
+    assertInRange(maxGMet, 125, 162, "Peak g-force occurs late in the S-IC burn");
 
-    // At staging (MET 131s), felt g-force drops dramatically near weightlessness (<0.5g)
-    const stagingG = gForce(131);
-    assertInRange(stagingG, 0.1, 0.3, "Staging separation must drop g-force near weightlessness");
+    // In the staging coast after S-IC cutoff (T+161.1 s), the crew is nearly weightless.
+    const sep = EVENTS.find((e) => e.id === "stageSep")!.met;
+    const stagingG = gForce(Math.ceil(sep));
+    assertInRange(stagingG, 0.0, 0.3, "Staging separation must drop g-force near weightlessness");
 
-    // After MECO (MET 541s), felt g-force is 0g (orbit insertion weightlessness)
-    const postMecoG = gForce(541);
+    // After insertion, felt g-force is 0g (parking-orbit weightlessness)
+    const postMecoG = gForce(INSERTION_MET + 1);
     assert.equal(postMecoG, 0, "Post-MECO felt g-force must be 0g in parking orbit");
   });
 

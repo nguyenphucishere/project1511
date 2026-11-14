@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { handleWorkerMessage, type WorkerRequestMessage } from "@/workers/simulation.worker";
 import type {
+  AscentProfile,
+  AscentProfileRequest,
+  DescentProfile,
+  DescentProfileRequest,
+} from "@/lib/simulation/trajectory.physics";
+import type {
   DsnTelemetryInput,
   DsnTelemetryResult,
   LandingRadarInput,
@@ -149,6 +155,18 @@ export function useSimulationWasm() {
     [dispatchMessage],
   );
 
+  /** Scene 4: Saturn V ascent profile (WASM simulate_ascent). */
+  const simulateAscentProfile = useCallback(
+    (input: AscentProfileRequest) => dispatchMessage<AscentProfile>("ASCENT_PROFILE", input),
+    [dispatchMessage],
+  );
+
+  /** Scene 6: LM powered descent profile (WASM simulate_powered_descent). */
+  const simulateDescentProfile = useCallback(
+    (input: DescentProfileRequest) => dispatchMessage<DescentProfile>("DESCENT_PROFILE", input),
+    [dispatchMessage],
+  );
+
   const runSimulation = useCallback(
     async (config: unknown): Promise<WasmLaunchValidationResult> => {
       return validateLaunch((config ?? {}) as WasmLaunchConfigInput);
@@ -170,6 +188,8 @@ export function useSimulationWasm() {
     calculateLandingRadar,
     evaluateMissionDesignBudget,
     calculateDsnTelemetry,
+    simulateAscentProfile,
+    simulateDescentProfile,
     runSimulation,
   };
 }

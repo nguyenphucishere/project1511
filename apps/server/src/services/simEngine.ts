@@ -17,6 +17,9 @@ export const ENGINE_CALCULATIONS = [
   "calculate_landing_radar",
   "evaluate_mission_design_budget",
   "calculate_dsn_telemetry",
+  "plan_launch",
+  "simulate_ascent",
+  "simulate_powered_descent",
 ] as const;
 export type EngineCalculation = (typeof ENGINE_CALCULATIONS)[number];
 
@@ -24,6 +27,7 @@ type SimWasmModule = {
   initSync: (m: { module: BufferSource }) => unknown;
   ping?: () => string;
   get_lunar_environment_constants?: () => string;
+  get_launch_catalog?: () => string;
 } & Partial<Record<EngineCalculation, (json: string) => string>>;
 
 export interface EngineLunarConstants {
@@ -75,6 +79,7 @@ export async function engineStatus(): Promise<EngineStatus> {
   const calculations = [
     ...ENGINE_CALCULATIONS.filter((n) => typeof mod[n] === "function"),
     ...(typeof mod.get_lunar_environment_constants === "function" ? ["get_lunar_environment_constants"] : []),
+    ...(typeof mod.get_launch_catalog === "function" ? ["get_launch_catalog"] : []),
   ];
   return { loaded: true, version: typeof mod.ping === "function" ? mod.ping() : null, calculations };
 }
@@ -131,6 +136,17 @@ export async function engineLunarConstants(): Promise<EngineLunarConstants | nul
   }
 }
 
+/** sim-core vehicle presets and launch commit criteria, or null when the engine is unavailable. */
+export async function engineLaunchCatalog(): Promise<Record<string, unknown> | null> {
+  const mod = await loadSimEngine();
+  if (typeof mod?.get_launch_catalog !== "function") return null;
+  try {
+    return JSON.parse(mod.get_launch_catalog()) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 /** Apollo 11 baselines the UI uses to show the engine's answer for the flown mission. */
 export const APOLLO_11_ENGINE_INPUTS = {
   validate_launch: {
@@ -179,4 +195,16 @@ export const APOLLO_11_ENGINE_INPUTS = {
     ],
   },
   calculate_dsn_telemetry: { distance_km: 389_472.8, true_anomaly_deg: 0 },
+  simulate_ascent: { parking_orbit_km: 185, payload_mass_kg: 43_904 },
+  simulate_powered_descent: {},
+  plan_launch: {
+    vehicle_id: "saturn-v",
+    payload_mass_kg: 43_904,
+    propellant_load_pct: 100,
+    parking_orbit_km: 185,
+    destination: "TLI",
+    wind_speed_kmh: 9.5,
+    wind_gust_kmh: 16.2,
+    thunderstorm: false,
+  },
 } satisfies Record<EngineCalculation, unknown>;

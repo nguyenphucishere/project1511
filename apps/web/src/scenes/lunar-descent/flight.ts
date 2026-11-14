@@ -1,33 +1,46 @@
-import { KEYFRAMES, SAFE_TOUCHDOWN_MS } from "@/mocks/descent";
+import { DESCENT, KEYFRAMES, SAFE_TOUCHDOWN_MS, CONTACT_PROBE_M } from "@/mocks/descent";
 
 /**
- * Final descent flight model (Scene 5). Pure and framework-free so it can be unit-tested.
+ * Final descent flight model (Scene 6), from the low gate (≈150 m) to the surface. Pure and
+ * framework-free so it can be unit-tested.
  *
  * Two axes are simulated, as seen from the lander window: altitude and sideways position `x`
- * (metres, 0 = the boulder field the lander was aimed at). The numbers follow a real Lunar Module
- * descent from the low gate (150 m): lunar gravity, a descent engine that cannot out-thrust the
- * mass it carries, a finite fuel supply, and RCS thrusters for sideways translation. The vertical
- * axis is flown the way Apollo crews flew it in program P66: the computer holds a commanded rate
- * of descent and the pilot nudges that rate up or down.
+ * (metres, 0 = the boulder field the lander was aimed at). The physics is the engine's: the LM's
+ * mass and propellant at the low gate come from the engine's powered-descent profile, the descent
+ * engine gives 45.04 kN at Isp 311 s and throttles over 10–60 % in this phase, gravity is the
+ * engine's local lunar gravity (mascon included) and mass falls as propellant burns
+ * (ṁ = F / (Isp·g₀)). Sideways moves use the LM RCS (separate propellant). The vertical axis is
+ * flown the way Apollo crews flew it in program P66: the computer holds a commanded rate of
+ * descent and the pilot nudges that rate up or down.
  */
 
-/** Lunar surface gravity, m/s². */
-export const LUNAR_G = 1.62;
-/** Vertical acceleration at full throttle for the lander's mass near touchdown, m/s². */
-export const MAX_ACCEL = 4.4;
-/** Throttle changes at most this fast (fraction per second): a real engine takes time to respond. */
+const G0 = 9.80665;
+/** Lunar gravity at the landing site, m/s² (engine lunar constants, mascon included). */
+export const LUNAR_G = DESCENT.local_gravity_mps2;
+/** Descent engine rated thrust, N, and specific impulse, s (§2.4). */
+export const DPS_THRUST_N = DESCENT.dps_max_thrust_n;
+export const DPS_ISP = DESCENT.dps_isp_s;
+/** Usable DPS propellant the fuel percentage is counted against, kg. */
+export const DPS_CAPACITY_KG = DESCENT.dps_propellant_capacity_kg;
+/** LM mass with empty DPS tanks (low-gate mass minus the propellant still aboard), kg. */
+export const LM_BURNOUT_MASS_KG = DESCENT.low_gate.mass_kg - DESCENT.low_gate.propellant_kg;
+/** P66 throttle band: the LMDE throttles continuously between 10 % and 60 % of rated thrust. */
+export const THROTTLE_MIN = 0.1;
+export const THROTTLE_MAX = 0.6;
+/** Throttle changes at most this fast (fraction of rated thrust per second). */
 export const THROTTLE_SLEW = 1.2;
-/** Sideways acceleration while an RCS translation thruster fires, m/s². */
-export const RCS_ACCEL = 0.6;
-/** Fuel burned per second at full throttle, % of the tank. */
-export const FUEL_BURN_FULL = 0.4;
-/** Fuel burned per second while RCS fires, % of the tank. */
-export const FUEL_BURN_RCS = 0.06;
-/**
- * Height of the contact probes under the footpads, m. The contact light comes on here and the
- * pilot must cut the engine: the lander then drops the last metre under lunar gravity.
- */
-export const CONTACT_HEIGHT = 1;
+/** Sideways translation: four 445 N R-4D RCS jets (§2.3). */
+export const RCS_THRUST_N = 4 * 445;
+/** Contact light height: the 1.71 m probes under the footpads touch the ground. */
+export const CONTACT_HEIGHT = CONTACT_PROBE_M;
+
+/** LM mass for a given fuel percentage, kg. */
+export const massAt = (fuelPct: number) => LM_BURNOUT_MASS_KG + (fuelPct / 100) * DPS_CAPACITY_KG;
+/** Acceleration the descent engine gives at throttle `thr` (fraction of rated thrust), m/s². */
+export const engineAccel = (thr: number, fuelPct: number) => (thr * DPS_THRUST_N) / massAt(fuelPct);
+/** Propellant flow at throttle `thr`, % of the tank per second. */
+export const fuelBurnPctPerSec = (thr: number) => ((thr * DPS_THRUST_N) / (DPS_ISP * G0) / DPS_CAPACITY_KG) * 100;
+
 /** Rate-of-descent commands the pilot may select, m/s (negative is down), in this step. */
 export const ROD_STEP = 0.5;
 export const ROD_MIN = -6;
@@ -37,14 +50,15 @@ const ROD_GAIN = 1.5;
 /** Integration step; longer frames are split so the result never depends on frame rate. */
 const MAX_DT = 1 / 60;
 
-/** Tipping and dust limits at touchdown. */
-export const MAX_TOUCHDOWN_HS = 1;
+/** Touchdown limits (§4.3): sideways ≤ 1.22 m/s. */
+export const MAX_TOUCHDOWN_HS = 1.22;
 export const GREAT_TOUCHDOWN_VS = 2;
 export const GREAT_TOUCHDOWN_HS = 0.5;
 /** Within this many metres of the chosen site counts as a precision landing. */
 export const PRECISION_M = 3;
-/** Fuel left (%) that counts as a comfortable margin. */
+/** Fuel left (%) that counts as a comfortable margin (game rating). */
 export const COMFORT_FUEL_PCT = 3;
+/** Low-level propellant quantity light (§4.3: 5 %). */
 export const LOW_FUEL_PCT = 5;
 
 /** The playable strip, metres either side of the aim point. */
@@ -146,8 +160,10 @@ export const NO_INPUT: FlightInput = { rcs: 0, nullDrift: false };
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-/** Throttle that exactly cancels gravity. */
-export const HOVER_THROTTLE = LUNAR_G / MAX_ACCEL;
+/** Throttle that exactly cancels gravity for an LM of this fuel load. */
+export const hoverThrottle = (fuelPct: number) => (LUNAR_G * massAt(fuelPct)) / DPS_THRUST_N;
+/** Hover throttle at the low gate (§4.3 gives 26–30 %). */
+export const HOVER_THROTTLE = hoverThrottle(DESCENT.low_gate.propellant_kg / DPS_CAPACITY_KG * 100);
 
 /**
  * Where the manual phase starts: the low gate, straight from the scripted profile, with a small
@@ -163,7 +179,7 @@ export function createFlight(siteId: SiteId, attempt = 0): FlightState {
     xM: 0,
     hsMs: drifts[attempt % drifts.length],
     fuelPct: gate.fuelPct,
-    throttle: HOVER_THROTTLE,
+    throttle: hoverThrottle(gate.fuelPct),
     targetVs: gate.vsMs,
     engineOn: true,
     rcs: 0,
@@ -195,7 +211,7 @@ export function cutEngine(s: FlightState): void {
 
 /** Fuel-seconds left at the current burn (hover burn when throttle is below hover), capped for display. */
 export function fuelSecondsLeft(s: FlightState): number {
-  const burn = FUEL_BURN_FULL * Math.max(s.throttle, HOVER_THROTTLE);
+  const burn = fuelBurnPctPerSec(Math.max(s.throttle, hoverThrottle(s.fuelPct)));
   return Math.min(999, s.fuelPct / burn);
 }
 
@@ -219,12 +235,15 @@ function integrate(s: FlightState, input: FlightInput, dt: number): void {
   }
 
   // Autopilot holds the commanded descent rate; the engine follows with a finite response.
-  const demand = s.engineOn ? clamp((LUNAR_G + ROD_GAIN * (s.targetVs - s.vsMs)) / MAX_ACCEL, 0, 1) : 0;
+  const mass = massAt(s.fuelPct);
+  const demand = s.engineOn
+    ? clamp((mass * (LUNAR_G + ROD_GAIN * (s.targetVs - s.vsMs))) / DPS_THRUST_N, THROTTLE_MIN, THROTTLE_MAX)
+    : 0;
   if (!s.engineOn) {
     s.throttle = 0;
   } else {
     const dThr = clamp(demand - s.throttle, -THROTTLE_SLEW * dt, THROTTLE_SLEW * dt);
-    s.throttle = clamp(s.throttle + dThr, 0, 1);
+    s.throttle = clamp(s.throttle + dThr, THROTTLE_MIN, THROTTLE_MAX);
   }
 
   // Sideways: RCS only. Drift continues untouched until the pilot (or the null-drift hold) stops it.
@@ -235,17 +254,18 @@ function integrate(s: FlightState, input: FlightInput, dt: number): void {
   }
   s.rcs = rcs;
   if (rcs !== 0) {
-    const dv = RCS_ACCEL * dt;
+    const dv = (RCS_THRUST_N / mass) * dt;
     if (input.rcs === 0 && Math.abs(s.hsMs) <= dv) s.hsMs = 0;
     else s.hsMs += rcs * dv;
   }
 
-  s.fuelPct = Math.max(0, s.fuelPct - (FUEL_BURN_FULL * s.throttle + (rcs !== 0 ? FUEL_BURN_RCS : 0)) * dt);
+  // DPS propellant only: the RCS jets draw on their own tanks.
+  s.fuelPct = Math.max(0, s.fuelPct - fuelBurnPctPerSec(s.throttle) * dt);
 
   // Vertical: thrust against gravity.
   // Trapezoid rule: exact for the constant acceleration inside one step.
   const vsBefore = s.vsMs;
-  s.vsMs += (MAX_ACCEL * s.throttle - LUNAR_G) * dt;
+  s.vsMs += ((s.throttle * DPS_THRUST_N) / mass - LUNAR_G) * dt;
   s.altM += ((vsBefore + s.vsMs) / 2) * dt;
   s.xM += s.hsMs * dt;
 
