@@ -101,8 +101,8 @@ export function ParallaxCanvas({ mode = "drift", horizon = false, className }: P
 
       if (horizon) {
         // Earth, high in the black sky.
-        const ex = Math.round(w * 0.64);
-        const ey = Math.round(h * 0.17);
+        const ex = Math.round(w * 0.82);
+        const ey = Math.round(h * 0.2);
         const er = Math.max(6, Math.round(Math.min(w, h) * 0.07));
         ctx.fillStyle = colors.blue;
         ctx.beginPath();
