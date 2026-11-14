@@ -12,6 +12,7 @@ import {
   type Group,
   type Mesh,
   type MeshBasicMaterial,
+  ShaderMaterial,
   Vector3,
 } from "three";
 import { filmClock } from "./clock";
@@ -291,29 +292,35 @@ export function Ship() {
 const PLASMA_CORE = new Color(3.2, 1.8, 0.8);
 const PLASMA_EDGE = new Color(2, 0.6, 0.25);
 
-function Canopy({ x, z, lean }: { x: number; z: number; lean: number }) {
+/** Height of the canopies above the point on the capsule where every shroud line ends (the chute group's origin). */
+const CANOPY_HEIGHT = 9;
+
+function Canopy({ x, z }: { x: number; z: number; lean?: number }) {
+  // Every line runs from the canopy's rim to the one point on the capsule, so the three chutes share it.
   const lines = useMemo(() => {
     const geo = new BufferGeometry();
     const pts: number[] = [];
-    for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * Math.PI * 2;
-      pts.push(Math.cos(a) * 3.2, 0, Math.sin(a) * 3.2, 0, -9, 0);
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      pts.push(x + Math.cos(a) * 3.2, CANOPY_HEIGHT, z + Math.sin(a) * 3.2, 0, 0, 0);
     }
     geo.setAttribute("position", new Float32BufferAttribute(pts, 3));
     return geo;
-  }, []);
+  }, [x, z]);
   return (
-    <group position={[x, 9, z]} rotation={[lean, 0, 0]}>
-      {Array.from({ length: 8 }, (_, i) => (
-        <mesh key={i} scale={[3.2, 2.1, 3.2]}>
-          <sphereGeometry args={[1, 8, 6, (i * Math.PI) / 4, Math.PI / 4, 0, Math.PI / 2]} />
-          <meshStandardMaterial color={i % 2 ? "#f4f1ea" : "#e8561c"} roughness={0.7} side={DoubleSide} />
-        </mesh>
-      ))}
+    <>
+      <group position={[x, CANOPY_HEIGHT, z]}>
+        {Array.from({ length: 8 }, (_, i) => (
+          <mesh key={i} scale={[3.2, 2.1, 3.2]}>
+            <sphereGeometry args={[1, 8, 6, (i * Math.PI) / 4, Math.PI / 4, 0, Math.PI / 2]} />
+            <meshStandardMaterial color={i % 2 ? "#f4f1ea" : "#e8561c"} roughness={0.7} side={DoubleSide} />
+          </mesh>
+        ))}
+      </group>
       <lineSegments geometry={lines}>
         <lineBasicMaterial color="#d8d3c8" />
       </lineSegments>
-    </group>
+    </>
   );
 }
 
@@ -337,6 +344,43 @@ function ExpandingRing() {
 }
 
 /**
+ * Soft plasma: brightest where the surface faces the camera (so the edges fade instead of cutting off
+ * like a tube), fading along its length, from white-yellow at the shield to red-orange behind.
+ */
+function plasmaMaterial(strength: number, sink: { current: ShaderMaterial[] }, trail = false) {
+  const m = new ShaderMaterial({
+    uniforms: { uHeat: { value: 0 }, uStrength: { value: strength }, uTrail: { value: trail ? 1 : 0 } },
+    vertexShader: `
+      varying vec3 vN; varying vec3 vV; varying float vT;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vN = normalize(normalMatrix * normal);
+        vV = normalize(-mv.xyz);
+        vT = uv.y;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform float uHeat; uniform float uStrength; uniform float uTrail;
+      varying vec3 vN; varying vec3 vV; varying float vT;
+      void main() {
+        float rim = pow(abs(dot(normalize(vN), normalize(vV))), 1.6);
+        float along = uTrail > 0.5 ? pow(vT, 1.3) * smoothstep(0.0, 0.2, 1.0 - vT) : pow(1.0 - vT, 1.4) * smoothstep(0.0, 0.18, vT);
+        vec3 hot = vec3(3.0, 2.2, 1.2);
+        vec3 cool = vec3(2.0, 0.55, 0.2);
+        vec3 col = mix(cool, hot, along);
+        gl_FragColor = vec4(col, rim * along * uHeat * uStrength);
+      }`,
+    transparent: true,
+    blending: AdditiveBlending,
+    depthWrite: false,
+    side: DoubleSide,
+    toneMapped: false,
+  });
+  sink.current.push(m);
+  return m;
+}
+
+/**
  * The command module alone: through the fire of reentry (heat shield first, a plasma wake behind),
  * then under three parachutes and down into the sea at the splashdown set.
  */
@@ -344,7 +388,7 @@ export function ReentryCapsule() {
   const group = useRef<Group>(null);
   const body = useRef<Group>(null);
   const wake = useRef<Group>(null);
-  const wakeMats = useRef<MeshBasicMaterial[]>([]);
+  const wakeMats = useRef<ShaderMaterial[]>([]);
   const chutes = useRef<Group>(null);
   useFrame(({ clock }) => {
     const t = filmClock.t;
@@ -370,7 +414,7 @@ export function ReentryCapsule() {
         const flick = 1 + Math.sin(clock.elapsedTime * 38) * 0.08;
         wake.current.scale.set(1, 1, hot * flick);
       }
-      wakeMats.current.forEach((m, i) => (m.opacity = hot * (i ? 0.5 : 0.8)));
+      wakeMats.current.forEach((m) => (m.uniforms.uHeat.value = hot));
     } else {
       const alt = capsuleAltitude(t);
       const bob = alt < 1 ? Math.sin(clock.elapsedTime * 1.3) * 0.12 : 0;
@@ -396,27 +440,20 @@ export function ReentryCapsule() {
         </mesh>
       </group>
       <group ref={wake}>
-        {/* Plasma streaming back over the capsule: the wake runs toward +Z, behind the heat shield. */}
-        {[
-          [PLASMA_EDGE, 0.8, 0],
-          [PLASMA_CORE, 0.45, 1],
-        ].map(([c, r, i]) => (
-          <mesh key={i as number} position={[0, 0, 4.6]} rotation={[Math.PI / 2, 0, 0]} scale={[(r as number) * 1.2, 9, (r as number) * 1.2]}>
-            <coneGeometry args={[1, 1, 24, 1, true]} />
-            <meshBasicMaterial
-              ref={(m) => {
-                if (m) wakeMats.current[i as number] = m;
-              }}
-              color={c as Color}
-              transparent
-              opacity={0.6}
-              blending={AdditiveBlending}
-              depthWrite={false}
-              toneMapped={false}
-              side={DoubleSide}
-            />
-          </mesh>
-        ))}
+        {/* Heat shield leads (-Z). A shock cap glows just in front of it, a thin sheath of hot gas hugs
+            the capsule's sides, and a slim trail streams from the nose, widening and fading as it goes. */}
+        <mesh position={[0, 0, -0.5]} scale={[1.1, 1.1, 0.45]}>
+          <sphereGeometry args={[1, 24, 16]} />
+          <primitive object={plasmaMaterial(0.45, wakeMats)} attach="material" />
+        </mesh>
+        <mesh position={[0, 0, 0.7]} rotation={[Math.PI / 2, 0, 0]} scale={[1.02, 1.6, 1.02]}>
+          <coneGeometry args={[1, 1, 32, 6, true]} />
+          <primitive object={plasmaMaterial(0.3, wakeMats)} attach="material" />
+        </mesh>
+        <mesh position={[0, 0, 6.3]} rotation={[-Math.PI / 2, 0, 0]} scale={[0.85, 10, 0.85]}>
+          <coneGeometry args={[1, 1, 32, 8, true]} />
+          <primitive object={plasmaMaterial(0.4, wakeMats, true)} attach="material" />
+        </mesh>
       </group>
     </group>
     <ExpandingRing />

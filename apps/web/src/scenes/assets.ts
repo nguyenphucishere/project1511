@@ -42,6 +42,8 @@ export const SCENE_ASSETS: Record<string, SceneAssets> = {
     textures: [earthPair, MILKY_WAY, MOON],
     hdr: [STUDIO_HDR],
   },
+  // The liftoff scene is drawn in SVG: nothing to fetch but their code.
+  liftoff: { files: [], textures: [], hdr: [] },
   "lunar-descent": {
     files: [studio, { url: MILKY_WAY, weight: 1 }, { url: MOON, weight: 6 }, { url: EARTH_DAY, weight: 4 }, { url: EARTH_CLOUDS, weight: 5 }],
     textures: [MILKY_WAY, MOON, earthPair],

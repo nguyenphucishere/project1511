@@ -19,7 +19,7 @@ export const PHASES: Caption[] = [
   { from: T.AOS, to: T.CABIN, text: { en: "Fourth orbit: the Earth rises", vi: "Vòng quỹ đạo thứ tư: Trái Đất mọc" } },
   { from: T.CABIN, to: T.OUTBOUND_END, text: { en: "Christmas Eve, 1968", vi: "Đêm Giáng Sinh, 1968" } },
   { from: T.OUTBOUND_END, to: T.REENTRY, text: { en: "Trans-Earth injection: homeward", vi: "Đốt về nhà: hướng về Trái Đất" } },
-  { from: T.REENTRY, to: T.CHUTES, text: { en: "Reentry: four minutes of radio blackout", vi: "Tái nhập khí quyển: bốn phút mất liên lạc" } },
+  { from: T.REENTRY, to: T.CHUTES, text: { en: "Reentry: three and a half minutes of radio blackout", vi: "Tái nhập khí quyển: ba phút rưỡi mất liên lạc" } },
   { from: T.CHUTES, to: T.FILM_END, text: { en: "Splashdown in the Pacific", vi: "Hạ xuống Thái Bình Dương" } },
 ];
 
@@ -59,5 +59,5 @@ export const CUES: { t: number; id: "ignition" | "pyro" | "unlatch" | "caution" 
   { t: T.AOS, id: "chime" },
   { t: T.OUTBOUND_END + 0.3, id: "ignition", gain: 0.8 },
   { t: T.REENTRY, id: "whoosh" },
-  { t: T.FILM_END - 5.4, id: "touchdown", gain: 0.7 },
+  { t: T.TOUCHDOWN, id: "touchdown", gain: 0.7 },
 ];

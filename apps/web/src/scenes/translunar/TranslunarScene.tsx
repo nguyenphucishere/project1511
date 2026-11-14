@@ -10,7 +10,7 @@ import { playSfx, startRumble, startScore, type Rumble, type Score } from "@/gam
 import { useLocalized, useT } from "@/i18n/useT";
 import { cn } from "@/lib/utils";
 import { filmClock } from "./clock";
-import { FILM_END, OUTBOUND_END, SIGNAL_LOST, formatMet, missionElapsed, thrust } from "./flight";
+import { ATMOSPHERE, ENTRY_BLACKOUT, FILM_END, cutDip, OUTBOUND_END, RETURN_LOG, SIGNAL_LOST, T, TEI_LOS, atmosphereLayer, entryState, formatMet, skyAir, missionElapsed, thrust } from "./flight";
 import { CUES, PHASES, READING, captionAt, moodAt } from "./story";
 import { TranslunarWorld } from "./TranslunarWorld";
 
@@ -22,6 +22,15 @@ const VIEWPOINTS = [
 const PANEL_TICK_MS = 100;
 
 type Part = "outbound" | "return";
+
+function Readout({ label, value, hot = false }: { label: string; value: string; hot?: boolean }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-[0.15em] text-white/55">{label}</div>
+      <div className={cn("text-sm tabular-nums sm:text-base", hot ? "text-amber-300" : "text-white")}>{value}</div>
+    </div>
+  );
+}
 
 /**
  * The flight to the Moon (outbound) or the flight home (return): a watch-only film that cuts
@@ -102,7 +111,16 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
   // The narrator reads each stretch's title and the cabin reading as they appear, one after the other.
   useVoiceLine(phase ? localize(phase.text) : null, { queue: true });
   useVoiceLine(reading ? localize(reading.text) : null, { queue: true });
-  const lost = now >= SIGNAL_LOST[0] && now < SIGNAL_LOST[1];
+  // No radio: behind the Moon on the way out and again for the burn that sends the ship home, and in the
+  // plasma of the entry. Each says why in its own words.
+  const farSide = part === "outbound" ? now >= SIGNAL_LOST[0] && now < SIGNAL_LOST[1] : now >= TEI_LOS[0] && now < TEI_LOS[1];
+  const plasmaBlackout = part === "return" && now >= ENTRY_BLACKOUT[0] && now < ENTRY_BLACKOUT[1];
+  const lost = farSide || plasmaBlackout;
+  // After the burn the only signal loss left is the plasma one, so the fade-out keeps its own words.
+  const inEntry = part === "return" && now >= T.REENTRY;
+  const skipping = part === "return" && now >= T.OUTBOUND_END + 9 && now < T.REENTRY + 0.4;
+  const entry = part === "return" && now >= T.REENTRY ? entryState(now) : null;
+  const passed = part === "return" ? RETURN_LOG.filter((e) => now >= e.t).slice(-3) : [];
   const started = startAt !== null;
 
   return (
@@ -110,6 +128,11 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
       <WorldCanvas label={part === "outbound" ? s.sceneLabel : s.returnSceneLabel}>
         <TranslunarWorld startAt={startAt} from={from} to={to} onReady={begin} />
       </WorldCanvas>
+
+      {/* The cuts of the flight home dip through black instead of jumping */}
+      {part === "return" && (
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-[9] bg-black transition-opacity duration-100 ease-linear" style={{ opacity: cutDip(now) }} />
+      )}
 
       {/* Letterbox bars */}
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[8vh] bg-black" />
@@ -135,9 +158,76 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
           lost ? "opacity-100" : "opacity-0",
         )}
       >
-        <div className="animate-pulse font-mono text-sm font-semibold uppercase tracking-[0.25em] text-red-400 sm:text-base">{s.signalLost}</div>
-        <div className="mt-1 text-xs text-white/70">{s.signalLostSub}</div>
+        <div className="animate-pulse font-mono text-sm font-semibold uppercase tracking-[0.25em] text-red-400 sm:text-base">{inEntry ? s.blackout : s.signalLost}</div>
+        <div className="mt-1 text-xs text-white/70">{inEntry ? s.blackoutSub : part === "return" ? s.teiSub : s.signalLostSub}</div>
       </div>
+
+      {/* The air thickens as the capsule falls: a blue glow along the bottom edge, and the layers it passes through */}
+      {entry && now < T.CHUTES + 0.75 && (
+        <>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-[5]"
+            style={{
+              height: "55%",
+              opacity: skyAir(entry.altKm),
+              background: "linear-gradient(to top, rgba(120,180,255,0.75), rgba(60,120,230,0.35) 35%, transparent)",
+            }}
+          />
+          <div aria-hidden className="pointer-events-none absolute right-4 top-[calc(8vh+5rem)] z-10 font-mono text-[10px] text-white/80 sm:right-10">
+            <div className="mb-1 uppercase tracking-[0.2em] text-space-cyan">{s.layerTitle}</div>
+            <div className="relative flex h-40 gap-2">
+              <div className="flex w-2 flex-col overflow-hidden rounded border border-white/30">
+                {ATMOSPHERE.map((l) => (
+                  <div key={l.id} className="flex-1 border-b border-white/20 last:border-b-0" style={{ background: `rgba(120,180,255,${0.1 + 0.2 * (ATMOSPHERE.length - 1 - ATMOSPHERE.indexOf(l)) })` }} />
+                ))}
+              </div>
+              <div className="flex flex-col">
+                {ATMOSPHERE.map((l) => (
+                  <div key={l.id} className={cn("flex flex-1 items-center", atmosphereLayer(entry.altKm) === l.id ? "text-white" : "text-white/45")}>
+                    {s.layer[l.id]} <span className="ml-1 text-white/40">{l.toKm >= 100 ? "100+" : l.toKm} km</span>
+                  </div>
+                ))}
+              </div>
+              <span
+                className="absolute -left-1 h-2 w-2 rounded-full bg-orange-400 shadow-[0_0_8px_#fb923c]"
+                style={{ top: `calc(${(() => { const i = ATMOSPHERE.findIndex((l) => entry.altKm >= l.fromKm); const l = ATMOSPHERE[i < 0 ? ATMOSPHERE.length - 1 : i]; return ((i < 0 ? ATMOSPHERE.length - 1 : i) + (l.toKm - Math.min(l.toKm, entry.altKm)) / (l.toKm - l.fromKm)) * 25; })()}% - 4px)` }}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Two and a half days pass between the end of the burn and the air */}
+      {skipping && (
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-[40%] z-10 text-center font-mono text-sm uppercase tracking-[0.3em] text-white/80 sm:text-lg">{s.daysLater}</div>
+      )}
+
+      {/* The way home, with the real Apollo 11 numbers: the entry readout and the log of what has happened */}
+      {part === "return" && (
+        <div className="pointer-events-none absolute bottom-[calc(8vh+4.5rem)] left-4 z-10 w-[min(21rem,calc(100%-2rem))] font-mono text-xs text-white/85 sm:left-10">
+          {entry && (
+            <div className="mb-2 grid grid-cols-3 gap-2 border border-white/20 bg-black/55 px-3 py-2 backdrop-blur-sm" aria-hidden>
+              <Readout label={s.entryAlt} value={`${entry.altKm >= 10 ? Math.round(entry.altKm) : entry.altKm.toFixed(1)} km`} />
+              <Readout label={s.entrySpeed} value={`${entry.speedKms.toFixed(2)} km/s`} />
+              <Readout label={s.entryLoad} value={`${entry.g.toFixed(1)} g`} hot={entry.g > 5} />
+            </div>
+          )}
+          {passed.length > 0 && (
+            <div className="border-l-2 border-space-cyan/70 bg-black/45 px-3 py-1.5 backdrop-blur-sm">
+              <div className="text-[10px] uppercase tracking-[0.2em] text-space-cyan">{s.logTitle}</div>
+              <ul className="mt-1 space-y-0.5">
+                {passed.map((e, i) => (
+                  <li key={e.id} className={i === passed.length - 1 ? "text-white" : "text-white/55"}>
+                    <span className="mr-2 text-white/60">{e.approx ? "≈" : ""}{e.get}</span>
+                    {s.log[e.id]}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Phase title and, in the cabin, the reading */}
       <div className="pointer-events-none absolute inset-x-0 bottom-[calc(8vh+1rem)] z-10 flex flex-col items-center gap-2 px-6 text-center">

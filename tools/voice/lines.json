@@ -1816,8 +1816,8 @@
     },
     {
       "role": "narrator",
-      "en": "Reentry: four minutes of radio blackout",
-      "vi": "Tái nhập khí quyển: bốn phút mất liên lạc",
+      "en": "Reentry: three and a half minutes of radio blackout",
+      "vi": "Tái nhập khí quyển: ba phút rưỡi mất liên lạc",
       "src": "translunar:phase#8"
     },
     {
@@ -1861,6 +1861,24 @@
       "en": "Splashdown. Salt air, a calm sea, and the sky wide open. The flag is up on the Moon, and you are back.",
       "vi": "Hạ xuống biển. Gió mặn, biển lặng và bầu trời mở rộng. Lá cờ đã cắm trên Mặt Trăng, và bạn đã trở về.",
       "src": "translunar:return-done"
+    },
+    {
+      "role": "narrator",
+      "en": "One engine, no spare. If it does not light, we stay here.",
+      "vi": "Một động cơ, không có dự phòng. Nếu nó không nổ, chúng ta ở lại đây.",
+      "src": "homeward:liftoff.intro"
+    },
+    {
+      "role": "narrator",
+      "en": "Stages separate: the descent stage stays behind as the launch pad",
+      "vi": "Tách tầng: tầng hạ cánh ở lại làm bệ phóng",
+      "src": "homeward:liftoff.stageSep"
+    },
+    {
+      "role": "narrator",
+      "en": "Orbit reached. Columbia is waiting.",
+      "vi": "Đã vào quỹ đạo. Columbia đang chờ.",
+      "src": "homeward:liftoff.orbit"
     },
     {
       "role": "armstrong",

@@ -1,4 +1,6 @@
 import { FLOW, stepIndex, type SceneId } from "@/game/flow";
+import { useSettingsStore } from "@/game/settingsStore";
+import { warmAllVoices } from "@/game/sfx";
 import { SCENE_ASSETS } from "./assets";
 import { WORKSHOP_FILES, WORKSHOP_TEXTURE_GROUPS, STUDIO_HDR } from "./workshop/assets";
 
@@ -58,8 +60,33 @@ const JOBS: Record<SceneId, Job> = {
   ascent: assetJob("ascent", () => import("./ascent/AscentScene")),
   translunar: assetJob("translunar", () => import("./translunar/TranslunarScene")),
   return: assetJob("return", () => import("./translunar/TranslunarScene")),
+  liftoff: assetJob("liftoff", () => import("./homeward/HomewardScenes")),
   "lunar-descent": assetJob("lunar-descent", () => import("./lunar-descent/LunarDescentScene")),
 };
+
+/* ---------------------------------------------------------------- the voices */
+
+/** The share of a scene's loading bar that is the voice recordings. */
+const VOICE_WEIGHT = 10;
+/** The longest a scene waits for the recordings: past it the scene starts and the rest arrive as they can. */
+const VOICE_WAIT_MS = 30_000;
+const voiceWarm = new Map<string, Promise<unknown>>();
+
+/**
+ * Downloads every voice recording of the player's language into memory (once), so no line is fetched
+ * while a scene is running: a download in the way is what made voices start late against the picture.
+ * Starts on the title screen; a scene's loading screen waits for it.
+ */
+export function ensureVoicesWarm(): Promise<unknown> {
+  if (typeof window === "undefined") return Promise.resolve();
+  const locale = useSettingsStore.getState().locale;
+  let p = voiceWarm.get(locale);
+  if (!p) {
+    p = warmAllVoices(locale).catch(() => undefined);
+    voiceWarm.set(locale, p);
+  }
+  return p;
+}
 
 const states = new Map<SceneId, PreloadState>();
 const running = new Map<SceneId, Promise<void>>();
@@ -100,7 +127,7 @@ export function preloadScene(scene: SceneId): Promise<void> {
   const job = JOBS[scene];
   if (!job) return Promise.resolve();
 
-  const total = job.chunkWeight + job.files.reduce((n, f) => n + f.weight, 0);
+  const total = job.chunkWeight + VOICE_WEIGHT + job.files.reduce((n, f) => n + f.weight, 0);
   let loaded = 0;
   const advance = (weight: number) => {
     loaded += weight;
@@ -117,7 +144,9 @@ export function preloadScene(scene: SceneId): Promise<void> {
       .then(() => advance(f.weight)),
   );
 
-  const promise = Promise.all([chunk, ...files])
+  const voices = Promise.race([ensureVoicesWarm(), new Promise((r) => window.setTimeout(r, VOICE_WAIT_MS))]).then(() => advance(VOICE_WEIGHT));
+
+  const promise = Promise.all([chunk, voices, ...files])
     .then(() => job.fillCaches())
     .catch(() => undefined)
     .then(() => publish(scene, DONE));
@@ -176,6 +205,7 @@ export function warmUpcoming(stepId: string): void {
   if (typeof window === "undefined") return;
   const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
   if (saveData) return;
+  void ensureVoicesWarm();
   const scenes = scenesToPreload(stepId).filter((s) => !warmQueued.has(s));
   for (const s of scenes) warmQueued.add(s);
   let chainWarm: Promise<void> = Promise.resolve();

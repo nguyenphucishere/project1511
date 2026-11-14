@@ -80,6 +80,8 @@ export const T = {
   TEI_END: 150,
   REENTRY: 150,
   CHUTES: 158,
+  /** The capsule touches the sea (the touchdown sound plays here, five and a half seconds before the film ends). */
+  TOUCHDOWN: 166.6,
   FILM_END: 172,
 } as const;
 
@@ -211,9 +213,53 @@ export function reentryPosition(t: number): Vec {
   const k = t - T.REENTRY;
   return [0, 62 - 1.9 * k - 0.0 * k * k, 70 - 12 * k];
 }
+/**
+ * How hot the capsule glows, 0 to 1. Heating comes from compressing the air in front of the heat
+ * shield, so it follows how dense the air is and how fast the capsule goes (convective heating goes as
+ * the square root of density times speed cubed). Almost nothing at 122 km where the air is a trace, a
+ * long glow through the thick part from about 90 km down to 20, and gone under the parachutes.
+ */
 export function plasma(t: number) {
-  const k = t - T.REENTRY;
-  return smooth(k / 1.5) * (1 - smooth((k - 6) / 1.6));
+  const { altKm, speedKms } = entryState(t);
+  const rho = 1.225 * Math.exp(-altKm / 7.2);
+  return clamp01((Math.sqrt(rho) * speedKms ** 3) / 8);
+}
+
+export type AtmosphereLayer = "thermosphere" | "mesosphere" | "stratosphere" | "troposphere";
+
+/** The layers the capsule falls through, and where each one starts (km). */
+export const ATMOSPHERE: { id: AtmosphereLayer; fromKm: number; toKm: number }[] = [
+  { id: "thermosphere", fromKm: 85, toKm: 122 },
+  { id: "mesosphere", fromKm: 50, toKm: 85 },
+  { id: "stratosphere", fromKm: 12, toKm: 50 },
+  { id: "troposphere", fromKm: 0, toKm: 12 },
+];
+
+export function atmosphereLayer(altKm: number): AtmosphereLayer {
+  return (ATMOSPHERE.find((l) => altKm >= l.fromKm) ?? ATMOSPHERE[ATMOSPHERE.length - 1]).id;
+}
+
+/** How much of the sky is air by now, 0 (vacuum, black) to 1 (blue): the glow along the horizon. */
+export function skyAir(altKm: number): number {
+  return clamp01(1 - (altKm - 8) / 100);
+}
+
+/**
+ * The hard cuts of the flight home, each softened by dipping through black: the jump of two and a half
+ * days to the top of the air, and the cut from space to the sea under the parachutes.
+ */
+export const HOME_CUTS = [T.REENTRY, T.CHUTES];
+const DIP_IN = 0.8;
+const DIP_OUT = 1.0;
+
+/** How black the screen is at film time t (0 clear, 1 black): it closes just before a cut and opens just after. */
+export function cutDip(t: number, cuts: number[] = HOME_CUTS): number {
+  let dip = 0;
+  for (const c of cuts) {
+    const k = t < c ? 1 - (c - t) / DIP_IN : 1 - (t - c) / DIP_OUT;
+    if (k > 0) dip = Math.max(dip, smooth(k));
+  }
+  return dip;
 }
 
 /** Parachute descent at the splashdown set. */
@@ -392,6 +438,8 @@ export function stagePose(t: number): Pose {
 
 /* ---------------------------------------------------------------- readouts */
 
+const hms = (h: number, m: number, s = 0) => h * 3600 + m * 60 + s;
+
 /** Mission elapsed time (seconds) by film time, compressing days into seconds. */
 const MET_KEYS: [number, number][] = [
   [0, 2 * 3600 + 44 * 60],
@@ -403,12 +451,13 @@ const MET_KEYS: [number, number][] = [
   [104, 74 * 3600 + 34 * 60],
   [T.CABIN, 75 * 3600 + 30 * 60],
   [128, 86 * 3600],
-  [T.OUTBOUND_END, 89 * 3600 + 15 * 60],
-  [T.REENTRY, 146 * 3600 + 40 * 60],
-  [T.FILM_END, 147 * 3600],
+  // The outbound film ends at the moment the engine lights for home (the cabin scenes stand for the whole
+  // stay in lunar orbit, which in Apollo 11 included the landing): see RETURN_MET_KEYS for what follows.
+  [T.OUTBOUND_END, hms(135, 23, 42)],
 ];
 
 export function missionElapsed(t: number) {
+  if (t > T.OUTBOUND_END) return returnMissionElapsed(t);
   const first = MET_KEYS[0];
   if (t <= first[0]) return first[1];
   for (let i = 1; i < MET_KEYS.length; i++) {
@@ -429,3 +478,101 @@ export function formatMet(seconds: number) {
 
 /** Behind the Moon, with no radio, between these film times. */
 export const SIGNAL_LOST: [number, number] = [T.LOS, T.AOS];
+
+/* ---------------------------------------------------------------- the way home (Apollo 11 numbers) */
+
+/**
+ * The flight home, on the real Apollo 11 clock (NASA Apollo Flight Journal and SP-4029): the engine
+ * lights behind the Moon at 135:23:42 and burns about two and a half minutes; two and a half days
+ * pass in a second; the capsule meets the air at about 195:03:25, the radio goes quiet until
+ * 195:06:56, the drogues open at 195:12:04, the mains at 195:12:52 and it touches the Pacific at
+ * 195:18:35. The film squeezes all of that into thirty-odd seconds, so each key below pins a film
+ * time to the moment it stands for.
+ */
+const RETURN_MET_KEYS: [number, number][] = [
+  [T.OUTBOUND_END, hms(135, 23, 42)], // TEI ignition
+  [T.OUTBOUND_END + 9, hms(135, 26, 14)], // cutoff, 151 s later
+  [T.REENTRY, hms(195, 3, 25)], // two and a half days in one second, then the air
+  [T.CHUTES, hms(195, 12, 4)], // drogue parachutes
+  [T.CHUTES + 0.75, hms(195, 12, 52)], // main parachutes
+  [T.TOUCHDOWN, hms(195, 18, 35)], // splashdown
+  [T.FILM_END, hms(195, 20, 30)],
+];
+
+/** Mission elapsed time (seconds) at film time t during the flight home. */
+export function returnMissionElapsed(t: number) {
+  const keys = RETURN_MET_KEYS;
+  if (t <= keys[0][0]) return keys[0][1];
+  for (let i = 1; i < keys.length; i++) {
+    const [t1, m1] = keys[i];
+    const [t0, m0] = keys[i - 1];
+    if (t <= t1) return lerp(m0, m1, (t - t0) / (t1 - t0));
+  }
+  return keys[keys.length - 1][1];
+}
+
+/** The burn that takes the ship out of lunar orbit happens behind the Moon: no radio until it comes round. */
+export const TEI_LOS: [number, number] = [T.OUTBOUND_END, T.OUTBOUND_END + 9.3];
+/** The plasma around the capsule blocks radio: 195:03:25 to 195:06:56, about three and a half minutes. */
+export const ENTRY_BLACKOUT: [number, number] = [
+  T.REENTRY,
+  // Placed on the film by the clock itself, so the film's blackout is exactly as long as the real one (211 s of 519).
+  T.REENTRY + ((hms(195, 6, 56) - hms(195, 3, 25)) / (hms(195, 12, 4) - hms(195, 3, 25))) * (T.CHUTES - T.REENTRY) + 1e-6,
+];
+
+/** Where the capsule is, how fast, and how hard the air is pushing, from the entry interface to the sea. */
+export interface EntryState {
+  altKm: number;
+  speedKms: number;
+  g: number;
+}
+
+/**
+ * Altitude, speed and load through the entry, as the key moments of Apollo 11's: the entry interface at
+ * 121.9 km and 11.03 km/s (36,194 ft/s) at -6.5 degrees; a first load peak of about 6.5 g near 9.7 km/s
+ * (the post-flight reconstruction gives 6.7 g, the plan 6.1 g); a lighter stretch while the capsule
+ * lifts; a second peak of about 6 g near 3.8 km/s (12,390 ft/s); the drogues and mains; and the sea at
+ * about 9 m/s. Between the keys the numbers are blended smoothly. Outside the entry they hold the
+ * first or last value.
+ */
+const ENTRY_KEYS: [number, EntryState][] = [
+  [T.REENTRY, { altKm: 121.9, speedKms: 11.03, g: 0 }],
+  [T.REENTRY + 0.8, { altKm: 95, speedKms: 10.9, g: 1.4 }],
+  [T.REENTRY + 1.5, { altKm: 75, speedKms: 9.7, g: 6.5 }],
+  [T.REENTRY + 2.5, { altKm: 64, speedKms: 8.6, g: 3 }],
+  [T.REENTRY + 4, { altKm: 58, speedKms: 7.4, g: 1.4 }],
+  [T.REENTRY + 5.5, { altKm: 42, speedKms: 5, g: 4.8 }],
+  [T.REENTRY + 6.5, { altKm: 28, speedKms: 3.8, g: 6 }],
+  [T.REENTRY + 7.4, { altKm: 14, speedKms: 1.6, g: 3 }],
+  [T.CHUTES, { altKm: 7.3, speedKms: 0.35, g: 1 }],
+  [T.CHUTES + 0.75, { altKm: 3, speedKms: 0.12, g: 1 }],
+  [T.TOUCHDOWN, { altKm: 0, speedKms: 0.009, g: 1 }],
+];
+
+export function entryState(t: number): EntryState {
+  const keys = ENTRY_KEYS;
+  if (t <= keys[0][0]) return keys[0][1];
+  for (let i = 1; i < keys.length; i++) {
+    const [t1, b] = keys[i];
+    if (t <= t1) {
+      const [t0, a] = keys[i - 1];
+      const k = smooth((t - t0) / (t1 - t0));
+      return { altKm: lerp(a.altKm, b.altKm, k), speedKms: lerp(a.speedKms, b.speedKms, k), g: lerp(a.g, b.g, k) };
+    }
+  }
+  return keys[keys.length - 1][1];
+}
+
+/** Events on the way home, with the film time at which the film passes them and the Apollo 11 clock they carry. */
+export type ReturnLogId = "tei" | "teiEnd" | "entry" | "peak" | "signal" | "drogue" | "main" | "splash";
+/** `approx`: the moment is an estimate from the entry profile, not a logged time (shown with a ≈). */
+export const RETURN_LOG: { id: ReturnLogId; t: number; get: string; approx?: boolean }[] = [
+  { id: "tei", t: T.OUTBOUND_END, get: "135:23:42" },
+  { id: "teiEnd", t: T.OUTBOUND_END + 9, get: "135:26:14" },
+  { id: "entry", t: T.REENTRY, get: "195:03:25" },
+  { id: "peak", t: T.REENTRY + 1.5, get: "195:05:02", approx: true },
+  { id: "signal", t: ENTRY_BLACKOUT[1], get: "195:06:56" },
+  { id: "drogue", t: T.CHUTES, get: "195:12:04" },
+  { id: "main", t: T.CHUTES + 0.75, get: "195:12:52" },
+  { id: "splash", t: T.TOUCHDOWN, get: "195:18:35" },
+];

@@ -9,7 +9,9 @@
     "play": "node scripts/play.mjs",
     "lint": "next lint",
     "clean": "rm -rf .next dist",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:voice": "vitest run src/game/voiceTrace.test.ts src/game/voicePlayer.test.ts src/scenes/mission-control/voiceTimeline.test.ts src/scenes/ascent/failureScript.test.ts",
+    "check:voice:watch": "vitest src/game/voiceTrace.test.ts src/game/voicePlayer.test.ts src/scenes/mission-control/voiceTimeline.test.ts src/scenes/ascent/failureScript.test.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",

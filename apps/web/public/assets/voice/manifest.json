@@ -1489,12 +1489,6 @@
    "h": "d9b6eb615a",
    "d": 3.08
   },
-  "en-a2fe4e05cc254fe8": {
-   "f": "en/en-a2fe4e05cc254fe8.m4a",
-   "role": "narrator",
-   "h": "f25c4a008b",
-   "d": 3.73
-  },
   "en-54aa681c7e1ccbb5": {
    "f": "en/en-54aa681c7e1ccbb5.m4a",
    "role": "narrator",
@@ -2569,12 +2563,6 @@
    "h": "3db5cff5a6",
    "d": 2.77
   },
-  "vi-dfcafc814938ff38": {
-   "f": "vi/vi-dfcafc814938ff38.m4a",
-   "role": "narrator",
-   "h": "22e125bf4b",
-   "d": 2.66
-  },
   "vi-b4479724497b04d3": {
    "f": "vi/vi-b4479724497b04d3.m4a",
    "role": "narrator",
@@ -3373,23 +3361,11 @@
    "h": "7a2f363d9e",
    "d": 1.69
   },
-  "en-6430e9bae1e632e3": {
-   "f": "en/en-6430e9bae1e632e3.m4a",
-   "role": "armstrong",
-   "h": "b62e138942",
-   "d": 2.23
-  },
   "vi-058bda0ca13f4191": {
    "f": "vi/vi-058bda0ca13f4191.m4a",
    "role": "aldrin",
    "h": "4758909e50",
    "d": 2.23
-  },
-  "vi-6c73ce169b4a4d7f": {
-   "f": "vi/vi-6c73ce169b4a4d7f.m4a",
-   "role": "armstrong",
-   "h": "4b37604b7f",
-   "d": 2.27
   },
   "vi-5fffa814fd2863d7": {
    "f": "vi/vi-5fffa814fd2863d7.m4a",
@@ -3415,23 +3391,11 @@
    "h": "8069ac7c23",
    "d": 1.94
   },
-  "en-8554e8e4091fac69": {
-   "f": "en/en-8554e8e4091fac69.m4a",
-   "role": "collins",
-   "h": "7dfd0999b3",
-   "d": 1.22
-  },
   "en-603337915fee6c4a": {
    "f": "en/en-603337915fee6c4a.m4a",
    "role": "collins",
    "h": "feaf8515ca",
    "d": 1.76
-  },
-  "en-9743393cbca482ab": {
-   "f": "en/en-9743393cbca482ab.m4a",
-   "role": "collins",
-   "h": "d3e8025989",
-   "d": 3.42
   },
   "en-7dc604a6bc55c4a7": {
    "f": "en/en-7dc604a6bc55c4a7.m4a",
@@ -3451,12 +3415,6 @@
    "h": "0a304c0f56",
    "d": 2.34
   },
-  "en-599d80378927f3c4": {
-   "f": "en/en-599d80378927f3c4.m4a",
-   "role": "collins",
-   "h": "c9d02a8f75",
-   "d": 2.02
-  },
   "en-5ecb32cbb4f1499c": {
    "f": "en/en-5ecb32cbb4f1499c.m4a",
    "role": "collins",
@@ -3474,18 +3432,6 @@
    "role": "aldrin",
    "h": "530cb7acdd",
    "d": 1.94
-  },
-  "en-a570c0e7fe0fe28c": {
-   "f": "en/en-a570c0e7fe0fe28c.m4a",
-   "role": "aldrin",
-   "h": "6746f06cfc",
-   "d": 2.2
-  },
-  "en-7c2a744b4ee3619c": {
-   "f": "en/en-7c2a744b4ee3619c.m4a",
-   "role": "aldrin",
-   "h": "c3abf28164",
-   "d": 1.37
   },
   "en-89c56755d9df15b0": {
    "f": "en/en-89c56755d9df15b0.m4a",
@@ -3541,41 +3487,17 @@
    "h": "718cfe153d",
    "d": 1.84
   },
-  "en-ce63314b05d2dad6": {
-   "f": "en/en-ce63314b05d2dad6.m4a",
-   "role": "aldrin",
-   "h": "99d9b62048",
-   "d": 2.27
-  },
   "en-a831c57d919e4008": {
    "f": "en/en-a831c57d919e4008.m4a",
    "role": "armstrong",
    "h": "864d11f6c2",
    "d": 1.69
   },
-  "en-6fc0ac20e01b7031": {
-   "f": "en/en-6fc0ac20e01b7031.m4a",
-   "role": "armstrong",
-   "h": "eec1705934",
-   "d": 2.23
-  },
   "en-34987633a70b6ff2": {
    "f": "en/en-34987633a70b6ff2.m4a",
    "role": "armstrong",
    "h": "122fc7cb1e",
    "d": 2.34
-  },
-  "en-225939f4d01ab97f": {
-   "f": "en/en-225939f4d01ab97f.m4a",
-   "role": "armstrong",
-   "h": "8ba89b470b",
-   "d": 1.87
-  },
-  "en-48a77d826b9aa88f": {
-   "f": "en/en-48a77d826b9aa88f.m4a",
-   "role": "armstrong",
-   "h": "c1ee88b8e3",
-   "d": 3.02
   },
   "en-357a77caef9de52b": {
    "f": "en/en-357a77caef9de52b.m4a",
@@ -3619,12 +3541,6 @@
    "h": "c32da9617c",
    "d": 2.27
   },
-  "en-6577a3cee57feda3": {
-   "f": "en/en-6577a3cee57feda3.m4a",
-   "role": "armstrong",
-   "h": "294c74718f",
-   "d": 2.27
-  },
   "en-633733901236becb": {
    "f": "en/en-633733901236becb.m4a",
    "role": "armstrong",
@@ -3643,29 +3559,11 @@
    "h": "276ecea098",
    "d": 1.51
   },
-  "vi-91a6db6d08f35a2a": {
-   "f": "vi/vi-91a6db6d08f35a2a.m4a",
-   "role": "armstrong",
-   "h": "828e7f0e28",
-   "d": 2.16
-  },
   "vi-6acfd3e91928e9ca": {
    "f": "vi/vi-6acfd3e91928e9ca.m4a",
    "role": "armstrong",
    "h": "7cf5104dd2",
    "d": 1.87
-  },
-  "vi-10d2b41e86a89c03": {
-   "f": "vi/vi-10d2b41e86a89c03.m4a",
-   "role": "armstrong",
-   "h": "94db32d14a",
-   "d": 2.23
-  },
-  "vi-5ad341692349339a": {
-   "f": "vi/vi-5ad341692349339a.m4a",
-   "role": "armstrong",
-   "h": "27b416a06d",
-   "d": 2.05
   },
   "vi-6024acf80b8f45e5": {
    "f": "vi/vi-6024acf80b8f45e5.m4a",
@@ -3709,12 +3607,6 @@
    "h": "51eedd4243",
    "d": 1.44
   },
-  "vi-3f54e938e3cea809": {
-   "f": "vi/vi-3f54e938e3cea809.m4a",
-   "role": "armstrong",
-   "h": "619cb16247",
-   "d": 1.51
-  },
   "vi-9181f8517fae27be": {
    "f": "vi/vi-9181f8517fae27be.m4a",
    "role": "armstrong",
@@ -3725,18 +3617,6 @@
    "f": "vi/vi-adc60d89b289a722.m4a",
    "role": "aldrin",
    "h": "a5e0520bcb",
-   "d": 1.37
-  },
-  "vi-2f4e09d49d93da73": {
-   "f": "vi/vi-2f4e09d49d93da73.m4a",
-   "role": "aldrin",
-   "h": "e708fea4de",
-   "d": 1.84
-  },
-  "vi-04fba0b994c3e9be": {
-   "f": "vi/vi-04fba0b994c3e9be.m4a",
-   "role": "aldrin",
-   "h": "0660430dab",
    "d": 1.37
   },
   "vi-5e82b070855ad959": {
@@ -3793,12 +3673,6 @@
    "h": "7be1c1528a",
    "d": 1.4
   },
-  "vi-6e1e63491a0427da": {
-   "f": "vi/vi-6e1e63491a0427da.m4a",
-   "role": "aldrin",
-   "h": "17f76309b2",
-   "d": 1.98
-  },
   "en-f79ccb87d7e0fbc8": {
    "f": "en/en-f79ccb87d7e0fbc8.m4a",
    "role": "kranz",
@@ -3817,23 +3691,11 @@
    "h": "1d9480d56c",
    "d": 1.51
   },
-  "vi-377d48a27645dd67": {
-   "f": "vi/vi-377d48a27645dd67.m4a",
-   "role": "collins",
-   "h": "afdcacca29",
-   "d": 0.65
-  },
   "vi-9c79af63564553ba": {
    "f": "vi/vi-9c79af63564553ba.m4a",
    "role": "collins",
    "h": "da08684779",
    "d": 1.66
-  },
-  "vi-c872e98a04e0077d": {
-   "f": "vi/vi-c872e98a04e0077d.m4a",
-   "role": "collins",
-   "h": "700c9468e1",
-   "d": 4
   },
   "vi-f72257b612635257": {
    "f": "vi/vi-f72257b612635257.m4a",
@@ -3852,12 +3714,6 @@
    "role": "collins",
    "h": "b8c4d35501",
    "d": 1.66
-  },
-  "vi-6552cb0261fb3c5f": {
-   "f": "vi/vi-6552cb0261fb3c5f.m4a",
-   "role": "collins",
-   "h": "901591e7f1",
-   "d": 1.44
   },
   "vi-0a88b5a2691ee127": {
    "f": "vi/vi-0a88b5a2691ee127.m4a",
@@ -3895,18 +3751,6 @@
    "h": "2e89019d8c",
    "d": 1.44
   },
-  "vi-57c52597922c5ab0": {
-   "f": "vi/vi-57c52597922c5ab0.m4a",
-   "role": "aldrin",
-   "h": "25743f955d",
-   "d": 3.02
-  },
-  "en-fb1add8bd3218744": {
-   "f": "en/en-fb1add8bd3218744.m4a",
-   "role": "aldrin",
-   "h": "0c0158fb8e",
-   "d": 2.09
-  },
   "vi-114302d1e0d799c0": {
    "f": "vi/vi-114302d1e0d799c0.m4a",
    "role": "aldrin",
@@ -3918,12 +3762,6 @@
    "role": "aldrin",
    "h": "ac6044aca1",
    "d": 1.8
-  },
-  "vi-7a103fd84b17496f": {
-   "f": "vi/vi-7a103fd84b17496f.m4a",
-   "role": "aldrin",
-   "h": "ac7e8f0f5e",
-   "d": 2.2
   },
   "en-25dbbe37f31efaf6": {
    "f": "en/en-25dbbe37f31efaf6.m4a",
@@ -3966,18 +3804,6 @@
    "role": "collins",
    "h": "7e21ee7398",
    "d": 3.71
-  },
-  "en-2e64ae6c1854bf07": {
-   "f": "en/en-2e64ae6c1854bf07.m4a",
-   "role": "collins",
-   "h": "8a456b6901",
-   "d": 3.42
-  },
-  "en-e5e388dc28086b3d": {
-   "f": "en/en-e5e388dc28086b3d.m4a",
-   "role": "collins",
-   "h": "abc70d4c57",
-   "d": 3.49
   },
   "en-404e2e5677ea5143": {
    "f": "en/en-404e2e5677ea5143.m4a",
@@ -4039,29 +3865,11 @@
    "h": "7a68a623b1",
    "d": 2.66
   },
-  "en-89f38808657133e7": {
-   "f": "en/en-89f38808657133e7.m4a",
-   "role": "aldrin",
-   "h": "5f155a5039",
-   "d": 3.35
-  },
-  "en-f3b14bcd161a530a": {
-   "f": "en/en-f3b14bcd161a530a.m4a",
-   "role": "armstrong",
-   "h": "bd7527a0a2",
-   "d": 3.31
-  },
   "en-7e3531e2efd22857": {
    "f": "en/en-7e3531e2efd22857.m4a",
    "role": "armstrong",
    "h": "11a25c12fc",
    "d": 2.7
-  },
-  "en-fa695e566b734d47": {
-   "f": "en/en-fa695e566b734d47.m4a",
-   "role": "armstrong",
-   "h": "62d3a89eab",
-   "d": 3.24
   },
   "en-6c2b66449b6fa257": {
    "f": "en/en-6c2b66449b6fa257.m4a",
@@ -4093,35 +3901,17 @@
    "h": "8c6da9bf55",
    "d": 2.45
   },
-  "en-40cd1a81f8ef5ada": {
-   "f": "en/en-40cd1a81f8ef5ada.m4a",
-   "role": "armstrong",
-   "h": "5830d85c4a",
-   "d": 2.63
-  },
   "en-414cdc88bae2afdd": {
    "f": "en/en-414cdc88bae2afdd.m4a",
    "role": "armstrong",
    "h": "cd2bc52ec7",
    "d": 2.59
   },
-  "en-aa8b31641740fe1f": {
-   "f": "en/en-aa8b31641740fe1f.m4a",
-   "role": "armstrong",
-   "h": "080350f038",
-   "d": 4.36
-  },
   "en-70f6539c1e2f2f35": {
    "f": "en/en-70f6539c1e2f2f35.m4a",
    "role": "armstrong",
    "h": "f7eab9167f",
    "d": 2.56
-  },
-  "en-d70419ecdb8cb8c1": {
-   "f": "en/en-d70419ecdb8cb8c1.m4a",
-   "role": "armstrong",
-   "h": "d6148792c6",
-   "d": 3.17
   },
   "en-89b7e9c87583b0f5": {
    "f": "en/en-89b7e9c87583b0f5.m4a",
@@ -4135,28 +3925,10 @@
    "h": "4ca69c30d4",
    "d": 3.46
   },
-  "vi-94a75b3200d53149": {
-   "f": "vi/vi-94a75b3200d53149.m4a",
-   "role": "collins",
-   "h": "80eebb8281",
-   "d": 2.66
-  },
-  "vi-d61789f406ac8611": {
-   "f": "vi/vi-d61789f406ac8611.m4a",
-   "role": "collins",
-   "h": "8786b1dad2",
-   "d": 1.84
-  },
   "vi-bc2a24bc843cd8a7": {
    "f": "vi/vi-bc2a24bc843cd8a7.m4a",
    "role": "collins",
    "h": "cfdf37b5ea",
-   "d": 2.38
-  },
-  "vi-56893b85a8f30346": {
-   "f": "vi/vi-56893b85a8f30346.m4a",
-   "role": "armstrong",
-   "h": "b2956785f9",
    "d": 2.38
   },
   "vi-f824ce8000cf9c05": {
@@ -4164,12 +3936,6 @@
    "role": "armstrong",
    "h": "2f2989b932",
    "d": 2.23
-  },
-  "vi-b08f1290a19c792f": {
-   "f": "vi/vi-b08f1290a19c792f.m4a",
-   "role": "armstrong",
-   "h": "4f1e3b335e",
-   "d": 3.1
   },
   "vi-cd7266d5f1d228da": {
    "f": "vi/vi-cd7266d5f1d228da.m4a",
@@ -4201,35 +3967,17 @@
    "h": "5940a16ebe",
    "d": 2.66
   },
-  "vi-10ae1a3737c2c124": {
-   "f": "vi/vi-10ae1a3737c2c124.m4a",
-   "role": "armstrong",
-   "h": "1bf3ecabf2",
-   "d": 2.09
-  },
   "vi-c8f5edd95c939768": {
    "f": "vi/vi-c8f5edd95c939768.m4a",
    "role": "armstrong",
    "h": "1bec3b670f",
    "d": 2.48
   },
-  "vi-e98a2e138b46f390": {
-   "f": "vi/vi-e98a2e138b46f390.m4a",
-   "role": "armstrong",
-   "h": "286e6d3e20",
-   "d": 2.77
-  },
   "vi-c32d71b9c1631ab2": {
    "f": "vi/vi-c32d71b9c1631ab2.m4a",
    "role": "armstrong",
    "h": "24ac36ac01",
    "d": 2.34
-  },
-  "vi-0a3b0dfc7ca70787": {
-   "f": "vi/vi-0a3b0dfc7ca70787.m4a",
-   "role": "armstrong",
-   "h": "b3300d7626",
-   "d": 2.23
   },
   "vi-cfc1768d1f8cf2a6": {
    "f": "vi/vi-cfc1768d1f8cf2a6.m4a",
@@ -4374,6 +4122,54 @@
    "role": "collins",
    "h": "bbb524c41b",
    "d": 1.94
+  },
+  "en-0a542112ef0360f3": {
+   "f": "en/en-0a542112ef0360f3.mp3",
+   "role": "narrator",
+   "h": "f9e51e5c04",
+   "d": 3.89
+  },
+  "en-74509bc126a57f2c": {
+   "f": "en/en-74509bc126a57f2c.mp3",
+   "role": "narrator",
+   "h": "853b986224",
+   "d": 3.2
+  },
+  "vi-19140931880263b6": {
+   "f": "vi/vi-19140931880263b6.mp3",
+   "role": "narrator",
+   "h": "83390e3d1c",
+   "d": 3.46
+  },
+  "vi-d1009afbf62b3db0": {
+   "f": "vi/vi-d1009afbf62b3db0.mp3",
+   "role": "narrator",
+   "h": "de6b88d0d4",
+   "d": 5.44
+  },
+  "en-77bd9d835f42559e": {
+   "f": "en/en-77bd9d835f42559e.mp3",
+   "role": "narrator",
+   "h": "39159fecea",
+   "d": 4.72
+  },
+  "vi-ceadfe2edc53b031": {
+   "f": "vi/vi-ceadfe2edc53b031.mp3",
+   "role": "narrator",
+   "h": "41a17184fb",
+   "d": 4.1
+  },
+  "en-0d2d39c4180653d1": {
+   "f": "en/en-0d2d39c4180653d1.mp3",
+   "role": "narrator",
+   "h": "7fd6835419",
+   "d": 5.33
+  },
+  "vi-c6fbb9cfac6379f6": {
+   "f": "vi/vi-c6fbb9cfac6379f6.mp3",
+   "role": "narrator",
+   "h": "cf62de7e66",
+   "d": 3.31
   }
  }
 }
