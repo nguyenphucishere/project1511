@@ -24,7 +24,7 @@ import { BRIEFINGS } from "@/game/script";
 import { useGameStore } from "@/game/gameStore";
 import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
-import { playSfx, startRumble, type Rumble } from "@/game/sfx";
+import { playSfx, setMasterVolume, startRumble, type Rumble } from "@/game/sfx";
 import { preloadCrowd, startCrowdBed, type CrowdBed } from "@/game/crowdAudio";
 import {
   fetchLaunchTelemetryFromServer,
@@ -80,6 +80,9 @@ import {
   engineOption,
   tankOption,
 } from "@/scenes/workshop/loadout";
+
+/** Master volume while this scene is up (the default is 0.5). */
+const MC_VOLUME = 0.9;
 
 /**
  * How loud the engines are at film time `t`: full while a stage burns, a low ring-down in the
@@ -196,6 +199,11 @@ export function MissionControlScene({
   const roar = useRef<() => void>(() => {});
   const rumbleRef = useRef<Rumble | null>(null);
   useEffect(() => () => roar.current(), []);
+  // The launch is the loudest scene (roar, crowd, band, radio at once): everything runs louder here.
+  useEffect(() => {
+    setMasterVolume(MC_VOLUME);
+    return () => setMasterVolume();
+  }, []);
   useEffect(() => {
     const timers = cinematicTimers.current;
     return () => {
