@@ -1,8 +1,10 @@
+pub mod descent;
 pub mod evaluator;
 pub mod kepler;
 pub mod launch;
 pub mod resource_graph;
 
+pub use descent::*;
 pub use evaluator::*;
 pub use kepler::*;
 pub use launch::*;

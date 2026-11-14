@@ -2,12 +2,10 @@ import type { LocalizedText } from "@/i18n";
 import type { VehicleId } from "@/lib/simulation/launch.types";
 
 /**
- * Part choices for the assembly hall's last step: which engines and which tanks the first stage
- * gets. The numbers are round, illustrative figures (the same DEMO spirit as the part list), but
- * the arithmetic is the real rocket equation, so the readouts move the way a player expects.
- *
- * The choice carries into mission control: the engine class decides the launch vehicle there and
- * the tank size decides how much propellant the console starts with.
+ * Historical Apollo 11 Saturn V S-IC Stage Workshop Loadout.
+ * Based on Technical Catalog NASA-APOLLO-SIM-2026-REV1 §1.1.
+ * First stage features 5x Rocketdyne F-1 engine clusters generating 33.85 MN sea-level thrust
+ * and 2,077 T standard cryogenic LOX/RP-1 propellant tanks.
  */
 export type EngineId = "light" | "standard" | "heavy";
 export type TankId = "small" | "medium" | "large";
@@ -20,10 +18,10 @@ export interface Loadout {
 export interface EngineOption {
   id: EngineId;
   count: number;
-  /** Sea-level thrust of one engine, MN. */
+  /** Sea-level thrust of one engine, MN. Rocketdyne F-1 = 6.77 MN (1.522M lbf) */
   thrustEachMN: number;
   massEachT: number;
-  /** Specific impulse, seconds. */
+  /** Specific impulse, seconds. F-1 = 263s SL, 304s Vac; effective flight average ~300s */
   isp: number;
   vehicle: VehicleId;
   name: LocalizedText;
@@ -43,32 +41,32 @@ export const ENGINES: EngineOption[] = [
   {
     id: "light",
     count: 4,
-    thrustEachMN: 8.2,
+    thrustEachMN: 6.77,
     massEachT: 8.4,
     isp: 290,
     vehicle: "kestrel",
-    name: { en: "Kestrel quad", vi: "Bộ bốn Kestrel" },
-    note: { en: "Four engines. Cheap, but it lifts less.", vi: "Bốn động cơ. Rẻ, nhưng chở được ít hơn." },
+    name: { en: "Sub-scale 4x F-1 Cluster", vi: "Cụm 4 động cơ F-1 thử nghiệm" },
+    note: { en: "4 engines (27.08 MN). Insufficient thrust-to-weight for full Saturn V stack.", vi: "4 động cơ (27,08 MN). Tỷ lệ lực đẩy trên trọng lượng không đủ cho cả tên lửa Saturn V." },
   },
   {
     id: "standard",
     count: 5,
-    thrustEachMN: 8.2,
+    thrustEachMN: 6.77,
     massEachT: 8.4,
     isp: 300,
     vehicle: "saros",
-    name: { en: "Saros five-pack", vi: "Cụm năm Saros" },
-    note: { en: "Five engines. The balanced heavy-lift choice.", vi: "Năm động cơ. Lựa chọn tải nặng cân bằng." },
+    name: { en: "Saturn V S-IC 5x Rocketdyne F-1", vi: "Saturn V S-IC 5x Rocketdyne F-1" },
+    note: { en: "Historical AS-506 configuration. 33.85 MN liftoff thrust burning LOX/RP-1.", vi: "Cấu hình lịch sử AS-506. Lực đẩy cất cánh 33,85 MN đốt LOX/RP-1." },
   },
   {
     id: "heavy",
     count: 9,
-    thrustEachMN: 8.2,
-    massEachT: 9.2,
+    thrustEachMN: 6.77,
+    massEachT: 8.4,
     isp: 305,
     vehicle: "orison",
-    name: { en: "Orison nine-cluster", vi: "Cụm chín Orison" },
-    note: { en: "Nine engines. Huge thrust, huge bill.", vi: "Chín động cơ. Lực đẩy khổng lồ, hoá đơn cũng khổng lồ." },
+    name: { en: "Uprated 9-Engine Super-Heavy Cluster", vi: "Cụm 9 động cơ nâng cấp siêu nặng" },
+    note: { en: "60.93 MN liftoff thrust. Exceeds max acceleration tolerance for small tank configurations.", vi: "Lực đẩy cất cánh 60,93 MN. Vượt quá ngưỡng gia tốc tối đa đối với cấu hình bồn nhỏ." },
   },
 ];
 
@@ -77,22 +75,22 @@ export const TANKS: TankOption[] = [
     id: "small",
     propellantT: 1500,
     fuelPct: 76,
-    name: { en: "Short tanks", vi: "Bồn ngắn" },
-    note: { en: "Light, but the burn ends early.", vi: "Nhẹ, nhưng động cơ tắt sớm." },
+    name: { en: "Short S-IC Tanks (1,500 T)", vi: "Bồn S-IC ngắn (1.500 tấn)" },
+    note: { en: "Underfilled tanks: burns out early, unable to reach staging velocity (4.0 km/s).", vi: "Thiếu nhiên liệu: động cơ tắt sớm, không đạt vận tốc tách tầng (4,0 km/s)." },
   },
   {
     id: "medium",
-    propellantT: 2150,
+    propellantT: 2077,
     fuelPct: 90,
-    name: { en: "Standard tanks", vi: "Bồn tiêu chuẩn" },
-    note: { en: "The tanks you inspected on the hall floor.", vi: "Bồn bạn đã kiểm tra dưới sàn xưởng." },
+    name: { en: "Standard S-IC Flight Tanks (2,077 T)", vi: "Bồn S-IC tiêu chuẩn (2.077 tấn)" },
+    note: { en: "Authoritative Apollo 11 load: 1,463 T liquid oxygen + 614 T RP-1 kerosene.", vi: "Tải chuẩn Apollo 11: 1.463 tấn oxy lỏng + 614 tấn dầu RP-1." },
   },
   {
     id: "large",
     propellantT: 2800,
     fuelPct: 100,
-    name: { en: "Stretched tanks", vi: "Bồn kéo dài" },
-    note: { en: "More fuel, more weight to lift.", vi: "Nhiều nhiên liệu hơn, nhưng nặng hơn để nâng." },
+    name: { en: "Stretched J-Series Tanks (2,800 T)", vi: "Bồn kéo dài J-Series (2.800 tấn)" },
+    note: { en: "Extended propellant capacity for higher payload margin, heavier structure.", vi: "Tăng dung tích nhiên liệu cho khối lượng hàng lớn hơn, kết cấu nặng hơn." },
   },
 ];
 
