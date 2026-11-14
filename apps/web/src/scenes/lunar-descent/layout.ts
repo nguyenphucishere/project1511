@@ -1,5 +1,6 @@
 import type { Viewpoint, Vec3 } from "@/game/sceneStore";
 import { DESCENT_STEPS, KEYFRAMES, missionTimeAt } from "@/mocks/descent";
+import type { SiteId } from "./flight";
 
 /**
  * Scene 4 metrics, in metres. The astronaut stands (as lander crews did) at a small window with
@@ -42,9 +43,6 @@ export function visualRange(altM: number): number {
   return 3.4 * (visualAltitude(altM) - 3);
 }
 
-/** Where the clear patch sits relative to the boulder field the lander was heading for. */
-export const SITE_OFFSET_X = 8;
-
 const smooth = (a: number, b: number, t: number) => {
   const x = Math.min(1, Math.max(0, (t - a) / (b - a)));
   return x * x * (3 - 2 * x);
@@ -55,14 +53,9 @@ export function tiltAt(t: number): number {
   return -0.15 * (1 - smooth(KEYFRAMES[1].t, KEYFRAMES[1].t + 60, t));
 }
 
-/** Sideways drift onto the clear patch after the site is confirmed. */
-export function driftAt(t: number): number {
-  return SITE_OFFSET_X * smooth(KEYFRAMES[2].t, KEYFRAMES[3].t - 10, t);
-}
-
 /**
- * The descent clock. `stepsDone` controls pressed so far; the segment that the last press
- * started began at `segmentStart` (performance.now()). Shared by the 3D world and the DOM panel.
+ * The descent clock for the scripted part (steps 0 and 1). `stepsDone` controls pressed so far;
+ * the segment that the last press started began at `segmentStart` (performance.now()).
  */
 export interface DescentClock {
   stepsDone: number;
@@ -72,4 +65,59 @@ export interface DescentClock {
 export function missionTimeNow(clock: DescentClock, now = performance.now()): number {
   if (clock.stepsDone === 0 || clock.segmentStart === null) return 0;
   return missionTimeAt(clock.stepsDone - 1, (now - clock.segmentStart) / 1000);
+}
+
+/**
+ * What the 3D world draws this frame. A plain mutable object written by the scene every frame
+ * (scripted profile, then the flight model) and only read by the world: it changes 60 times a
+ * second and nothing re-renders on it.
+ */
+export interface FlightView {
+  /** Mission time, s since powered descent. */
+  t: number;
+  altM: number;
+  vsMs: number;
+  /** Sideways position of the lander relative to the aim point, m. */
+  xM: number;
+  hsMs: number;
+  throttle: number;
+  rcs: -1 | 0 | 1;
+  /** Backward lean of the lander before the pitch-over, rad. */
+  tilt: number;
+  fuelPct: number;
+  engineOn: boolean;
+  /** Controls already thrown (0-3). */
+  stepsDone: number;
+  contact: boolean;
+  /** The pilot is flying the final descent. */
+  manual: boolean;
+  /** Candidate sites are marked on the ground (from the low gate on). */
+  showSites: boolean;
+  /** The site the pilot picked (highlighted on the ground). */
+  siteId: SiteId | null;
+  /** performance.now() of the touchdown, or null in flight. */
+  touchdownAt: number | null;
+  crashed: boolean;
+}
+
+export function initialView(): FlightView {
+  return {
+    t: 0,
+    altM: KEYFRAMES[0].altM,
+    vsMs: 0,
+    xM: 0,
+    hsMs: 0,
+    throttle: 0,
+    rcs: 0,
+    tilt: tiltAt(0),
+    fuelPct: KEYFRAMES[0].fuelPct,
+    engineOn: false,
+    stepsDone: 0,
+    contact: false,
+    manual: false,
+    showSites: false,
+    siteId: null,
+    touchdownAt: null,
+    crashed: false,
+  };
 }
