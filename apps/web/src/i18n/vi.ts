@@ -254,6 +254,18 @@ export const vi: Dictionary = {
     soft: "Đáp nhẹ nhàng",
     continue: "Bước ra ngoài",
   },
+  sceneLoading: {
+    percent: "{n}%",
+    stageCode: "Đang tải mã cảnh",
+    stageAssets: "Đang tải kết cấu và ánh sáng",
+    stageWarmup: "Đang khởi động bộ dựng hình",
+    ready: "Sẵn sàng",
+    workshopTitle: "Xưởng lắp ráp",
+    workshopSubtitle: "Đang chuẩn bị cần trục, khối tên lửa và các trạm kiểm tra",
+    tip1: "Mẹo: cần trục xếp tên lửa từng tầng một. Cứ từ từ thôi.",
+    tip2: "Mẹo: chế độ quét nhìn bên trong cho thấy lỗi mà bên ngoài không thấy được.",
+    tip3: "Mẹo: duyệt vội sẽ tốn nhiên liệu ở các chặng sau.",
+  },
   consequence: {
     yourCall: "Quyết định của bạn",
     hint: "Nhấn Enter hoặc bấm để tiếp tục",

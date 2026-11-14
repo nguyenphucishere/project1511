@@ -257,6 +257,18 @@ export const en = {
     soft: "Soft landing",
     continue: "Step outside",
   },
+  sceneLoading: {
+    percent: "{n}%",
+    stageCode: "Loading scene code",
+    stageAssets: "Loading textures and lighting",
+    stageWarmup: "Warming up the renderer",
+    ready: "Ready",
+    workshopTitle: "Assembly hall",
+    workshopSubtitle: "Preparing the gantry crane, the rocket stack and the inspection stations",
+    tip1: "Tip: the gantry crane stacks the rocket stage by stage. Take it slowly.",
+    tip2: "Tip: the scanner's inside view shows faults you cannot see from the outside.",
+    tip3: "Tip: a rushed sign-off costs fuel later in the mission.",
+  },
   consequence: {
     yourCall: "Your call",
     hint: "Enter or click to continue",

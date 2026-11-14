@@ -6,6 +6,7 @@ import { DialogueOverlay } from "@/components/cutscene/DialogueOverlay";
 import { DecisionOverlay } from "@/components/cutscene/DecisionOverlay";
 import { EndScreen } from "@/components/cutscene/EndScreen";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { preloadUpcoming } from "@/scenes/preload";
 import { SCENES } from "@/scenes/registry";
 import { cn } from "@/lib/utils";
 import { getStep, type Step, type Transition } from "./flow";
@@ -50,6 +51,11 @@ export function SceneRouter({ stepId }: { stepId: string }) {
       window.clearTimeout(reveal);
     };
   }, [stepId, reduced]);
+
+  // Warm the heavy scenes coming up (e.g. the assembly hall) while the player is still on this step.
+  useEffect(() => {
+    preloadUpcoming(shownId);
+  }, [shownId]);
 
   const step = getStep(shownId);
   const done = () => advanceFrom(shownId);
