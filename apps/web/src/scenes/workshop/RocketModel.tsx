@@ -306,7 +306,7 @@ function Decal({
 let lettering: { word: ReturnType<typeof makeLettering>; usa: ReturnType<typeof makeLettering> } | undefined;
 function letters() {
   lettering ??= {
-    word: makeLettering("MOONBOUND", { color: "#0b2a6b", font: "800 110px Arial, Helvetica, sans-serif", w: 128, h: 1100, vertical: true }),
+    word: makeLettering("BEYOND THE EARTH", { color: "#0b2a6b", font: "800 64px Arial, Helvetica, sans-serif", w: 128, h: 1100, vertical: true }),
     usa: makeLettering("USA", { color: "#c4281b", font: "800 110px Arial, Helvetica, sans-serif", w: 128, h: 380, vertical: true }),
   };
   return lettering;

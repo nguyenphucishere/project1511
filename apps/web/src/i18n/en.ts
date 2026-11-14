@@ -5,7 +5,7 @@
  */
 export const en = {
   meta: {
-    title: "Moonbound: Mission Control",
+    title: "Beyond The Earth: Mission Control",
     description: "Prepare, launch, and land a crewed mission on the Moon.",
   },
   common: {
@@ -21,7 +21,7 @@ export const en = {
     off: "Off",
   },
   home: {
-    title: "Moonbound",
+    title: "Beyond The Earth",
     subtitle: "Four crew members, one rocket, and the long way to the Moon.",
     start: "Start mission",
     continue: "Continue",
@@ -332,6 +332,10 @@ export const en = {
     tip1: "Tip: the gantry crane stacks the rocket stage by stage. Take it slowly.",
     tip2: "Tip: the scanner's inside view shows faults you cannot see from the outside.",
     tip3: "Tip: a rushed sign-off costs fuel later in the mission.",
+    genericSubtitle: "Getting everything ready so the scene runs smoothly",
+    genericTip1: "Everything loads before the scene starts, so it stays smooth.",
+    genericTip2: "Sound is part of the mission: turn it on for the full effect.",
+    genericTip3: "Press Skip in a film to jump to its end.",
   },
   consequence: {
     yourCall: "Your call",
