@@ -403,6 +403,8 @@ export function MissionControlScene({
       const close = shot.startsWith("crowd-");
       bed.setLevel(shot === "crowd-cheer" ? 1 : close ? 0.85 : 0.2);
       if (shot === "crowd-cheer") bed.react("cheer");
+      // The first cut to the crowd comes right after liftoff: they cheer as the rocket clears the pad.
+      else if (shot === "crowd-field") bed.react("cheer", 0.7);
       else if (/^crowd-(field|beach)-[23]$/.test(shot)) bed.react("awe", 0.8);
     }, 100);
     return () => window.clearInterval(id);
