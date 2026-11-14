@@ -147,10 +147,12 @@ describe("Tier 3 Combination: Obstacle Hazard (West Crater) & Propellant Depleti
       session.makeDecision("landing_approach", "p66_redesignation");
       const nextStep = session.advance();
 
-      // Flow goes to flag video -> epilogue -> end
+      // Flow goes to flag video -> epilogue -> return-briefing -> return-scene -> end
       assert.equal(nextStep, "flag-video");
       assert.equal(session.advance(), "epilogue");
-      assert.equal(session.advanceTo("end"), "end");
+      assert.equal(session.advance(), "return-briefing");
+      assert.equal(session.advance(), "return-scene");
+      assert.equal(session.advance(), "end");
 
       assert.equal(session.getEndingId(), "ending-1");
       const state = session.getState();

@@ -98,6 +98,11 @@ function lerpTable(table: [number, number][], t: number): number {
   return table[table.length - 1]![1];
 }
 
+/** Nominal altitude (km) `realSec` seconds after ignition, whatever orbit was chosen. */
+export function nominalAltitudeKm(realSec: number): number {
+  return lerpTable(ALTITUDE_KM, missionSecondsAt(realSec));
+}
+
 /** DEMO altitude, scaled so a nominal flight ends exactly at the chosen parking orbit. */
 export function altitudeKm(t: number, orbitKm: number): number {
   return lerpTable(ALTITUDE_KM, t) * (orbitKm / 185);

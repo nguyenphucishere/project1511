@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocalized } from "@/i18n/useT";
 import { CHARACTERS } from "@/game/characters";
 import { DECISIONS, type DecisionId } from "@/game/decisions";
 import { type ChapterId } from "@/game/flow";
 import { useGameStore } from "@/game/gameStore";
+import { getCallbackLines, getConsequence, type Consequence } from "@/game/consequences";
+import { ConsequenceBeat } from "./ConsequenceBeat";
 import { CharacterPortrait } from "./CharacterPortrait";
 import { ParallaxCanvas } from "./ParallaxCanvas";
 
@@ -25,12 +27,23 @@ export function DecisionOverlay({ decisionId, chapter, onDone }: DecisionOverlay
   const decision = DECISIONS[decisionId];
   const speaker = CHARACTERS[decision.speaker];
 
+  const narrative = useGameStore((s) => s.narrative);
+  // After the call is committed, the aftermath beat covers the screen; it then calls onDone.
+  const [beat, setBeat] = useState<{ consequence: Consequence; title: string } | null>(null);
+  // At most one quiet hint that an earlier shortcut is still in play.
+  const callback = getCallbackLines(decision.pointId, narrative)[0];
+
   const handleSelect = useCallback(
     (optionId: string) => {
-      makeDecision(decision.pointId, optionId);
-      onDone();
+      if (beat) return;
+      if (!makeDecision(decision.pointId, optionId)) return onDone();
+      const option = decision.options.find((o) => o.id === optionId);
+      setBeat({
+        consequence: getConsequence(decision.pointId, optionId, useGameStore.getState().narrative),
+        title: option ? localize(option.title) : optionId,
+      });
     },
-    [decision.pointId, makeDecision, onDone],
+    [beat, decision.options, decision.pointId, localize, makeDecision, onDone],
   );
 
   useEffect(() => {
@@ -67,6 +80,7 @@ export function DecisionOverlay({ decisionId, chapter, onDone }: DecisionOverlay
         </div>
         <div className="bezel bezel-gold bg-space-deep/95 px-5 py-4 shadow-2xl sm:px-8 sm:py-5">
           <p className="text-lg font-medium leading-snug text-foreground sm:text-xl">{localize(decision.prompt)}</p>
+          {callback && <p className="mt-1 text-sm italic text-amber-300/85">{localize(callback)}</p>}
 
           <div className={`mt-4 grid grid-cols-1 gap-3 ${decision.options.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
             {decision.options.map((opt) => (
@@ -88,6 +102,15 @@ export function DecisionOverlay({ decisionId, chapter, onDone }: DecisionOverlay
           </div>
         </div>
       </div>
+
+      {beat && (
+        <ConsequenceBeat
+          consequence={beat.consequence}
+          choiceTitle={beat.title}
+          horizon={chapter === "lunar-descent"}
+          onDone={onDone}
+        />
+      )}
     </section>
   );
 }

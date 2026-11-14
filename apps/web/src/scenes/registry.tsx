@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
+import { SceneLoading } from "@/components/hud/SceneLoading";
 import type { SceneId } from "@/game/flow";
 
 export interface SceneProps {
@@ -27,5 +28,10 @@ export const SCENES: Record<SceneId, ComponentType<SceneProps>> = {
     ssr: false,
     loading,
   }),
-  workshop: dynamic(() => import("./workshop/WorkshopScene").then((m) => m.WorkshopScene), { ssr: false, loading }),
+  // The hall is the heaviest scene: it has a loading screen, and its assets are preloaded ahead
+  // of time (see ./preload.ts), so the screen is usually brief or skipped.
+  workshop: dynamic(() => import("./workshop/WorkshopGate").then((m) => m.WorkshopGate), {
+    ssr: false,
+    loading: () => <SceneLoading scene="workshop" />,
+  }),
 };

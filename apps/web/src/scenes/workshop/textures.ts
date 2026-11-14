@@ -11,8 +11,7 @@ import {
   SRGBColorSpace,
   type Texture,
 } from "three";
-
-const PH = "/assets/textures/ph";
+import { hallTextureUrls } from "./assets";
 
 type PbrSet = { map: Texture; normalMap: Texture; roughnessMap: Texture };
 
@@ -36,11 +35,8 @@ function pbr(set: PbrSet, rx: number, ry: number): PbrSet {
 }
 
 function load(name: string) {
-  return {
-    map: `${PH}/${name}_diff.jpg`,
-    normalMap: `${PH}/${name}_nor_gl.jpg`,
-    roughnessMap: `${PH}/${name}_rough.jpg`,
-  };
+  const [map, normalMap, roughnessMap] = hallTextureUrls(name);
+  return { map, normalMap, roughnessMap };
 }
 
 /** The real PBR texture sets of the hall (Poly Haven, CC0), tiled to suit each surface. */

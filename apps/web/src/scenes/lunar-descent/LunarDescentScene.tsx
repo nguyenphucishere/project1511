@@ -13,6 +13,11 @@ import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
 import { playSfx, startLoop } from "@/game/sfx";
 import { useSimulationWasm } from "@/hooks/useSimulationWasm";
+import { useNasaData } from "@/hooks/useNasaData";
+import { useServerEngine } from "@/hooks/useServerEngine";
+import { DsnTrackingStatus } from "@/components/hud/DsnTrackingStatus";
+import { landingRadar } from "@/lib/simulation/nasa.physics";
+import type { DsnTelemetryResult, LandingRadarMeasurement } from "@/lib/simulation/nasa.types";
 import { DESCENT_STEPS, KEYFRAMES, sampleAt } from "@/mocks/descent";
 import {
   DescentCommand,
@@ -38,7 +43,9 @@ import {
   type Touchdown,
 } from "./flight";
 import type { StickValue } from "./Joystick";
+import { LandingRadarProfile } from "./LandingRadarProfile";
 import { LunarWorld } from "./LunarWorld";
+import { radarInputAt, terrainOffsetAt } from "./radar";
 import {
   VIEWPOINTS,
   initialView,
@@ -179,7 +186,11 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
   const [trace, setTrace] = useState<Trace>(EMPTY_TRACE);
   const [result, setResult] = useState<Touchdown | null>(null);
   const [dialog, setDialog] = useState(false);
-  const { stepDescent, lastDescentState } = useSimulationWasm();
+  const { stepDescent, lastDescentState, calculateLandingRadar, calculateDsnTelemetry } = useSimulationWasm();
+  const nasa = useNasaData();
+  const serverEngine = useServerEngine({ apollo11: false });
+  const [radar, setRadar] = useState<LandingRadarMeasurement>(() => landingRadar(radarInputAt(0)));
+  const [dsnLink, setDsnLink] = useState<DsnTelemetryResult | null>(null);
 
   // Mutable state the frame loop owns. React state mirrors what the DOM needs.
   const view = useRef<FlightView>(initialView());
@@ -487,6 +498,40 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
   }, [chooseSite, clearHeld, nudge]);
 
   const manual = phase === "manual";
+
+  // Landing radar reads the live flight: the scripted profile until the low gate, then the
+  // player's own altitude and rates (sideways speed is what the radar's beams see by then).
+  const radarIn = radarInputAt(snap.t);
+  const radarAlt = snap.altM;
+  const radarVs = snap.vsMs;
+  const radarHs = manual ? Math.abs(snap.hsMs) : radarIn.horizontal_vel_mps;
+  const radarPitch = radarIn.pitch_angle_deg;
+  useEffect(() => {
+    let alive = true;
+    calculateLandingRadar({
+      inertial_alt_m: radarAlt,
+      vertical_vel_mps: radarVs,
+      horizontal_vel_mps: radarHs,
+      terrain_elevation_offset_m: terrainOffsetAt(radarAlt),
+      pitch_angle_deg: radarPitch,
+    })
+      .then((m) => alive && setRadar(m))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [radarAlt, radarVs, radarHs, radarPitch, calculateLandingRadar]);
+
+  // S-band link to Earth for the current Earth–Moon distance (Eagle is on the near side).
+  useEffect(() => {
+    let alive = true;
+    calculateDsnTelemetry({ distance_km: nasa.ephemeris.distance_km, true_anomaly_deg: 0 })
+      .then((l) => alive && setDsnLink(l))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [nasa.ephemeris.distance_km, calculateDsnTelemetry]);
   const choosingSite = phase === "hold" && clock.stepsDone === 2;
   // The switch that may be thrown now (panel, console lamp and 3D hotspot agree on this).
   const armed: number | null =
@@ -604,6 +649,10 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
               </div>
             </div>
           )}
+        </div>
+        <div className="bezel bezel-sm flex shrink-0 flex-col gap-2.5 bg-space-deep/85 px-3 py-2.5 backdrop-blur-sm">
+          <LandingRadarProfile measurement={radar} />
+          <DsnTrackingStatus status={nasa.dsn} link={serverEngine.dsnLink ?? dsnLink} compact className="border-t border-space-blue/60 pt-2" />
         </div>
       </aside>
 

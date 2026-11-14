@@ -76,7 +76,7 @@ export function WorkshopWorld({ level, phase, inspected, activeId, onInspect, on
         color="#fff4e0"
         intensity={3.1}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1536, 1536]}
         shadow-bias={-0.0004}
         shadow-normalBias={0.04}
         shadow-camera-near={5}

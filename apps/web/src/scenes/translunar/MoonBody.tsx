@@ -62,14 +62,16 @@ function patch(shader: WebGLProgramParametersWithUniforms) {
       "#include <map_fragment>",
       `#include <map_fragment>
        float detailFade = 1.0 - smoothstep(6.0, 70.0, length(vViewPosition));
-       float hh = moonHeight(vObj);
+       // Far views (most of the film) skip the noise entirely; near views compute it once for both uses.
+       float hh = 0.0;
+       if (detailFade > 0.0) hh = moonHeight(vObj);
        diffuseColor.rgb *= 1.0 + hh * 0.38 * detailFade;`,
     )
     .replace(
       "#include <normal_fragment_maps>",
       `#include <normal_fragment_maps>
        {
-         float bh = moonHeight(vObj) * detailFade;
+         float bh = hh * detailFade;
          vec3 dp1 = dFdx(-vViewPosition);
          vec3 dp2 = dFdy(-vViewPosition);
          float dh1 = dFdx(bh);
@@ -93,7 +95,7 @@ export function MoonBody() {
   const key = useMemo(() => "moon-detail", []);
   return (
     <mesh position={MOON} rotation={[0, -Math.PI / 2, 0]}>
-      <sphereGeometry args={[R_MOON, 128, 96]} />
+      <sphereGeometry args={[R_MOON, 96, 72]} />
       <meshStandardMaterial map={map} color="#cfcfd4" roughness={1} metalness={0} onBeforeCompile={patch} customProgramCacheKey={() => key} />
     </mesh>
   );

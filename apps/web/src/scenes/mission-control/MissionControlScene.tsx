@@ -35,6 +35,16 @@ import {
 import { TRACE_TEXT } from "@/lib/simulation/launch.mock";
 import type { LaunchConfig, LaunchResult } from "@/lib/simulation/launch.types";
 import { useSimulationWasm } from "@/hooks/useSimulationWasm";
+import { useNasaData } from "@/hooks/useNasaData";
+import { useServerEngine } from "@/hooks/useServerEngine";
+import { serverFirstBudget } from "@/lib/simulation/engine.adapter";
+import { LunarEnvironmentPanel } from "@/components/hud/LunarEnvironmentPanel";
+import { EasepPanel } from "@/components/dashboard/EasepPanel";
+import { ServerEnginePanel } from "@/components/dashboard/ServerEnginePanel";
+import { DsnTrackingStatus } from "@/components/hud/DsnTrackingStatus";
+import { SpaceWeatherWidget } from "@/components/hud/SpaceWeatherWidget";
+import { BuildItYourselfPanel } from "@/components/dashboard/BuildItYourselfPanel";
+import type { DsnTelemetryResult } from "@/lib/simulation/nasa.types";
 import { ConfigPanel } from "./ConfigPanel";
 import { mood } from "./mood";
 import { EXPLOSION_SECONDS, FLY_SECONDS } from "./SkyExplosion";
@@ -57,6 +67,9 @@ import {
   STAGE3_T,
 } from "./ascent";
 import { shotAt } from "./launchShots";
+import { KEYWORD_SECONDS, calloutsDue } from "./callouts";
+import { radioCall, stopRadio } from "@/game/radio";
+import { useSettingsStore } from "@/game/settingsStore";
 import {
   startCalmScore,
   startRockScore,
@@ -141,7 +154,25 @@ export function MissionControlScene({
   const [explodeAt, setExplodeAt] = useState<number | null>(null);
   const [boomFlash, setBoomFlash] = useState(false);
   const [serverTelemetry, setServerTelemetry] = useState<ServerLaunchTelemetry>(OFFLINE_APOLLO11_TELEMETRY);
-  const { validateLaunch: validateLaunchWasm, lastValidation: wasmValidation } = useSimulationWasm();
+  const {
+    validateLaunch: validateLaunchWasm,
+    lastValidation: wasmValidation,
+    evaluateMissionDesignBudget,
+    calculateDsnTelemetry,
+  } = useSimulationWasm();
+  const nasa = useNasaData();
+  const serverEngine = useServerEngine();
+  const evaluateBudget = useMemo(() => serverFirstBudget(evaluateMissionDesignBudget), [evaluateMissionDesignBudget]);
+  const [dsnLink, setDsnLink] = useState<DsnTelemetryResult | null>(null);
+  useEffect(() => {
+    let alive = true;
+    calculateDsnTelemetry({ distance_km: nasa.ephemeris.distance_km })
+      .then((l) => alive && setDsnLink(l))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [nasa.ephemeris.distance_km, calculateDsnTelemetry]);
   const cinematicTimers = useRef<number[]>([]);
   const pending = useRef<Promise<LaunchResult> | null>(null);
 
@@ -417,6 +448,38 @@ export function MissionControlScene({
     [],
   );
 
+  // Launch control on the radio: each stage event is called out in a radio-style voice and its name
+  // (one keyword) is shown on screen. A call is only made while its moment is fresh, so skipping the
+  // film does not replay the chatter, and none is made past the end of a failed flight.
+  const locale = useSettingsStore((s) => s.locale);
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
+  const [keyword, setKeyword] = useState<{ id: number; text: string } | null>(null);
+  const keywordId = useRef(0);
+  const burnEnd = result ? realSecondsAt(result.endSec) : Infinity;
+  useEffect(() => {
+    if (phase !== "flight" || ignitionAt === null) return;
+    let last = (performance.now() - ignitionAt) / 1000;
+    let hide = 0;
+    const id = window.setInterval(() => {
+      const now = (performance.now() - ignitionAt) / 1000;
+      for (const call of calloutsDue(last, Math.min(now, burnEnd))) {
+        const lang = localeRef.current;
+        radioCall(call.line, lang, call.voice);
+        setKeyword({ id: ++keywordId.current, text: call.keyword[lang] });
+        window.clearTimeout(hide);
+        hide = window.setTimeout(() => setKeyword(null), KEYWORD_SECONDS * 1000);
+      }
+      last = now;
+    }, 100);
+    return () => {
+      window.clearInterval(id);
+      window.clearTimeout(hide);
+      stopRadio();
+      setKeyword(null);
+    };
+  }, [phase, ignitionAt, burnEnd]);
+
   const briefing = BRIEFINGS["mission-control"];
   const titles: Record<Phase, string> = {
     config: m.configTitle,
@@ -522,6 +585,21 @@ export function MissionControlScene({
           >
             {m.skipCinematic}
           </Button>
+        </div>
+      )}
+
+      {keyword && (
+        <div
+          key={keyword.id}
+          aria-live="polite"
+          className="pointer-events-none absolute left-1/2 top-[15%] z-20 -translate-x-1/2 [animation:fade-in_400ms_ease-out]"
+        >
+          <div className="flex items-center gap-3 border-y border-primary/60 bg-space-deep/55 px-6 py-2 backdrop-blur-sm">
+            <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+            <span className="font-mono text-lg font-semibold uppercase tracking-[0.25em] text-foreground sm:text-2xl">
+              {keyword.text}
+            </span>
+          </div>
         </div>
       )}
 
@@ -641,6 +719,25 @@ export function MissionControlScene({
                   <span>TWR / MAX-Q: {(wasmValidation?.liftoff_twr ?? serverTelemetry.vehicle.liftoff_twr).toFixed(3)} / {(wasmValidation?.max_q_kpa ?? serverTelemetry.vehicle.max_q_kpa).toFixed(1)} kPa</span>
                 </div>
               </div>
+              <details className="group mb-3 rounded border border-space-blue/60 bg-space-blue/15 px-3 py-2">
+                <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-wider text-primary">
+                  NASA mission data &amp; design study
+                </summary>
+                <div className="mt-2 flex flex-col gap-3">
+                  <DsnTrackingStatus status={nasa.dsn} link={serverEngine.dsnLink ?? dsnLink} />
+                  <SpaceWeatherWidget data={nasa.spaceWeather} className="border-t border-space-blue/60 pt-2" />
+                  <LunarEnvironmentPanel data={nasa.lunarEnvironment} className="border-t border-space-blue/60 pt-2" />
+                  <EasepPanel data={nasa.easep} className="border-t border-space-blue/60 pt-2" />
+                  <ServerEnginePanel
+                    status={serverEngine.status}
+                    apollo11={serverEngine.apollo11}
+                    className="border-t border-space-blue/60 pt-2"
+                  />
+                  <div className="border-t border-space-blue/60 pt-2">
+                    <BuildItYourselfPanel evaluate={evaluateBudget} />
+                  </div>
+                </div>
+              </details>
               <ConfigPanel
                 config={config}
                 onChange={setConfig}

@@ -6,6 +6,8 @@ import { useLocalized, useT } from "@/i18n/useT";
 import { useGameStore } from "@/game/gameStore";
 import { ENDINGS, getEnding } from "@/game/endings";
 import { DECISIONS, type DecisionId } from "@/game/decisions";
+import { causeChain } from "@/game/consequences";
+import { EndingScene } from "./EndingScene";
 import { ParallaxCanvas } from "./ParallaxCanvas";
 
 const CALLS: { id: DecisionId; pointKey: string }[] = [
@@ -28,6 +30,12 @@ export function EndScreen() {
   const narrative = useGameStore((s) => s.narrative);
   const endingId = useGameStore((s) => s.endingId) ?? narrative.ending ?? "ending-1";
   const ending = getEnding(endingId) ?? ENDINGS["ending-1"];
+
+  // What each call cost or bought, plus the forced wave-off when earlier shortcuts ran out the fuel.
+  const chain = causeChain(narrative);
+  const effectOf = (pointKey: string) => chain.find((c) => c.id.startsWith(`${pointKey}:`) && !c.id.endsWith(":margin"));
+  const marginRunOut = chain.find((c) => c.id.endsWith(":margin"));
+  const marker = { positive: ["▲", "text-emerald-400"], negative: ["▼", "text-red-400"], neutral: ["■", "text-amber-300"] } as const;
 
   const badgeColor =
     ending.status === "success"
@@ -57,6 +65,8 @@ export function EndScreen() {
             <p className="mt-1 text-base font-medium text-primary/90">{localize(ending.subtitle)}</p>
           </div>
 
+          <EndingScene ending={ending} />
+
           <blockquote className="bezel bezel-gold w-full bg-space-deep/95 p-4 text-left sm:p-5">
             <p className="border-l-2 border-primary pl-3.5 text-base italic text-foreground/95 sm:text-lg">
               &ldquo;{ending.quote}&rdquo;
@@ -70,21 +80,35 @@ export function EndScreen() {
             </p>
           )}
 
-          <ul className="flex w-full flex-wrap justify-center gap-2 text-xs">
+          <ul className="flex w-full flex-wrap justify-center gap-2 text-xs" aria-label={t.consequence.whyTitle}>
             {CALLS.map(({ id, pointKey }) => {
               const choice =
                 narrative.decisions[pointKey] ??
                 (pointKey === "agc_alarm" ? narrative.decisions.agcAlarm : pointKey === "landing_approach" ? narrative.decisions.landing : undefined);
               const option = DECISIONS[id].options.find((o) => o.id === choice);
+              const effect = option ? effectOf(pointKey) : undefined;
               return (
-                <li key={id} className="rounded border border-space-blue/60 bg-space-blue/25 px-2.5 py-1">
+                <li key={id} className="rounded border border-space-blue/60 bg-space-blue/25 px-2.5 py-1 text-left">
+                  {effect && (
+                    <span aria-hidden className={`mr-1 ${marker[effect.impact][1]}`}>
+                      {marker[effect.impact][0]}
+                    </span>
+                  )}
                   <span className="text-foreground/60">{localize(DECISIONS[id].title)}: </span>
                   <span className={option ? "font-semibold text-foreground" : "text-foreground/45"}>
                     {option ? localize(option.title) : e.notPlayed}
                   </span>
+                  {effect && <span className="block text-[11px] text-foreground/60">{localize(effect.effect)}</span>}
                 </li>
               );
             })}
+            {marginRunOut && (
+              <li className="rounded border border-red-700/60 bg-red-950/40 px-2.5 py-1 text-left">
+                <span aria-hidden className="mr-1 text-red-400">▼</span>
+                <span className="font-semibold text-foreground">{localize(marginRunOut.title)}</span>
+                <span className="block text-[11px] text-foreground/60">{localize(marginRunOut.effect)}</span>
+              </li>
+            )}
           </ul>
 
           <div className="mt-1 flex flex-wrap justify-center gap-3">

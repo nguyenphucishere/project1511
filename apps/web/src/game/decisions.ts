@@ -112,7 +112,7 @@ export const DECISIONS: Record<DecisionId, DecisionDefinition> = {
       "Bãi đá tảng ngay bên dưới, nhiên liệu còn khoảng 60 giây. Ra lệnh gì?",
     ),
     options: [
-      { id: "p66_redesignation", keyLabel: "A", title: t("Fly past the boulders", "Bay lướt qua bãi đá"), hint: t("Manual control, soft touchdown", "Điều khiển thủ công, đáp êm"), historical: true },
+      { id: "p66_redesignation", keyLabel: "A", title: t("Fly past the boulders", "Bay lướt qua bãi đá"), hint: t("Manual control, burns hover fuel", "Điều khiển thủ công, tốn nhiên liệu lơ lửng"), historical: true },
       { id: "boulder_field", keyLabel: "B", title: t("Land right here", "Đáp ngay tại đây"), hint: t("Saves fuel, but the rocks are deadly", "Tiết kiệm nhiên liệu nhưng đá rất nguy hiểm") },
       { id: "bingo_abort", keyLabel: "C", title: t("Wave off", "Hủy hạ cánh"), hint: t("Fuel's nearly out: climb back to orbit", "Sắp hết nhiên liệu: bay lên quỹ đạo") },
     ],
