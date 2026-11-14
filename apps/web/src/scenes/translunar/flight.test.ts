@@ -63,7 +63,7 @@ describe("film", () => {
   it("lists shots in increasing order and resolves every moment to one", () => {
     for (let i = 1; i < SHOT_STARTS.length; i++) expect(SHOT_STARTS[i][0]).toBeGreaterThan(SHOT_STARTS[i - 1][0]);
     expect(shotIdAt(0)).toBe("tli-wide");
-    expect(shotIdAt(FILM_END - 1)).toBe("splash");
+    expect(shotIdAt(FILM_END - 1)).toBe("recovery");
   });
 
   it("gives finite camera frames over the whole film", () => {
