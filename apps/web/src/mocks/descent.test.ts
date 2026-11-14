@@ -31,8 +31,14 @@ describe("descent profile", () => {
     }
   });
 
-  it("plays each step's segment from one keyframe to the next", () => {
+  it("leaves the flown steps (site choice, engine stop) to the flight model", () => {
+    expect(DESCENT_STEPS.map((s) => s.playSec !== null)).toEqual([true, true, false, false]);
+    expect(missionTimeAt(2, 5)).toBe(KEYFRAMES[2].t);
+  });
+
+  it("plays each scripted step's segment from one keyframe to the next", () => {
     DESCENT_STEPS.forEach((step, i) => {
+      if (step.playSec === null) return;
       expect(missionTimeAt(i, 0)).toBe(KEYFRAMES[i].t);
       expect(missionTimeAt(i, step.playSec)).toBe(KEYFRAMES[i + 1].t);
       expect(missionTimeAt(i, step.playSec * 10)).toBe(KEYFRAMES[i + 1].t);

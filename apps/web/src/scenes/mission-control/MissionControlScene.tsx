@@ -25,6 +25,7 @@ import { useGameStore } from "@/game/gameStore";
 import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
 import { playSfx, startRumble, type Rumble } from "@/game/sfx";
+import { preloadCrowd, startCrowdBed, type CrowdBed } from "@/game/crowdAudio";
 import {
   fetchLaunchTelemetryFromServer,
   launchSimulator,
@@ -390,6 +391,49 @@ export function MissionControlScene({
       score.current = null;
       calmStop.current?.(0.3);
       calmStop.current = null;
+    },
+    [],
+  );
+
+  // The onlookers' murmur lives from the countdown to the end of the flight. Up close (the film
+  // cuts to the crowd) it comes forward and brightens; from the pad or the sky it is a distant hum.
+  // It gasps as the capsule climbs past them and cheers when it reaches orbit.
+  const crowd = useRef<CrowdBed | null>(null);
+  useEffect(() => {
+    if (phase === "countdown") preloadCrowd();
+    if (phase === "countdown" || phase === "flight") {
+      crowd.current ??= startCrowdBed();
+      return;
+    }
+    crowd.current?.stop(phase === "failure-pov" ? 0.4 : 2);
+    crowd.current = null;
+  }, [phase]);
+  useEffect(() => {
+    const bed = crowd.current;
+    if (!bed) return;
+    if (phase === "countdown") {
+      bed.setLevel(0.3);
+      return;
+    }
+    if (phase !== "flight" || ignitionAt === null) return;
+    let lastShot = "";
+    const id = window.setInterval(() => {
+      const shot = shotAt((performance.now() - ignitionAt) / 1000).id;
+      if (shot === lastShot) return;
+      lastShot = shot;
+      const close = shot.startsWith("crowd-");
+      bed.setLevel(shot === "crowd-cheer" ? 1 : close ? 0.85 : 0.2);
+      if (shot === "crowd-cheer") bed.react("cheer");
+      // The first cut to the crowd comes right after liftoff: they cheer as the rocket clears the pad.
+      else if (shot === "crowd-field") bed.react("cheer", 0.7);
+      else if (/^crowd-(field|beach)-[23]$/.test(shot)) bed.react("awe", 0.8);
+    }, 100);
+    return () => window.clearInterval(id);
+  }, [phase, ignitionAt]);
+  useEffect(
+    () => () => {
+      crowd.current?.stop(0.3);
+      crowd.current = null;
     },
     [],
   );

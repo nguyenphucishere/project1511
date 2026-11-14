@@ -152,12 +152,16 @@ export const BRIEFINGS: Record<BriefingId, Briefing> = {
       {
         speaker: "astronaut",
         text: {
-          en: "Follow the descent checklist step by step and we'll set down softly.",
-          vi: "Làm đúng từng bước trong danh sách hạ cánh, chúng ta sẽ đáp xuống nhẹ nhàng.",
+          en: "Computer flies the first part. At 150 metres the lander is yours: pick a site, brake, steer clear of the boulders.",
+          vi: "Máy tính lo phần đầu. Đến độ cao 150 mét, tàu là của bạn: chọn điểm đáp, giảm tốc, tránh xa đá tảng.",
         },
       },
     ],
-    objectives: [{ en: "Complete the descent checklist", vi: "Hoàn thành danh sách hạ cánh" }],
+    objectives: [
+      { en: "Start the descent and pick a landing site", vi: "Bắt đầu hạ cánh và chọn điểm đáp" },
+      { en: "Touch down under 3 m/s, clear of hazards", vi: "Chạm đất dưới 3 m/s, tránh khu nguy hiểm" },
+      { en: "Cut the engine at the contact light", vi: "Tắt động cơ khi đèn tiếp đất sáng" },
+    ],
   },
   epilogue: {
     pov: "astronaut",

@@ -51,7 +51,7 @@ export function Callout({ line }: { line: Line | null }) {
       <div className="bezel bezel-gold flex w-full items-start gap-3 bg-space-deep/95 p-3 shadow-xl">
         {speaker ? (
           <div className="h-12 w-10 shrink-0">
-            <CharacterPortrait character={line.who as Exclude<Line["who"], "pa">} />
+            <CharacterPortrait character={line.who as Exclude<Line["who"], "pa">} avatar />
           </div>
         ) : (
           <Megaphone className="mt-1 h-6 w-6 shrink-0 text-primary" aria-hidden />

@@ -59,11 +59,29 @@ const config: Config = {
         "count-pop": { from: { transform: "scale(1.18)", opacity: "0.55" }, to: { transform: "scale(1)", opacity: "1" } },
         // Anomaly alarm: a single orange flash that fades back to nothing.
         "alarm-flash": { "0%": { opacity: "0" }, "15%": { opacity: "1" }, "100%": { opacity: "0" } },
+        // Nebula background: very slow zoom and pan.
+        "nebula-pan": {
+          "0%": { transform: "scale(1.08) translate(-1.5%, -1%)" },
+          "100%": { transform: "scale(1.18) translate(1.5%, 1%)" },
+        },
+        // Briefing portrait: a slow weightless bob.
+        float: { "0%, 100%": { transform: "translateY(0)" }, "50%": { transform: "translateY(-10px)" } },
+        // Typewriter caret.
+        caret: { "0%, 49%": { opacity: "1" }, "50%, 100%": { opacity: "0" } },
+        // Halo behind the speaker: breathes softly.
+        halo: { "0%, 100%": { opacity: "0.55", transform: "scale(1)" }, "50%": { opacity: "0.85", transform: "scale(1.04)" } },
+        // Entrance for the briefing header and dialogue panel.
+        "rise-in": { from: { opacity: "0", transform: "translateY(14px)" }, to: { opacity: "1", transform: "translateY(0)" } },
       },
       animation: {
         "fade-in": "fade-in 200ms ease-out",
         "count-pop": "count-pop 320ms cubic-bezier(0.22, 1, 0.36, 1)",
         "alarm-flash": "alarm-flash 1100ms ease-out forwards",
+        "nebula-pan": "nebula-pan 70s ease-in-out infinite alternate",
+        float: "float 6s ease-in-out infinite",
+        caret: "caret 1s steps(1) infinite",
+        halo: "halo 5s ease-in-out infinite",
+        "rise-in": "rise-in 500ms cubic-bezier(0.22, 1, 0.36, 1) both",
       },
     },
   },

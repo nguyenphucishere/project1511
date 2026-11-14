@@ -29,7 +29,7 @@ describe("consequence beats", () => {
   it("never names an ending or spoils outcomes on decision cards", () => {
     for (const d of Object.values(DECISIONS)) {
       for (const o of d.options) {
-        for (const text of [o.title, o.description, o.tacticalBadge]) {
+        for (const text of [o.title, o.hint]) {
           expect(text.en).not.toMatch(/ending[- ]?\d|Triggers|Historical|Safire/i);
           expect(text.vi).not.toMatch(/KẾT THÚC \d|Kích hoạt|Lịch sử/);
         }
