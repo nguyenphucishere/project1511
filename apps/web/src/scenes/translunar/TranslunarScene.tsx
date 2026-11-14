@@ -10,7 +10,7 @@ import { playSfx, startRumble, startScore, type Rumble, type Score } from "@/gam
 import { useLocalized, useT } from "@/i18n/useT";
 import { cn } from "@/lib/utils";
 import { filmClock } from "./clock";
-import { FILM_END, OUTBOUND_END, SIGNAL_LOST, formatMet, missionElapsed, thrust } from "./flight";
+import { FILM_END, OUTBOUND_END, OUTBOUND_FILM_END, SIGNAL_LOST, formatMet, missionElapsed, thrust } from "./flight";
 import { CUES, PHASES, READING, captionAt, moodAt } from "./story";
 import { TranslunarWorld } from "./TranslunarWorld";
 
@@ -32,7 +32,7 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
   const s = t.translunar;
   const localize = useLocalized();
   const from = part === "outbound" ? 0 : OUTBOUND_END;
-  const to = part === "outbound" ? OUTBOUND_END : FILM_END;
+  const to = part === "outbound" ? OUTBOUND_FILM_END : FILM_END;
 
   const [startAt, setStartAt] = useState<number | null>(null);
   const [now, setNow] = useState(from);

@@ -118,8 +118,8 @@ function Fuel({ rgb, dur, reduced, failing }: { rgb: string; dur: number; reduce
         return (
           <g key={i}>
             <rect x={x} y="230" width="110" height="340" rx="8" fill="#0d1520" stroke="#3a4a5e" strokeWidth="6" />
-            <g style={{ transformOrigin: `${x}px 570px`, animation: reduced ? undefined : `gs-drain ${dur + 0.4}s ease-in forwards` }}>
-              <rect x={x + 6} y="236" width="98" height="328" fill={`rgb(${rgb})`} opacity="0.55" style={{ transformOrigin: `${x}px 564px`, transform: `scaleY(${start})`, transformBox: "fill-box" }} />
+            <g style={{ transformOrigin: `${x}px 570px`, animation: reduced || failing ? undefined : `gs-drain ${dur + 0.4}s ease-in forwards` }}>
+              <rect x={x + 6} y={564 - 328 * start} width="98" height={328 * start} fill={`rgb(${rgb})`} opacity="0.55" />
             </g>
             <text x={x + 55} y="610" textAnchor="middle" fontFamily="monospace" fontWeight="700" fontSize="26" fill="#9db4c9">
               {i === 0 ? "LOX" : "RP-1"}

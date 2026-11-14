@@ -57,10 +57,12 @@ export const T = {
   TLI_END: 22,
   /** The service module separates from the spent stage. */
   SEP: 26,
-  /** The flip: the ship turns to look back, then turns forward again. */
-  FLIP_A: 29,
-  FLIP_A_END: 38,
-  FLIP_B: 40,
+  /** Transposition: the ship turns around to face the lunar module still in the adapter. */
+  FLIP_A: 28,
+  FLIP_A_END: 34,
+  /** Soft dock with Eagle (the ship backs away with it a moment later), then the ship turns forward again. */
+  DOCK: 38,
+  FLIP_B: 41,
   FLIP_B_END: 46,
   /** Three days of coasting, compressed. */
   COAST: 42,
@@ -84,6 +86,8 @@ export const T = {
 } as const;
 
 export const OUTBOUND_END = T.OUTBOUND_END;
+/** The outbound film ends once the ship is in lunar orbit and behind the Moon, ready for the descent. */
+export const OUTBOUND_FILM_END = 88;
 export const FILM_END = T.FILM_END;
 
 /** Orbit angle around the Moon (0 = the point facing the Earth, π = the far side). */
@@ -105,9 +109,20 @@ export function orbitAngle(t: number) {
   return PHI_KEYS[PHI_KEYS.length - 1][1];
 }
 
-/** Distance the service module has drifted ahead of the spent stage. */
+/** Distance of the ship's aft end ahead of the stage's adapter joint, in the same units as the model. */
+const DOCK_GAP = 1.1;
+
+/**
+ * How far ahead of the spent stage the service module is: it pushes off at separation, turns round,
+ * backs in to dock with Eagle (the ship's nose then touches the adapter joint) and pulls Eagle out.
+ */
 export function separation(t: number) {
-  return clamp01((t - T.SEP) / 16) * 8;
+  if (t < T.SEP) return 0;
+  if (t < T.FLIP_A) return 2.4 * smooth((t - T.SEP) / (T.FLIP_A - T.SEP));
+  if (t < T.FLIP_A_END) return 2.4 + (0.8 * (t - T.FLIP_A)) / (T.FLIP_A_END - T.FLIP_A);
+  if (t < T.DOCK) return lerp(3.2, DOCK_GAP, smooth((t - T.FLIP_A_END) / (T.DOCK - T.FLIP_A_END)));
+  if (t < T.COAST) return lerp(DOCK_GAP, 8, smooth((t - T.DOCK) / (T.COAST - T.DOCK)));
+  return 8;
 }
 
 /** The leg out of Earth orbit: burning along -Z over the top of the Earth. */
@@ -245,8 +260,9 @@ export const SHOT_STARTS: [number, string][] = [
   [9, "tli-engine"],
   [16, "tli-front"],
   [T.TLI_END, "adapter"],
-  [29, "flip-wide"],
-  [36, "flip-back"],
+  [T.FLIP_A, "flip-wide"],
+  [T.FLIP_A_END, "dock"],
+  [T.FLIP_B, "flip-back"],
   [T.COAST, "coast-ahead"],
   [53, "coast-moon"],
   [66, "arrive"],
@@ -323,7 +339,7 @@ export function frameAt(t: number): Shot {
     }
     case "adapter": {
       // Macro on the adapter joint: an orbit around the petals as they swing open.
-      const q = k(T.TLI_END, 29);
+      const q = k(T.TLI_END, T.FLIP_A);
       const a = 0.7 + q * 0.9;
       const joint = shipAt(stagePose(t), 0, 0, -0.18);
       return {
@@ -337,7 +353,12 @@ export function frameAt(t: number): Shot {
     }
     case "flip-wide": {
       const mid = mul(add(stage, pose.pos), 0.5);
-      return { ...base, kind: "space", pos: add(stage, [-7, 2.2, -2.4 - (t - 29) * 0.3]), aim: add(mid, [0, 0.2, -1]), fov: 38 };
+      return { ...base, kind: "space", pos: add(stage, [-7, 2.2, -2.4 - (t - T.FLIP_A) * 0.3]), aim: add(mid, [0, 0.2, -1]), fov: 38 };
+    }
+    case "dock": {
+      // A close side view of the ship backing in to Eagle, then drawing it out of the adapter.
+      const mid = add(mul(add(stage, pose.pos), 0.5), [0, 0, t < T.DOCK ? 0 : -(t - T.DOCK) * 0.2]);
+      return { ...base, kind: "space", pos: add(mid, [-2.7, 0.55, 0.1]), aim: add(mid, [0, 0, 0]), fov: 36, shake: 0.004 };
     }
     case "flip-back": {
       return { ...base, kind: "space", pos: shipAt(pose, 2.4, 0.7, 2.2), aim: add(stage, [0, 0, 0.6]), fov: 34 };

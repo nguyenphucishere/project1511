@@ -12,7 +12,9 @@ export interface Caption {
 /** The title of each stretch of the flight, shown small above the letterbox. */
 export const PHASES: Caption[] = [
   { from: 0, to: T.TLI_END, text: { en: "Translunar injection: leaving Earth orbit", vi: "Đốt đẩy rời quỹ đạo Trái Đất" } },
-  { from: T.TLI_END, to: T.COAST, text: { en: "Eagle in tow: one last look back", vi: "Eagle đã gắn liền: ngoảnh nhìn lại lần cuối" } },
+  { from: T.TLI_END, to: T.FLIP_A, text: { en: "Separation: the ship leaves the spent third stage", vi: "Tách khỏi tầng 3 đã cạn nhiên liệu" } },
+  { from: T.FLIP_A, to: T.DOCK, text: { en: "Transposition: the ship turns around to face Eagle", vi: "Quay đầu tàu để hướng về Eagle" } },
+  { from: T.DOCK, to: T.COAST, text: { en: "Docking: Eagle is drawn out of the adapter", vi: "Ghép nối: Eagle được kéo ra khỏi tầng 3" } },
   { from: T.COAST, to: 66, text: { en: "Three days of silence", vi: "Ba ngày trong im lặng" } },
   { from: 66, to: T.LOS, text: { en: "The Moon fills the sky", vi: "Mặt Trăng choán cả bầu trời" } },
   { from: T.LOS, to: T.AOS, text: { en: "Behind the Moon: orbit insertion burn", vi: "Sau lưng Mặt Trăng: đốt nhập quỹ đạo" } },
@@ -50,10 +52,12 @@ export function moodAt(t: number): ScoreMood {
 }
 
 /** One-shot sounds, fired the first time the film clock passes their time. */
-export const CUES: { t: number; id: "ignition" | "pyro" | "unlatch" | "caution" | "chime" | "whoosh" | "touchdown" | "thud"; gain?: number }[] = [
+export const CUES: { t: number; id: "ignition" | "pyro" | "unlatch" | "caution" | "chime" | "whoosh" | "touchdown" | "thud" | "clunk" | "hydraulic"; gain?: number }[] = [
   { t: 0.3, id: "ignition" },
   { t: T.SEP - 0.2, id: "pyro", gain: 1.6 },
   { t: T.SEP + 0.3, id: "unlatch", gain: 1.6 },
+  { t: T.DOCK - 0.1, id: "clunk", gain: 1.5 },
+  { t: T.DOCK + 0.5, id: "hydraulic", gain: 0.9 },
   { t: T.LOS, id: "caution" },
   { t: T.BURN_IN, id: "ignition", gain: 0.6 },
   { t: T.AOS, id: "chime" },

@@ -57,6 +57,7 @@ export const FLOW: Step[] = [
   { id: "agc-alarm-decision", kind: "decision", decision: "agc-alarm-decision", chapter: "lunar-descent", enter: "fade" },
   { id: "lunar-descent-scene", kind: "scene", scene: "lunar-descent", chapter: "lunar-descent", enter: "fade" },
   { id: "landing-decision", kind: "decision", decision: "landing-decision", chapter: "lunar-descent", enter: "fade" },
+  { id: "touchdown-film", kind: "scene", scene: "lunar-descent", chapter: "lunar-descent", enter: "fade" },
   { id: "flag-video", kind: "cutscene", video: "flagPlanting", chapter: "lunar-descent", enter: "fade" },
   { id: "epilogue", kind: "briefing", briefing: "epilogue", chapter: "epilogue", enter: "black-hold" },
   { id: "return-briefing", kind: "briefing", briefing: "return", chapter: "return", enter: "fade" },
@@ -128,8 +129,11 @@ export function getNextStepId(currentStepId: string, state?: any): string | null
       return "trajectory-decision";
     case "trajectory-decision":
       return "translunar-briefing";
+    // The ship reaches lunar orbit and the landing film starts at once (the 1202 call is made inside it).
+    case "translunar-scene":
+      return "lunar-descent-scene";
     case "lunar-descent-briefing":
-      return "agc-alarm-decision";
+      return "lunar-descent-scene";
     case "agc-alarm-decision": {
       const agc = decisions.agc_alarm ?? decisions.agcAlarm;
       if (agc === "abort_stage" || agc === "abort") {
@@ -137,8 +141,12 @@ export function getNextStepId(currentStepId: string, state?: any): string | null
       }
       return "lunar-descent-scene";
     }
-    case "lunar-descent-scene":
+    case "lunar-descent-scene": {
+      // Aborting at the 1202 alarm (made inside the scene) ends the mission here.
+      const agc = decisions.agc_alarm ?? decisions.agcAlarm;
+      if (agc === "abort_stage" || agc === "abort") return "end"; // Triggers ENDING-2
       return "landing-decision";
+    }
     case "landing-decision": {
       const landing = decisions.landing_approach ?? decisions.landing;
       // Earlier shortcuts can leave too little fuel for the P66 landing (see consequences.resolveLanding).
@@ -146,7 +154,7 @@ export function getNextStepId(currentStepId: string, state?: any): string | null
         return "end"; // Triggers ENDING-4
       }
       if (landing === "p66_redesignation" || landing === "p66-redesignate") {
-        return "flag-video"; // Nominal touchdown -> Flag video -> Epilogue -> ENDING-1
+        return "touchdown-film"; // Nominal touchdown -> Landing film -> Flag video -> Epilogue -> ENDING-1
       }
       if (landing === "boulder_field" || landing === "west-crater") {
         return "end"; // Triggers ENDING-3
@@ -156,6 +164,8 @@ export function getNextStepId(currentStepId: string, state?: any): string | null
       }
       return "end";
     }
+    case "touchdown-film":
+      return "flag-video";
     case "flag-video":
       return "epilogue";
     case "epilogue":

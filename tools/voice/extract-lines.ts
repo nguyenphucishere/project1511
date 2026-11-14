@@ -134,6 +134,10 @@ async function main() {
   (ROOM_SCRIPT_ALL as any[]).forEach((b, i) =>
     add(b.voice, b.line, `launch-room#${i}`, b.panic >= 0.9 ? { tag: "(gasps) (pant) " } : b.panic >= 0.6 ? { tag: "(gasps) " } : {}),
   );
+  // The landing films: Collins, the Eagle crew and Houston on the air-to-ground loop.
+  const { BEATS: FILM_BEATS } = await load("scenes/lunar-descent/film/script.ts");
+  for (const [part, beats] of Object.entries(FILM_BEATS) as [string, any[]][])
+    beats.forEach((b, i) => add(b.who, b.line, `landing-film:${part}#${i}`, b.tag ? { tag: b.tag } : {}));
   const { LAUNCH_ENDINGS } = await load("scenes/mission-control/launchEndings.ts");
   for (const e of Object.values(LAUNCH_ENDINGS) as any[]) {
     add("kranz", e.call, `launch-ending:${e.id}:call`);
