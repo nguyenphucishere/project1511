@@ -4,7 +4,7 @@
  * because they cross the JSON boundary verbatim.
  */
 
-export type NasaDataSource = "api" | "offline_fallback" | (string & {});
+export type NasaDataSource = "api" | "engine" | "reference" | "offline_fallback" | (string & {});
 
 export interface EphemerisData {
   target_body: string;
@@ -57,6 +57,8 @@ export interface SpaceWeatherData {
   solar_proton_event_alert: boolean;
   mission_risk_status: MissionRiskStatus;
   source: NasaDataSource;
+  /** Upstream feeds that answered, e.g. "NOAA SWPC + NASA DONKI". */
+  provider?: string;
   cached?: boolean;
   fetched_at?: string;
 }
@@ -87,6 +89,11 @@ export interface LunarEnvironmentData {
   regolith_bulk_density_kg_m3: number;
   regolith_bearing_capacity_kpa: number;
   surface_temperature_c: number;
+  /** Engine-only extras (absent on the offline fixture). */
+  mascon_anomaly_mgal?: number;
+  surface_temperature_day_c?: number;
+  surface_temperature_night_c?: number;
+  moon_radius_km?: number;
   source: NasaDataSource;
 }
 
@@ -161,3 +168,34 @@ export interface DsnTelemetryResult {
   is_occulted: boolean;
   error_message?: string;
 }
+
+/* ------------------------------------------------------------------ server engine (/api/engine) */
+
+/** GET /api/nasa/dsn/link: engine link budget on the live Horizons Earth–Moon distance. */
+export interface DsnLinkData extends DsnTelemetryResult {
+  distance_km: number;
+  epoch: string;
+  distance_source: NasaDataSource;
+  source: NasaDataSource;
+}
+
+export type EngineCalculationName =
+  | "validate_launch"
+  | "run_descent_step"
+  | "calculate_score"
+  | "calculate_landing_radar"
+  | "evaluate_mission_design_budget"
+  | "calculate_dsn_telemetry";
+
+/** GET /api/engine/status */
+export interface EngineStatusData {
+  loaded: boolean;
+  version: string | null;
+  calculations: string[];
+  endpoints?: Partial<Record<EngineCalculationName, string>>;
+}
+
+/** GET /api/engine/apollo11: every engine calculation on the flown Apollo 11 baseline. */
+export type EngineApollo11Data = {
+  [K in EngineCalculationName]?: { input: Record<string, unknown>; result: Record<string, unknown> };
+} & { source?: NasaDataSource };

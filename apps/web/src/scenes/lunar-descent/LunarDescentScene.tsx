@@ -14,6 +14,7 @@ import { addTrauma } from "@/game/shake";
 import { playSfx, startLoop } from "@/game/sfx";
 import { useSimulationWasm } from "@/hooks/useSimulationWasm";
 import { useNasaData } from "@/hooks/useNasaData";
+import { useServerEngine } from "@/hooks/useServerEngine";
 import { DsnTrackingStatus } from "@/components/hud/DsnTrackingStatus";
 import { landingRadar } from "@/lib/simulation/nasa.physics";
 import type { DsnTelemetryResult, LandingRadarMeasurement } from "@/lib/simulation/nasa.types";
@@ -152,6 +153,7 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
   const [dialog, setDialog] = useState(false);
   const { stepDescent, lastDescentState, calculateLandingRadar, calculateDsnTelemetry } = useSimulationWasm();
   const nasa = useNasaData();
+  const serverEngine = useServerEngine({ apollo11: false });
   const [radar, setRadar] = useState<LandingRadarMeasurement>(() => landingRadar(radarInputAt(0)));
   const [dsnLink, setDsnLink] = useState<DsnTelemetryResult | null>(null);
 
@@ -602,7 +604,7 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
         </div>
         <div className="bezel bezel-sm flex shrink-0 flex-col gap-2.5 bg-space-deep/85 px-3 py-2.5 backdrop-blur-sm">
           <LandingRadarProfile measurement={radar} />
-          <DsnTrackingStatus status={nasa.dsn} link={dsnLink} compact className="border-t border-space-blue/60 pt-2" />
+          <DsnTrackingStatus status={nasa.dsn} link={serverEngine.dsnLink ?? dsnLink} compact className="border-t border-space-blue/60 pt-2" />
         </div>
       </aside>
 

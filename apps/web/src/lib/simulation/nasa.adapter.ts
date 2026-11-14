@@ -76,7 +76,8 @@ export const OFFLINE_LUNAR_ENVIRONMENT: LunarEnvironmentData = {
   source: "offline_fallback",
 };
 
-const TIMEOUT_MS = 2500;
+// Server upstream timeout is 4 s; leave room for a cold cache before falling back.
+const TIMEOUT_MS = 6000;
 
 export function nasaApiBase(override?: string): string {
   if (override) return override.replace(/\/$/, "");

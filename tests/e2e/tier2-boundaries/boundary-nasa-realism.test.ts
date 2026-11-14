@@ -221,11 +221,13 @@ describe("Tier 2 Boundary Suite: NASA Realism Limits, Singularity & Fault Bounda
 
     it("13. handles DEMO_KEY rate limit HTTP 403 / 429 exhaustion with silent offline fallback", async () => {
       (ctx.server as any).nasaSpaceWeather?.clearCache();
+      // DONKI rate-limited and NOAA SWPC unreachable: nothing live left, so the 1969 baseline.
       globalThis.fetch = (async (input: any, init?: any) => {
-        const url = typeof input === "string" ? input : input?.url ?? "";
+        const url = typeof input === "string" ? input : input instanceof URL ? input.href : input?.url ?? "";
         if (url.includes("api.nasa.gov")) {
           return new Response(JSON.stringify({ error: { code: "OVER_RATE_LIMIT" } }), { status: 429 });
         }
+        if (url.includes("swpc.noaa.gov")) throw new TypeError("fetch failed: getaddrinfo ENOTFOUND");
         return originalFetch(input, init);
       }) as typeof fetch;
 

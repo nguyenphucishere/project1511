@@ -36,6 +36,11 @@ import { TRACE_TEXT } from "@/lib/simulation/launch.mock";
 import type { LaunchConfig, LaunchResult } from "@/lib/simulation/launch.types";
 import { useSimulationWasm } from "@/hooks/useSimulationWasm";
 import { useNasaData } from "@/hooks/useNasaData";
+import { useServerEngine } from "@/hooks/useServerEngine";
+import { serverFirstBudget } from "@/lib/simulation/engine.adapter";
+import { LunarEnvironmentPanel } from "@/components/hud/LunarEnvironmentPanel";
+import { EasepPanel } from "@/components/dashboard/EasepPanel";
+import { ServerEnginePanel } from "@/components/dashboard/ServerEnginePanel";
 import { DsnTrackingStatus } from "@/components/hud/DsnTrackingStatus";
 import { SpaceWeatherWidget } from "@/components/hud/SpaceWeatherWidget";
 import { BuildItYourselfPanel } from "@/components/dashboard/BuildItYourselfPanel";
@@ -153,6 +158,8 @@ export function MissionControlScene({
     calculateDsnTelemetry,
   } = useSimulationWasm();
   const nasa = useNasaData();
+  const serverEngine = useServerEngine();
+  const evaluateBudget = useMemo(() => serverFirstBudget(evaluateMissionDesignBudget), [evaluateMissionDesignBudget]);
   const [dsnLink, setDsnLink] = useState<DsnTelemetryResult | null>(null);
   useEffect(() => {
     let alive = true;
@@ -667,10 +674,17 @@ export function MissionControlScene({
                   NASA mission data &amp; design study
                 </summary>
                 <div className="mt-2 flex flex-col gap-3">
-                  <DsnTrackingStatus status={nasa.dsn} link={dsnLink} />
+                  <DsnTrackingStatus status={nasa.dsn} link={serverEngine.dsnLink ?? dsnLink} />
                   <SpaceWeatherWidget data={nasa.spaceWeather} className="border-t border-space-blue/60 pt-2" />
+                  <LunarEnvironmentPanel data={nasa.lunarEnvironment} className="border-t border-space-blue/60 pt-2" />
+                  <EasepPanel data={nasa.easep} className="border-t border-space-blue/60 pt-2" />
+                  <ServerEnginePanel
+                    status={serverEngine.status}
+                    apollo11={serverEngine.apollo11}
+                    className="border-t border-space-blue/60 pt-2"
+                  />
                   <div className="border-t border-space-blue/60 pt-2">
-                    <BuildItYourselfPanel evaluate={evaluateMissionDesignBudget} />
+                    <BuildItYourselfPanel evaluate={evaluateBudget} />
                   </div>
                 </div>
               </details>

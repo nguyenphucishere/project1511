@@ -4,7 +4,13 @@ import { z } from "zod";
 // Common Types & Schemas
 // ==========================================
 
-export const DataSourceEnum = z.enum(["api", "offline_fallback"]);
+/**
+ * api              live upstream feed
+ * engine           computed by the Rust simulation engine (crates/sim-core via sim-wasm)
+ * reference        fixed historical specification (no live feed exists)
+ * offline_fallback Apollo 11 baseline served because the live feed / engine was unavailable
+ */
+export const DataSourceEnum = z.enum(["api", "engine", "reference", "offline_fallback"]);
 export type DataSource = z.infer<typeof DataSourceEnum>;
 
 // ==========================================
@@ -92,6 +98,8 @@ export const SpaceWeatherDataSchema = z.object({
   solar_proton_event_alert: z.boolean(),
   mission_risk_status: MissionRiskStatusEnum,
   source: DataSourceEnum,
+  /** Upstream feeds that answered, e.g. "NOAA SWPC + NASA DONKI". */
+  provider: z.string().optional(),
   cached: z.boolean().optional(),
   fetched_at: z.string().optional(),
 });
@@ -142,6 +150,11 @@ export const LunarEnvironmentDataSchema = z.object({
   regolith_bulk_density_kg_m3: z.number(),
   regolith_bearing_capacity_kpa: z.number(),
   surface_temperature_c: z.number(),
+  /** Engine-only extras (absent on the offline fixture). */
+  mascon_anomaly_mgal: z.number().optional(),
+  surface_temperature_day_c: z.number().optional(),
+  surface_temperature_night_c: z.number().optional(),
+  moon_radius_km: z.number().optional(),
   source: DataSourceEnum,
 });
 export type LunarEnvironmentData = z.infer<typeof LunarEnvironmentDataSchema>;

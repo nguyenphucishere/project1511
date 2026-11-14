@@ -494,11 +494,12 @@ describe("NASA Data Services & Resilience (Milestone 1)", () => {
 
       try {
         const first = await service.getSpaceWeather();
-        assert.equal(callCount, 1);
+        const callsAfterFirst = callCount;
+        assert.ok(callsAfterFirst >= 1);
         assert.equal(first.source, "api");
 
         const second = await service.getSpaceWeather();
-        assert.equal(callCount, 1, "Must hit cache");
+        assert.equal(callCount, callsAfterFirst, "Must hit cache");
         assert.equal(second.cached, true);
       } finally {
         globalThis.fetch = originalFetch;
@@ -547,6 +548,82 @@ describe("NASA Data Services & Resilience (Milestone 1)", () => {
         globalThis.fetch = originalFetch;
       }
     });
+
+    const swpcFetch = (donkiStatus: number, protonPfu = 0.23) =>
+      (async (input: string | URL | Request) => {
+        const url = String(input instanceof Request ? input.url : input);
+        const json = (v: unknown) => new Response(JSON.stringify(v), { status: 200 });
+        if (url.includes("DONKI")) return new Response("Too Many Requests", { status: donkiStatus });
+        if (url.includes("planetary-k-index"))
+          return json([
+            { time_tag: "2026-11-14T00:00:00", Kp: 2.33 },
+            { time_tag: "2026-11-14T03:00:00", Kp: 0.67 },
+          ]);
+        if (url.includes("f107_cm_flux"))
+          return json([
+            { time_tag: "2026-11-13T22:00:00", frequency: 2800, flux: 118.0 },
+            { time_tag: "2026-11-12T22:00:00", frequency: 2800, flux: 121.0 },
+          ]);
+        if (url.includes("integral-protons"))
+          return json([
+            { time_tag: "2026-11-14T06:45:00Z", flux: 0.2, energy: ">=10 MeV" },
+            { time_tag: "2026-11-14T06:50:00Z", flux: protonPfu, energy: ">=10 MeV" },
+            { time_tag: "2026-11-14T06:50:00Z", flux: 900, energy: ">=1 MeV" },
+          ]);
+        return new Response("not found", { status: 404 });
+      }) as typeof fetch;
+
+    it("uses NOAA SWPC measurements when DONKI is rate-limited", async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = swpcFetch(429);
+      try {
+        const sw = await service.getSpaceWeather();
+        assert.equal(sw.source, "api");
+        assert.equal(sw.provider, "NOAA SWPC");
+        assert.equal(sw.solar_cycle, 25);
+        assert.equal(sw.geomagnetic_kp_index, 0.67, "latest 3-hour Kp");
+        assert.equal(sw.solar_flux_f107, 118.0, "latest F10.7");
+        assert.equal(sw.mission_risk_status, "NOMINAL_QUIET");
+        assert.equal(sw.solar_proton_event_alert, false);
+        assert.ok(SpaceWeatherDataSchema.safeParse(sw).success);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it("raises SEP from GOES >=10 MeV proton flux at the NOAA S1 threshold", async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = swpcFetch(429, 42);
+      try {
+        const sw = await service.getSpaceWeather();
+        assert.equal(sw.solar_proton_event_alert, true);
+        assert.equal(sw.mission_risk_status, "SEVERE_ALERT");
+        assert.ok(sw.radiation_dose_rate_mrad_per_hour > 5);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it("keeps serving the last live reading when every upstream fails", async () => {
+      const shortTtl = new NasaSpaceWeatherService({ cacheTtlMs: 1 });
+      const originalFetch = globalThis.fetch;
+      try {
+        globalThis.fetch = swpcFetch(429);
+        const live = await shortTtl.getSpaceWeather();
+        assert.equal(live.source, "api");
+        await new Promise((r) => setTimeout(r, 5));
+
+        globalThis.fetch = (async () => {
+          throw new TypeError("fetch failed");
+        }) as typeof fetch;
+        const stale = await shortTtl.getSpaceWeather();
+        assert.equal(stale.source, "api");
+        assert.equal(stale.cached, true);
+        assert.equal(stale.geomagnetic_kp_index, live.geomagnetic_kp_index);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
   });
 
   // ========================================================
@@ -564,7 +641,7 @@ describe("NASA Data Services & Resilience (Milestone 1)", () => {
       assert.ok(easep.package_name.includes("Early Apollo"));
       assert.ok(typeof easep.total_mass_kg === "number" && easep.total_mass_kg > 40);
       assert.equal(easep.experiments.length, 3);
-      assert.equal(easep.source, "offline_fallback");
+      assert.equal(easep.source, "reference");
 
       const psep = easep.experiments.find((e) => e.id === "PSEP");
       assert.ok(psep);
@@ -599,8 +676,19 @@ describe("NASA Data Services & Resilience (Milestone 1)", () => {
       assert.ok(EasepDataSchema.safeParse(easep).success);
     });
 
-    it("serves authentic lunar surface environment constants including +280 mGal mascon", () => {
-      const env = service.getLunarEnvironment();
+    it("serves the engine's lunar surface constants (sim-core via sim-wasm)", async () => {
+      const env = await service.getLunarEnvironment();
+      assert.equal(env.source, "engine");
+      assert.equal(env.standard_gravity_mps2, 1.622);
+      assert.equal(env.mascon_anomaly_mps2, 0.0028);
+      assert.equal(env.local_gravity_effective_mps2, 1.6248);
+      assert.equal(env.regolith_bearing_capacity_kpa, 140.0);
+      assert.ok(LunarEnvironmentSchema.safeParse(env).success);
+    });
+
+    it("falls back to Apollo 11 lunar constants including +280 mGal mascon when the engine is unavailable", async () => {
+      const offline = new NasaMdlService({ lunarConstants: async () => null });
+      const env = await offline.getLunarEnvironment();
       assert.equal(env.standard_gravity_mps2, 1.622);
       assert.equal(env.mascon_anomaly_mps2, 0.0028);
       assert.equal(env.local_gravity_effective_mps2, 1.6248);
@@ -743,7 +831,7 @@ describe("NASA Data Services & Resilience (Milestone 1)", () => {
         const parsed = EasepDataSchema.safeParse(json);
         assert.ok(parsed.success, `EASEP schema invalid: ${JSON.stringify(parsed)}`);
 
-        assert.equal(parsed.data.source, "offline_fallback");
+        assert.equal(parsed.data.source, "reference");
         assert.equal(parsed.data.experiments.length, 3);
         const expIds = parsed.data.experiments.map((e) => e.id).sort();
         assert.deepEqual(expIds, ["LRRR", "PSEP", "SWC"]);
@@ -760,7 +848,7 @@ describe("NASA Data Services & Resilience (Milestone 1)", () => {
         const parsed = LunarEnvironmentDataSchema.safeParse(json);
         assert.ok(parsed.success, `Lunar env schema invalid: ${JSON.stringify(parsed)}`);
 
-        assert.equal(parsed.data.source, "offline_fallback");
+        assert.equal(parsed.data.source, "engine");
         assert.equal(parsed.data.standard_gravity_mps2, 1.622);
         assert.equal(parsed.data.mascon_anomaly_mps2, 0.0028);
         assert.equal(parsed.data.local_gravity_effective_mps2, 1.6248);

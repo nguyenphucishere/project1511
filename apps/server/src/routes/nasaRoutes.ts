@@ -5,6 +5,7 @@ import type {
   NasaSpaceWeatherService,
   NasaMdlService,
 } from "../services/nasa/index.js";
+import { runEngine } from "../services/simEngine.js";
 
 export interface NasaRouterDeps {
   nasaHorizons: NasaHorizonsService;
@@ -42,6 +43,34 @@ export function createNasaRouter(deps: NasaRouterDeps): express.Router {
     }
   });
 
+  // 2b. GET /dsn/link: engine link budget (calculate_dsn_telemetry) on the live Earth–Moon distance
+  router.get("/dsn/link", async (req, res, next) => {
+    try {
+      const forceFallback =
+        req.query.force_fallback === "true" || req.query.fallback === "true";
+      const ephemeris = await deps.nasaHorizons.getEphemeris({ forceFallback });
+      const anomaly = Number(req.query.true_anomaly_deg ?? 0);
+      const link = await runEngine<{
+        rtlt_seconds: number;
+        path_loss_db: number;
+        received_power_dbm: number;
+        is_occulted: boolean;
+      }>("calculate_dsn_telemetry", {
+        distance_km: ephemeris.distance_km,
+        true_anomaly_deg: Number.isFinite(anomaly) ? anomaly : 0,
+      });
+      res.json({
+        ...link,
+        distance_km: ephemeris.distance_km,
+        epoch: ephemeris.epoch,
+        distance_source: ephemeris.source,
+        source: "engine",
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // 3. GET /space-weather
   router.get("/space-weather", async (req, res, next) => {
     try {
@@ -67,7 +96,7 @@ export function createNasaRouter(deps: NasaRouterDeps): express.Router {
   // 5. GET /lunar-environment
   router.get("/lunar-environment", async (_req, res, next) => {
     try {
-      const data = deps.nasaMdl.getLunarEnvironment();
+      const data = await deps.nasaMdl.getLunarEnvironment();
       res.json(data);
     } catch (err) {
       next(err);
