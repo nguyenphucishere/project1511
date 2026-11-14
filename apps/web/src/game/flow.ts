@@ -6,8 +6,7 @@ import type { DecisionId } from "./decisions";
 import type { EndingId } from "./endings";
 
 export type ChapterId = "medical" | "workshop" | "mission-control" | "ascent" | "translunar" | "lunar-descent" | "return";
-/** The return chapter plays two scenes: liftoff, then the flight home. */
-export type SceneId = ChapterId | "liftoff";
+export type SceneId = ChapterId;
 
 /** How the screen changes when this step starts. */
 export type Transition = "fade" | "black-hold" | "none";
@@ -61,7 +60,6 @@ export const FLOW: Step[] = [
   { id: "flag-video", kind: "cutscene", video: "flagPlanting", chapter: "lunar-descent", enter: "fade" },
   { id: "epilogue", kind: "briefing", briefing: "epilogue", chapter: "epilogue", enter: "black-hold" },
   { id: "return-briefing", kind: "briefing", briefing: "return", chapter: "return", enter: "fade" },
-  { id: "liftoff-scene", kind: "scene", scene: "liftoff", chapter: "return", enter: "fade" },
   { id: "return-scene", kind: "scene", scene: "return", chapter: "return", enter: "fade" },
   { id: "end", kind: "end", enter: "black-hold" },
 ];

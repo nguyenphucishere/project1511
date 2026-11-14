@@ -12,7 +12,7 @@ import { useLocalized, useT } from "@/i18n/useT";
 import { cn } from "@/lib/utils";
 import { filmClock } from "./clock";
 import { ATMOSPHERE, ENTRY_BLACKOUT, FILM_END, MAIN_DELAY, frameAt, homePosition, plasma, viewKind, cutDip, OUTBOUND_END, RETURN_LOG, SIGNAL_LOST, T, TEI_LOS, atmosphereLayer, entryState, formatMet, skyAir, missionElapsed, thrust } from "./flight";
-import { CUES, HOUSTON, PHASES, READING, captionAt, moodAt } from "./story";
+import { CUES, HOUSTON, PHASES, RADIO_HOLD, RADIO_LOG, RADIO_WHO, READING, captionAt, moodAt } from "./story";
 import { TranslunarWorld } from "./TranslunarWorld";
 
 /** The camera is a scripted rig; the store just needs a viewpoint to exist. */
@@ -132,6 +132,9 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
   // The narrator reads each stretch's title and the cabin reading as they appear, one after the other.
   useVoiceLine(phase ? localize(phase.text) : null, { queue: true });
   useVoiceLine(reading ? localize(reading.text) : null, { queue: true });
+  // The air-to-ground traffic of the entry and recovery: on a channel of its own, heard with the narrator.
+  const radioLine = part === "return" ? [...RADIO_LOG].reverse().find((l) => now >= l.t && now < l.t + RADIO_HOLD) : undefined;
+  useVoiceLine(radioLine ? localize(radioLine.text) : null, { queue: true, radio: true, channel: "radio" });
   // No radio: behind the Moon on the way out and again for the burn that sends the ship home, and in the
   // plasma of the entry. Each says why in its own words.
   const farSide = part === "outbound" ? now >= SIGNAL_LOST[0] && now < SIGNAL_LOST[1] : now >= TEI_LOS[0] && now < TEI_LOS[1];
@@ -163,15 +166,14 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
         />
       )}
 
-      {/* Houston, while the capsule is cut off in the plasma and as the signal returns */}
-      {part === "return" && now >= ENTRY_BLACKOUT[0] && now < ENTRY_BLACKOUT[1] + 10 && (() => {
-        const dead = now < ENTRY_BLACKOUT[1];
+      {/* The radio: Houston's countdown through the blackout, and each line of the real air-to-ground traffic */}
+      {part === "return" && ((now >= ENTRY_BLACKOUT[0] && now < ENTRY_BLACKOUT[1]) || radioLine) && (() => {
+        const dead = now >= ENTRY_BLACKOUT[0] && now < ENTRY_BLACKOUT[1];
         const left = Math.max(0, missionElapsed(ENTRY_BLACKOUT[1]) - missionElapsed(now));
         const mm = String(Math.floor(left / 60)).padStart(2, "0");
         const ss = String(Math.floor(left % 60)).padStart(2, "0");
-        const sinceBack = now - ENTRY_BLACKOUT[1];
         return (
-          <div aria-live="polite" className="pointer-events-none absolute bottom-[calc(8vh+4.2rem)] right-4 z-10 w-[min(17rem,calc(100%-2rem))] border border-white/25 bg-black/65 p-2.5 font-mono text-[11px] text-white/85 backdrop-blur-sm sm:right-10">
+          <div aria-live="polite" className="pointer-events-none absolute bottom-[calc(8vh+4.2rem)] right-4 z-10 w-[min(18rem,calc(100%-2rem))] border border-white/25 bg-black/65 p-2.5 font-mono text-[11px] text-white/85 backdrop-blur-sm sm:right-10">
             <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.18em]">
               <span className="text-space-cyan">{localize(HOUSTON.title)}</span>
               <span className={dead ? "animate-pulse text-red-400" : "text-emerald-300"}>{localize(dead ? HOUSTON.noSignal : HOUSTON.signal)}</span>
@@ -181,19 +183,13 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
                 <span key={i} className={cn("h-1.5 flex-1 rounded-sm", dead ? "bg-white/15" : "bg-emerald-300/70")} style={dead ? undefined : { opacity: 0.4 + 0.6 * Math.abs(Math.sin(now * 3 + i)) }} />
               ))}
             </div>
-            <div className="mt-2 text-white/75">
-              {dead ? (
-                <>
-                  <div>{localize(HOUSTON.hold)}</div>
-                  <div className="mt-1 text-white">{localize(HOUSTON.waiting)} {mm}:{ss}</div>
-                </>
-              ) : (
-                <>
-                  <div className="text-white">{localize(HOUSTON.call)}</div>
-                  {sinceBack > 4 && <div className="mt-1 text-amber-100">{localize(HOUSTON.reply)}</div>}
-                </>
-              )}
-            </div>
+            {dead && <div className="mt-2 text-white">{localize(HOUSTON.waiting)} {mm}:{ss}</div>}
+            {radioLine && (
+              <div className="mt-2">
+                <div className="text-[10px] uppercase tracking-[0.16em] text-white/55">{localize(RADIO_WHO[radioLine.who])}</div>
+                <div className="text-white">{localize(radioLine.text)}</div>
+              </div>
+            )}
           </div>
         );
       })()}

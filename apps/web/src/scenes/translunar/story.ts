@@ -1,6 +1,6 @@
 import type { LocalizedText } from "@/i18n";
 import type { ScoreMood } from "@/game/sfx";
-import { MAIN_DELAY, T } from "./flight";
+import { MAIN_DELAY, T, filmAtMet, hms } from "./flight";
 
 /** A caption shown over the film between two film times. */
 export interface Caption {
@@ -34,19 +34,57 @@ export const READING: Caption[] = [
   { from: 135, to: 139.6, text: { en: "And God saw the light, that it was good.", vi: "Đức Chúa Trời thấy ánh sáng là tốt lành." } },
 ];
 
-/**
- * Houston, in a corner of the screen while the capsule is cut off in the plasma and as the signal comes back.
- * The two calls are a dramatization (captions only, not a transcript of the real air-to-ground tape).
- */
+/** The corner panel for the radio: Houston, the recovery ships and the swimmers. */
 export const HOUSTON = {
-  title: { en: "Houston · Mission Control", vi: "Houston · Trung tâm điều khiển" } satisfies LocalizedText,
+  title: { en: "Radio · air to ground", vi: "Vô tuyến · không đối đất" } satisfies LocalizedText,
   noSignal: { en: "No signal", vi: "Mất tín hiệu" } satisfies LocalizedText,
-  signal: { en: "Signal acquired", vi: "Đã có tín hiệu" } satisfies LocalizedText,
+  signal: { en: "On the air", vi: "Đang liên lạc" } satisfies LocalizedText,
   waiting: { en: "Expected contact in", vi: "Dự kiến có liên lạc sau" } satisfies LocalizedText,
-  hold: { en: "Consoles holding. Nobody speaks.", vi: "Các bàn điều khiển chờ. Không ai nói gì." } satisfies LocalizedText,
-  call: { en: "Apollo 11, this is Houston. Do you read?", vi: "Apollo 11, Houston đây. Có nghe rõ không?" } satisfies LocalizedText,
-  reply: { en: "Houston, Apollo 11. Loud and clear.", vi: "Houston, Apollo 11 đây. Nghe rất rõ." } satisfies LocalizedText,
 };
+
+export type RadioWho = "houston" | "armstrong" | "hornet" | "swim1";
+
+export interface RadioLine {
+  /** Film time the line is heard. */
+  t: number;
+  who: RadioWho;
+  /** The voice role that reads it (tools/voice/voices.json). */
+  role: "capcom" | "armstrong" | "booster" | "bales";
+  text: LocalizedText;
+}
+
+export const RADIO_WHO: Record<RadioWho, LocalizedText> = {
+  houston: { en: "Houston", vi: "Houston" },
+  armstrong: { en: "Armstrong", vi: "Armstrong" },
+  hornet: { en: "USS Hornet", vi: "USS Hornet" },
+  swim1: { en: "Swim 1", vi: "Thợ lặn 1" },
+};
+
+/**
+ * The real air-to-ground traffic of Apollo 11's entry and recovery, in order (NASA's Technical Air-to-Ground
+ * Voice Transcription, GOSS NET 1, tape 125; the Ground Elapsed Times are the transcript's). The first three
+ * are before the blackout, so they are pinned to the seconds just ahead of the entry interface. After the
+ * blackout Houston calls through the ARIA aircraft for minutes and hears nothing back. Lines in which the
+ * transcript is clipped or garbled are left out.
+ */
+export const RADIO_LOG: RadioLine[] = [
+  { t: T.REENTRY - 11, who: "houston", role: "capcom", text: { en: "We'll have you for about 3 or 4 minutes through Redstone, and then pick you up after blackout through ARIA.", vi: "Chúng tôi giữ liên lạc với các bạn khoảng ba đến bốn phút qua trạm Redstone, rồi bắt lại sau thời gian mất liên lạc qua máy bay ARIA." } },
+  { t: T.REENTRY - 6, who: "houston", role: "capcom", text: { en: "You're looking mighty fine to us.", vi: "Trông các bạn rất ổn." } },
+  { t: T.REENTRY - 3.4, who: "armstrong", role: "armstrong", text: { en: "See you later.", vi: "Hẹn gặp lại." } },
+  { t: filmAtMet(hms(195, 7, 15)), who: "houston", role: "capcom", text: { en: "Apollo 11, Houston through ARIA.", vi: "Apollo 11, Houston gọi qua ARIA." } },
+  { t: filmAtMet(hms(195, 9, 8)), who: "houston", role: "capcom", text: { en: "Apollo 11, Houston through ARIA. Standing by. Over.", vi: "Apollo 11, Houston gọi qua ARIA. Đang chờ. Hết." } },
+  { t: filmAtMet(hms(195, 9, 45)), who: "houston", role: "capcom", text: { en: "Apollo 11, Houston in the blind. Air Boss has visual contact.", vi: "Apollo 11, Houston gọi mà chưa nghe hồi âm. Chỉ huy không lực đã nhìn thấy tàu." } },
+  { t: filmAtMet(hms(195, 12, 9)), who: "houston", role: "capcom", text: { en: "Drogues.", vi: "Dù hãm đã mở." } },
+  { t: filmAtMet(hms(195, 15, 3)), who: "hornet", role: "booster", text: { en: "Apollo 11, Apollo 11. This is Hornet. Over.", vi: "Apollo 11, Apollo 11. Hornet đây. Hết." } },
+  { t: filmAtMet(hms(195, 15, 7)), who: "armstrong", role: "armstrong", text: { en: "Hello, Hornet. This is Apollo 11, reading you loud and clear.", vi: "Chào Hornet. Apollo 11 đây, nghe rất rõ." } },
+  { t: filmAtMet(hms(195, 15, 45)), who: "hornet", role: "booster", text: { en: "11, this is Hornet. What's your error of splashdown and condition of crew? Over.", vi: "11, Hornet đây. Sai số điểm hạ cánh và tình trạng phi hành đoàn thế nào? Hết." } },
+  { t: filmAtMet(hms(195, 16, 48)), who: "hornet", role: "booster", text: { en: "Roger. Twenty-five hundred on chutes.", vi: "Rõ. Hai nghìn năm trăm feet trên dù." } },
+  { t: filmAtMet(hms(195, 17, 56)), who: "swim1", role: "bales", text: { en: "Roger. You're looking real good.", vi: "Rõ. Trông các bạn rất tốt." } },
+  { t: filmAtMet(hms(195, 18, 18)), who: "swim1", role: "bales", text: { en: "Splashdown!", vi: "Đã chạm nước!" } },
+];
+
+/** How long a radio line stays in the corner panel after it is heard, seconds. */
+export const RADIO_HOLD = 5;
 
 export function captionAt(list: Caption[], t: number): Caption | undefined {
   return list.find((c) => t >= c.from && t < c.to);

@@ -4129,47 +4129,203 @@
    "h": "f9e51e5c04",
    "d": 3.89
   },
-  "en-74509bc126a57f2c": {
-   "f": "en/en-74509bc126a57f2c.mp3",
-   "role": "narrator",
-   "h": "853b986224",
-   "d": 3.2
-  },
-  "vi-19140931880263b6": {
-   "f": "vi/vi-19140931880263b6.mp3",
-   "role": "narrator",
-   "h": "83390e3d1c",
-   "d": 3.46
-  },
-  "vi-d1009afbf62b3db0": {
-   "f": "vi/vi-d1009afbf62b3db0.mp3",
-   "role": "narrator",
-   "h": "de6b88d0d4",
-   "d": 5.44
-  },
-  "en-77bd9d835f42559e": {
-   "f": "en/en-77bd9d835f42559e.mp3",
-   "role": "narrator",
-   "h": "39159fecea",
-   "d": 4.72
-  },
-  "vi-ceadfe2edc53b031": {
-   "f": "vi/vi-ceadfe2edc53b031.mp3",
-   "role": "narrator",
-   "h": "41a17184fb",
-   "d": 4.1
-  },
-  "en-0d2d39c4180653d1": {
-   "f": "en/en-0d2d39c4180653d1.mp3",
-   "role": "narrator",
-   "h": "7fd6835419",
-   "d": 5.33
-  },
   "vi-c6fbb9cfac6379f6": {
    "f": "vi/vi-c6fbb9cfac6379f6.mp3",
    "role": "narrator",
    "h": "cf62de7e66",
    "d": 3.31
+  },
+  "en-764382e8eaa25edd": {
+   "f": "en/en-764382e8eaa25edd.mp3",
+   "role": "narrator",
+   "h": "b1fff6d371",
+   "d": 2.12
+  },
+  "en-6df27d213d07c20a": {
+   "f": "en/en-6df27d213d07c20a.mp3",
+   "role": "narrator",
+   "h": "bb553f2d70",
+   "d": 1.8
+  },
+  "vi-e5c4622d60f63c3c": {
+   "f": "vi/vi-e5c4622d60f63c3c.mp3",
+   "role": "capcom",
+   "h": "7ff2c639d2",
+   "d": 1.55
+  },
+  "vi-4bfcbf2c2597163b": {
+   "f": "vi/vi-4bfcbf2c2597163b.mp3",
+   "role": "narrator",
+   "h": "932bb93dfd",
+   "d": 3.82
+  },
+  "vi-a6d207fbc034346a": {
+   "f": "vi/vi-a6d207fbc034346a.mp3",
+   "role": "capcom",
+   "h": "5688d17b0f",
+   "d": 7.16
+  },
+  "vi-7dc23c484d78e975": {
+   "f": "vi/vi-7dc23c484d78e975.mp3",
+   "role": "narrator",
+   "h": "7ef9675025",
+   "d": 1.84
+  },
+  "vi-1045ea7e075e93cd": {
+   "f": "vi/vi-1045ea7e075e93cd.mp3",
+   "role": "narrator",
+   "h": "cc1567dc0a",
+   "d": 2.23
+  },
+  "en-f639107cdc27dd71": {
+   "f": "en/en-f639107cdc27dd71.mp3",
+   "role": "narrator",
+   "h": "c57b670d0e",
+   "d": 4.03
+  },
+  "en-bfd59613831f9b5e": {
+   "f": "en/en-bfd59613831f9b5e.mp3",
+   "role": "capcom",
+   "h": "2f85a8e989",
+   "d": 1.58
+  },
+  "en-349c2f9a5ff14c13": {
+   "f": "en/en-349c2f9a5ff14c13.mp3",
+   "role": "capcom",
+   "h": "d665ff7b02",
+   "d": 4.57
+  },
+  "en-fbf8c1ed6064b7c6": {
+   "f": "en/en-fbf8c1ed6064b7c6.mp3",
+   "role": "capcom",
+   "h": "be6334e9ff",
+   "d": 3.17
+  },
+  "vi-25d0e0bc6b860e2b": {
+   "f": "vi/vi-25d0e0bc6b860e2b.mp3",
+   "role": "capcom",
+   "h": "55ebb041f2",
+   "d": 3.02
+  },
+  "en-d53e871945316e2e": {
+   "f": "en/en-d53e871945316e2e.mp3",
+   "role": "capcom",
+   "h": "176c62f379",
+   "d": 1.01
+  },
+  "en-4ff5382abdf6ffd7": {
+   "f": "en/en-4ff5382abdf6ffd7.mp3",
+   "role": "capcom",
+   "h": "4c9d6bfc8b",
+   "d": 4.28
+  },
+  "en-3e3970a115dab054": {
+   "f": "en/en-3e3970a115dab054.mp3",
+   "role": "capcom",
+   "h": "9ad3344bf2",
+   "d": 4.79
+  },
+  "vi-1e7de80f03afe50e": {
+   "f": "vi/vi-1e7de80f03afe50e.mp3",
+   "role": "capcom",
+   "h": "d8f71b0d0b",
+   "d": 4.43
+  },
+  "vi-d2c3770f62927f6a": {
+   "f": "vi/vi-d2c3770f62927f6a.mp3",
+   "role": "capcom",
+   "h": "28477adbc0",
+   "d": 1.3
+  },
+  "vi-94a099375838f426": {
+   "f": "vi/vi-94a099375838f426.mp3",
+   "role": "capcom",
+   "h": "705959300c",
+   "d": 5.51
+  },
+  "en-f0ccf57e6d333935": {
+   "f": "en/en-f0ccf57e6d333935.mp3",
+   "role": "armstrong",
+   "h": "acc11211fd",
+   "d": 1.19
+  },
+  "vi-2627b22f9a9357a8": {
+   "f": "vi/vi-2627b22f9a9357a8.mp3",
+   "role": "armstrong",
+   "h": "2e3dda7344",
+   "d": 0.97
+  },
+  "en-7dc680649b263979": {
+   "f": "en/en-7dc680649b263979.mp3",
+   "role": "armstrong",
+   "h": "15a051d1af",
+   "d": 4.9
+  },
+  "vi-0bc2707781f84af8": {
+   "f": "vi/vi-0bc2707781f84af8.mp3",
+   "role": "armstrong",
+   "h": "7c60a5e945",
+   "d": 3.96
+  },
+  "en-18c8234a913cf4f1": {
+   "f": "en/en-18c8234a913cf4f1.mp3",
+   "role": "booster",
+   "h": "ccb280733b",
+   "d": 6.88
+  },
+  "en-96bb650e72e9532b": {
+   "f": "en/en-96bb650e72e9532b.mp3",
+   "role": "booster",
+   "h": "a8c4f642e9",
+   "d": 3.1
+  },
+  "en-e8cc4e9c5b582591": {
+   "f": "en/en-e8cc4e9c5b582591.mp3",
+   "role": "booster",
+   "h": "0bfcc67279",
+   "d": 4.9
+  },
+  "vi-a46e40c75fb657ca": {
+   "f": "vi/vi-a46e40c75fb657ca.mp3",
+   "role": "booster",
+   "h": "7ed890e38f",
+   "d": 4.5
+  },
+  "en-06644dd84ee10bd1": {
+   "f": "en/en-06644dd84ee10bd1.mp3",
+   "role": "bales",
+   "h": "146102fcc2",
+   "d": 1.37
+  },
+  "vi-de6a26191a4028f2": {
+   "f": "vi/vi-de6a26191a4028f2.mp3",
+   "role": "booster",
+   "h": "a6ff524911",
+   "d": 2.52
+  },
+  "vi-96569973f2469eb4": {
+   "f": "vi/vi-96569973f2469eb4.mp3",
+   "role": "booster",
+   "h": "6553cae168",
+   "d": 3.2
+  },
+  "en-b702a0a4841b091b": {
+   "f": "en/en-b702a0a4841b091b.mp3",
+   "role": "bales",
+   "h": "6962ed6868",
+   "d": 2.59
+  },
+  "vi-d722df6133e69b70": {
+   "f": "vi/vi-d722df6133e69b70.mp3",
+   "role": "bales",
+   "h": "afac8d45da",
+   "d": 1.33
+  },
+  "vi-e203ad50b2bc17bb": {
+   "f": "vi/vi-e203ad50b2bc17bb.mp3",
+   "role": "bales",
+   "h": "d2ae673b5a",
+   "d": 2.77
   }
  }
 }

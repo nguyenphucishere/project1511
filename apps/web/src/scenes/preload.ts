@@ -60,7 +60,6 @@ const JOBS: Record<SceneId, Job> = {
   ascent: assetJob("ascent", () => import("./ascent/AscentScene")),
   translunar: assetJob("translunar", () => import("./translunar/TranslunarScene")),
   return: assetJob("return", () => import("./translunar/TranslunarScene")),
-  liftoff: assetJob("liftoff", () => import("./homeward/HomewardScenes")),
   "lunar-descent": assetJob("lunar-descent", () => import("./lunar-descent/LunarDescentScene")),
 };
 

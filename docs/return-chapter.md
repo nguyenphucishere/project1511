@@ -180,3 +180,30 @@ Thay thế đề xuất cho câu đang có: "Reentry: four minutes of radio blac
 - Hải quân Mỹ, báo cáo thu hồi Apollo 11 (mục tiêu 13°19′N 169°10′W, tàu Hornet): <https://history.navy.mil/research/archives/digital-exhibits-highlights/apollo-11/reports/tf-130-apollo-11.html>
 - Tài liệu của dự án: `apollo_program_technical_research_simulation_telemetry_catalog.md` (thời lượng pha, mất liên lạc phía sau Mặt Trăng 45,5–47,5 phút, thời gian trên bề mặt).
 - Về cách ly: Space.com <https://www.space.com/apollo-11-astronauts-quarantined-after-splashdown.html> và NASA SP-4214 <https://www.nasa.gov/wp-content/uploads/static/history/SP-4214/ch9-7.html> (mốc 21 ngày tính khác nhau giữa các nguồn).
+
+---
+
+## Cập nhật: phim bay về 4 phút (đã làm)
+
+Phim bay về dài khoảng 3 phút 52 giây (film 140 s → 372 s), chia thành: đốt về nhà (18 s) → hai ngày rưỡi bay (fly cam, đồng hồ chạy nhanh) → thả mô-đun phục vụ → tái nhập 74 s (góc bám theo, POV trong khoang với ánh lửa ở cửa sổ, fly cam từ trên nhìn xuống, góc thấp nhìn tấm chắn nhiệt) → mở dù (góc thấp, góc trực thăng) → hạ xuống biển → vớt tàu (tàu đổ úp mũi, túi hơi lật đứng, vòng phao, thợ lặn, trực thăng, tàu sân bay ở xa).
+
+### Lời thoại không đối đất: nay dùng bản ghi thật
+Nguồn: NASA, *Apollo 11 Technical Air-to-Ground Voice Transcription* (GOSS NET 1, băng 125), https://www.nasa.gov/wp-content/uploads/static/history/alsj/a11/a11transcript_tec.html. Mốc GET theo bản ghi (ngày/giờ/phút/giây, ngày 8 giờ 3 = 195 h).
+
+| GET | Người nói | Lời (bản ghi) |
+|---|---|---|
+| 195:03:00 | CAPCOM | "We'll have you for about 3 or 4 minutes through Redstone and then pick you up after blackout through ARIA." |
+| 195:03:03 | CAPCOM | "You're looking mighty fine to us." |
+| 195:03:06 | Armstrong | "See you later." |
+| 195:07:15 | CAPCOM | "Apollo 11, Houston through ARIA." (gọi lặp lại nhiều lần, không có hồi âm) |
+| 195:09:08 | CAPCOM | "...Standing by. Over." |
+| 195:09:45 | CAPCOM | "Apollo 11, Houston in the blind. Air Boss has visual contact." |
+| 195:12:09 | CAPCOM | "Drogues." |
+| 195:15:03 | Hornet | "Apollo 11, Apollo 11. This is Hornet. Over." |
+| 195:15:07 | Armstrong | "Hello, Hornet. This is Apollo 11 reading you loud and clear." |
+| 195:15:45 | Hornet | "...What's your error of splashdown and condition of crew? Over." |
+| 195:16:48 | Hornet | "Roger. 2500 on chutes." |
+| 195:17:56 | Swim 1 | "Roger. You're looking real good." |
+| 195:18:18 | Swim 1 | "SPLASHDOWN!" |
+
+Ba câu trước mất liên lạc được đặt vào vài giây ngay trước điểm vào khí quyển (trên phim, giờ nhiệm vụ trôi quá nhanh để đặt đúng mốc). Các câu bị cắt hoặc nhiễu trong bản ghi được bỏ qua. Điều đáng chú ý thật: sau mất liên lạc, Houston gọi suốt gần 5 phút mà không nghe hồi âm cho tới khi dù mở.

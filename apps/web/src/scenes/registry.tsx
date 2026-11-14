@@ -38,7 +38,6 @@ export const SCENES: Record<SceneId, ComponentType<SceneProps>> = {
   ascent: gated("ascent", () => import("./ascent/AscentScene").then((m) => m.AscentScene)),
   translunar: gated("translunar", () => import("./translunar/TranslunarScene").then((m) => m.TranslunarScene)),
   return: gated("return", () => import("./translunar/TranslunarScene").then((m) => m.ReturnScene)),
-  liftoff: gated("liftoff", () => import("./homeward/HomewardScenes").then((m) => m.LiftoffScene)),
   "lunar-descent": gated("lunar-descent", () => import("./lunar-descent/LunarDescentScene").then((m) => m.LunarDescentScene)),
   // The hall has its own gate (WorkshopGate) so its loading copy and tips stay specific.
   workshop: dynamic(() => import("./workshop/WorkshopGate").then((m) => m.WorkshopGate), {

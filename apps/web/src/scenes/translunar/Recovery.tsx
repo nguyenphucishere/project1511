@@ -93,6 +93,21 @@ export function Recovery() {
           <boxGeometry args={[12, 11, 5]} />
           <meshStandardMaterial color="#7a838d" roughness={0.8} />
         </mesh>
+        {/* The mast on the island, and the aircraft parked along the deck */}
+        <mesh position={[14, 24, 12]}>
+          <boxGeometry args={[0.8, 8, 0.8]} />
+          <meshStandardMaterial color="#444b53" />
+        </mesh>
+        {[-48, -34, -18, 22, 38, 52].map((x, i) => (
+          <mesh key={x} position={[x, 10.6, i % 2 ? -7 : 4]}>
+            <boxGeometry args={[6, 1.4, 2.2]} />
+            <meshStandardMaterial color="#3f4650" roughness={0.9} />
+          </mesh>
+        ))}
+        <mesh position={[0, 9.85, 0]}>
+          <boxGeometry args={[128, 0.05, 0.6]} />
+          <meshStandardMaterial color="#e6e1d3" />
+        </mesh>
       </group>
       <group ref={heli[0]}>
         <Helicopter rotor={rotor[0]!} />

@@ -542,7 +542,7 @@ export function stagePose(t: number): Pose {
 
 /* ---------------------------------------------------------------- readouts */
 
-const hms = (h: number, m: number, s = 0) => h * 3600 + m * 60 + s;
+export const hms = (h: number, m: number, s = 0) => h * 3600 + m * 60 + s;
 
 /** Mission elapsed time (seconds) by film time, compressing days into seconds. */
 const MET_KEYS: [number, number][] = [
@@ -613,6 +613,18 @@ export function returnMissionElapsed(t: number) {
     if (t <= t1) return lerp(m0, m1, (t - t0) / (t1 - t0));
   }
   return keys[keys.length - 1][1];
+}
+
+/** The film time at which the flight home stands at this mission elapsed time (the inverse of returnMissionElapsed). */
+export function filmAtMet(met: number): number {
+  let lo: number = T.OUTBOUND_END;
+  let hi: number = T.FILM_END;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (returnMissionElapsed(mid) < met) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
 }
 
 /** The burn that takes the ship out of lunar orbit happens behind the Moon: no radio until it comes round. */

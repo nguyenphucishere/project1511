@@ -177,3 +177,15 @@ describe("the cuts of the flight home", () => {
     expect(cutDip(T.OUTBOUND_END + 2)).toBe(0);
   });
 });
+
+describe("the radio log of the entry and recovery", () => {
+  it("places each line in order on the film, and splashdown near the touchdown", async () => {
+    const { RADIO_LOG } = await import("./story");
+    for (let i = 1; i < RADIO_LOG.length; i++) expect(RADIO_LOG[i]!.t).toBeGreaterThan(RADIO_LOG[i - 1]!.t);
+    expect(RADIO_LOG[0]!.t).toBeGreaterThan(T.SM_SEP);
+    const last = RADIO_LOG[RADIO_LOG.length - 1]!;
+    expect(last.text.en).toBe("Splashdown!");
+    expect(Math.abs(last.t - T.TOUCHDOWN)).toBeLessThan(6);
+    expect(last.t).toBeLessThan(T.FILM_END);
+  });
+});

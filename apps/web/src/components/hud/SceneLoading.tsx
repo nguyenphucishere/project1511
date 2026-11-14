@@ -40,7 +40,7 @@ export function SceneLoading({ scene, fading = false }: { scene: SceneId; fading
 
   const tips = [copy.tip1, copy.tip2, copy.tip3];
   const isHall = scene === "workshop";
-  const title = isHall ? copy.workshopTitle : localize(CHAPTERS.find((c) => c.id === (scene === "liftoff" ? "return" : scene))?.title ?? { en: "", vi: "" });
+  const title = isHall ? copy.workshopTitle : localize(CHAPTERS.find((c) => c.id === scene)?.title ?? { en: "", vi: "" });
   const stage = fading || done ? copy.stageWarmup : progress < 20 ? copy.stageCode : copy.stageAssets;
   const shown = done ? 100 : progress;
 

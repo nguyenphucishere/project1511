@@ -162,9 +162,8 @@ async function main() {
   (story.READING as any[]).forEach((c, i) => add("narrator", c.text, `translunar:reading#${i}`));
   add("narrator", both(["translunar", "doneBody"]), "translunar:done");
   add("narrator", both(["translunar", "returnDoneBody"]), "translunar:return-done");
-  // 7. Liftoff from Tranquility Base (the spoken beats; the flag line is an unverified detail, so it stays a caption).
-  const { HOMEWARD } = await load("scenes/homeward/script.ts");
-  for (const k of ["intro", "stageSep", "orbit"]) add("narrator", HOMEWARD.liftoff[k], `homeward:liftoff.${k}`);
+  // The real air-to-ground traffic of the entry and recovery, each in its speaker's voice.
+  (story.RADIO_LOG as any[]).forEach((c, i) => add(c.role, c.text, `translunar:radio#${i}`));
 
   // 7. Lunar descent: Armstrong's calls and the narrator's outcomes.
   DESCENT_STEPS.forEach((d: any) => add("armstrong", d.cue, `descent:cue:${d.id}`));
