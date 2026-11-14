@@ -2,6 +2,7 @@ import express from "express";
 import {
   APOLLO_11_ENGINE_INPUTS,
   ENGINE_CALCULATIONS,
+  engineLaunchCatalog,
   engineLunarConstants,
   engineRejected,
   engineStatus,
@@ -22,7 +23,17 @@ const PATHS: Record<EngineCalculation, string> = {
   calculate_landing_radar: "landing-radar",
   evaluate_mission_design_budget: "mission-design/budget",
   calculate_dsn_telemetry: "dsn/telemetry",
+  plan_launch: "launch/plan",
+  simulate_ascent: "ascent/profile",
+  simulate_powered_descent: "descent/profile",
 };
+
+/** The aggregate view leaves out the per-second samples (fetch the profile endpoints for those). */
+function summarise(result: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(result.samples)) return result;
+  const { samples, ...rest } = result;
+  return { ...rest, sample_count: samples.length };
+}
 
 export function createEngineRouter(): express.Router {
   const router = express.Router();
@@ -54,13 +65,26 @@ export function createEngineRouter(): express.Router {
     }
   });
 
+  router.get("/launch/catalog", async (_req, res, next) => {
+    try {
+      const catalog = await engineLaunchCatalog();
+      if (!catalog) {
+        res.status(503).json({ error: "Simulation engine unavailable (get_launch_catalog)" });
+        return;
+      }
+      res.json({ ...catalog, source: "engine" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   /** Every calculation run on the Apollo 11 baseline, in one call (used by the UI). */
   router.get("/apollo11", async (_req, res, next) => {
     try {
       const entries = await Promise.all(
         ENGINE_CALCULATIONS.map(async (n) => [
           n,
-          { input: APOLLO_11_ENGINE_INPUTS[n], result: await runEngine(n, APOLLO_11_ENGINE_INPUTS[n]) },
+          { input: APOLLO_11_ENGINE_INPUTS[n], result: summarise(await runEngine(n, APOLLO_11_ENGINE_INPUTS[n])) },
         ]),
       );
       res.json({ ...Object.fromEntries(entries), source: "engine" });

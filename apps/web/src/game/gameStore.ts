@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 import type { LocalizedText } from "@/i18n";
 import { safeLocalStorage } from "@/lib/safeStorage";
 import type { LaunchConfig } from "@/lib/simulation/launch.types";
-import { ORBITS, PAYLOADS, VEHICLES, WINDOWS } from "@/mocks/launch-options";
+import { LAUNCH_SITES, ORBITS, PAYLOADS, VEHICLES, WINDOWS } from "@/mocks/launch-options";
 import { isLoadout, type Loadout } from "@/scenes/workshop/loadout";
 import { FIRST_STEP_ID, FLOW, chapterStartId, getNextStepId, getStep, type ChapterId } from "./flow";
 import { hoverMarginSeconds, resolveLanding } from "./consequences";
@@ -374,6 +374,7 @@ function isLaunchConfig(c: unknown): c is LaunchConfig {
     PAYLOADS.some((p) => p.id === x.payload) &&
     ORBITS.some((o) => o.km === x.orbitKm) &&
     WINDOWS.some((w) => w.id === x.window) &&
+    (x.site === undefined || LAUNCH_SITES.some((site) => site.id === x.site)) &&
     typeof x.fuelPct === "number"
   );
 }

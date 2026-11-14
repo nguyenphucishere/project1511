@@ -77,7 +77,24 @@ describe("Simulation engine routes (/api/engine)", () => {
     assert.equal((await post("/api/engine/score", [1, 2])).status, 400);
     const bad = await post("/api/engine/score", { science_score: "lots" });
     assert.equal(bad.status, 400);
-    assert.match((await bad.json()).detail, /Invalid JSON/);
+    const body = await bad.json();
+    assert.match(body.detail ?? body.error_message, /Invalid JSON/);
+  });
+
+  it("serves the Saturn V ascent and LM descent profiles", async () => {
+    const ascent = await (await post("/api/engine/ascent/profile", { parking_orbit_km: 185 })).json();
+    assert.equal(ascent.source, "engine");
+    assert.equal(ascent.reached_orbit, true);
+    assert.ok(Math.abs(ascent.insertion_altitude_km - 185) < 1);
+    assert.ok(Math.abs(ascent.insertion_velocity_mps - 7_791) < 30);
+    assert.ok(ascent.samples.length > 600);
+    const descent = await (await fetch(`${base}/api/engine/descent/profile/apollo11`)).json();
+    assert.equal(descent.source, "engine");
+    assert.ok(Math.abs(descent.low_gate.altitude_m - 152.4) < 2);
+    assert.ok(Math.abs(descent.local_gravity_mps2 - 1.6248) < 1e-9);
+    const all = await (await fetch(`${base}/api/engine/apollo11`)).json();
+    assert.equal(all.simulate_ascent.result.samples, undefined, "aggregate leaves the samples out");
+    assert.ok(all.simulate_ascent.result.sample_count > 600);
   });
 
   it("serves the engine's lunar constants", async () => {

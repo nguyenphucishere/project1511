@@ -55,3 +55,40 @@ describe("fetchLaunchTelemetryFromServer", () => {
     expect(await fetchLaunchTelemetryFromServer("http://server.test")).toBe(OFFLINE_APOLLO11_TELEMETRY);
   });
 });
+
+describe("launch sites, windows and the engine's verdict", async () => {
+  const { fetchLaunchSites, fetchLaunchWindows, launchSimulator } = await import("./launch.adapter");
+  const { LAUNCH_SITES, OFFLINE_KSC_WINDOWS, WINDOWS } = await import("@/mocks/launch-options");
+  const respond = (body: unknown, ok = true) => vi.fn(async (..._a: unknown[]) => ({ ok, json: async () => body }) as unknown as Response);
+  const CONFIG = { vehicle: "saros", payload: "standard", fuelPct: 100, orbitKm: 185, window: "w1", site: "ksc-39a" } as const;
+
+  it("lists the server's sites, or the offline copy", async () => {
+    vi.stubGlobal("fetch", respond({ sites: [LAUNCH_SITES[1]] }));
+    expect(await fetchLaunchSites("http://x")).toEqual([LAUNCH_SITES[1]]);
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new TypeError("offline"))));
+    expect(await fetchLaunchSites("http://x")).toBe(LAUNCH_SITES);
+  });
+
+  it("takes valid windows from the server and falls back to 1969 at the right site otherwise", async () => {
+    const live = { ...OFFLINE_KSC_WINDOWS, site: LAUNCH_SITES[3], kind: "live", source: "api" };
+    const f = respond(live);
+    vi.stubGlobal("fetch", f);
+    expect(await fetchLaunchWindows("kourou-ela", "http://x")).toEqual(live);
+    expect(f).toHaveBeenCalledWith("http://x/api/launch/sites/kourou-ela/windows", expect.anything());
+
+    vi.stubGlobal("fetch", respond({ ...live, windows: [{ id: "w9" }] }));
+    const bad = await fetchLaunchWindows("kourou-ela", "http://x");
+    expect(bad.source).toBe("offline_fallback");
+    expect(bad.site.id).toBe("kourou-ela");
+  });
+
+  it("uses the server engine's verdict, and the browser engine when the server is down", async () => {
+    vi.stubGlobal("fetch", respond({ is_go: false, failure_mode: "wind_shear", failure_time_s: 80, failure_reason: "server says wind" }));
+    const r = await launchSimulator.simulate(CONFIG, WINDOWS[0]!);
+    expect(r).toMatchObject({ isSuccess: false, weatherLoss: true, source: "server-engine", reason: "server says wind" });
+
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new TypeError("offline"))));
+    const local = await launchSimulator.simulate(CONFIG, WINDOWS[0]!);
+    expect(local).toMatchObject({ isSuccess: true, source: "browser-engine" });
+  });
+});

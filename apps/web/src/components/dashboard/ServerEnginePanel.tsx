@@ -42,6 +42,24 @@ const ROWS: { key: EngineCalculationName; label: string; summary: (r: Result) =>
     ok: (r) => flag(r, "is_mass_compliant") && flag(r, "is_power_compliant") && flag(r, "is_delta_v_compliant"),
   },
   {
+    key: "simulate_ascent",
+    label: "Saturn V ascent",
+    summary: (r) => {
+      const e = (r.events ?? {}) as Result;
+      return `orbit at T+${num(e, "insertion_s")} s · ${num(r, "insertion_altitude_km", 1)} km · ${num(r, "insertion_velocity_mps")} m/s · Max-Q ${num(e, "max_q_kpa", 1)} kPa`;
+    },
+    ok: (r) => flag(r, "reached_orbit"),
+  },
+  {
+    key: "simulate_powered_descent",
+    label: "LM powered descent",
+    summary: (r) => {
+      const lg = (r.low_gate ?? {}) as Result;
+      return `low gate T+${num(lg, "t_s")} s · ${num(lg, "altitude_m")} m · ${num(lg, "propellant_kg")} kg DPS left · g ${num(r, "local_gravity_mps2", 4)}`;
+    },
+    ok: (r) => typeof r.low_gate === "object",
+  },
+  {
     key: "calculate_dsn_telemetry",
     label: "DSN link (July 1969)",
     summary: (r) => `RTLT ${num(r, "rtlt_seconds", 3)} s · loss ${num(r, "path_loss_db", 1)} dB · ${num(r, "received_power_dbm", 1)} dBm`,

@@ -328,3 +328,46 @@ pub fn get_lunar_environment_constants() -> String {
     })
 }
 
+
+/// Launch planning for the mission-control console (vehicle, payload, propellant load, orbit, weather).
+#[wasm_bindgen]
+pub fn plan_launch(json_str: &str) -> String {
+    let error_json = |msg: String| {
+        serde_json::json!({ "is_go": false, "error_message": msg, "failure_reason": msg }).to_string()
+    };
+    match serde_json::from_str::<sim_core::LaunchPlanRequest>(json_str) {
+        Ok(req) => serde_json::to_string(&sim_core::plan_launch(&req))
+            .unwrap_or_else(|e| error_json(format!("Serialization error: {}", e))),
+        Err(e) => error_json(format!("Invalid JSON: {}", e)),
+    }
+}
+
+/// Vehicle presets and launch commit criteria the console offers.
+#[wasm_bindgen]
+pub fn get_launch_catalog() -> String {
+    serde_json::json!({
+        "vehicles": sim_core::launch_vehicle_presets(),
+        "criteria": sim_core::launch_commit_criteria(),
+    })
+    .to_string()
+}
+
+/// Scene 4: Saturn V ascent profile from liftoff to parking-orbit insertion.
+#[wasm_bindgen]
+pub fn simulate_ascent(json_str: &str) -> String {
+    match serde_json::from_str::<sim_core::AscentProfileRequest>(json_str) {
+        Ok(req) => serde_json::to_string(&sim_core::simulate_ascent(&req))
+            .unwrap_or_else(|e| serde_json::json!({ "error_message": format!("Serialization error: {}", e) }).to_string()),
+        Err(e) => serde_json::json!({ "error_message": format!("Invalid JSON: {}", e) }).to_string(),
+    }
+}
+
+/// Scene 6: LM powered descent profile from PDI to the low gate.
+#[wasm_bindgen]
+pub fn simulate_powered_descent(json_str: &str) -> String {
+    match serde_json::from_str::<sim_core::DescentProfileRequest>(json_str) {
+        Ok(req) => serde_json::to_string(&sim_core::simulate_powered_descent(&req))
+            .unwrap_or_else(|e| serde_json::json!({ "error_message": format!("Serialization error: {}", e) }).to_string()),
+        Err(e) => serde_json::json!({ "error_message": format!("Invalid JSON: {}", e) }).to_string(),
+    }
+}

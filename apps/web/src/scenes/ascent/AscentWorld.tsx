@@ -26,7 +26,7 @@ import {
   FAIL_ABORT_AT,
   FAIL_BOOM_AT,
   FAIL_END_AT,
-  INSERTION_MET,
+  insertionMet,
   TROUBLE_LEAD,
   altitudeKm,
   eventsBetween,
@@ -201,7 +201,7 @@ function FlightDirector({
     };
     const emit = (e: Omit<AscentEvent, "met">) => eventRef.current({ ...e, met: f.met });
     const fireTimeline = (from: number, to: number) => {
-      for (const e of eventsBetween(from, to)) {
+      for (const e of eventsBetween(from, to, orbitKm)) {
         if (e.id === "stageSep") f.sepAt = clock.elapsedTime;
         if (e.id === "towerJettison") f.towerAt = clock.elapsedTime;
         eventRef.current(e);
@@ -212,12 +212,12 @@ function FlightDirector({
       const from = f.met;
       let next = f.met + dt * COMPRESS;
       if (failure) next = Math.min(next, failure.met - TROUBLE_LEAD);
-      f.met = Math.min(INSERTION_MET, next);
+      f.met = Math.min(insertionMet(orbitKm), next);
       fireTimeline(from, f.met);
       if (failure && f.met >= failure.met - TROUBLE_LEAD) {
         f.mode = "trouble";
         emit({ id: "warn", caution: true, kick: 0.3 });
-      } else if (!failure && f.met >= INSERTION_MET) {
+      } else if (!failure && f.met >= insertionMet(orbitKm)) {
         f.mode = "orbit";
       }
     } else if (f.mode === "trouble" && failure) {
@@ -256,7 +256,7 @@ function FlightDirector({
       f.mode === "orbit" || f.mode === "float"
         ? 0
         : MathUtils.smoothstep(alt, 1.9, 2.5) * (1 - MathUtils.smoothstep(alt, 3.0, 3.6));
-    f.heat = f.mode === "ride" || f.mode === "trouble" ? heating(f.met) : 0;
+    f.heat = f.mode === "ride" || f.mode === "trouble" ? heating(f.met, orbitKm) : 0;
 
     if (outside.current) {
       // Pitch-over swings Earth into the window; a failing vehicle tumbles instead.
@@ -832,7 +832,7 @@ function Cabin({
         l.intensity = on ? 3.4 : 1.0;
       } else {
         l.color.set(f.heat > 0.3 ? "#FFD2A0" : "#FFE9C8");
-        l.intensity = 2.6 + (burning ? 0.25 * Math.sin(t * 40) * vibration(f.met) : 0);
+        l.intensity = 2.6 + (burning ? 0.25 * Math.sin(t * 40) * vibration(f.met, orbitKm) : 0);
       }
     }
   });
@@ -949,14 +949,14 @@ function Console({
     c.font = "26px monospace";
     c.fillStyle = "#5cf2a8";
     c.fillText(`ALT  ${alt.toFixed(alt < 100 ? 1 : 0).padStart(5)} km`, 18, 140);
-    c.fillText(`VEL  ${speedKms(f.met).toFixed(2).padStart(5)} km/s`, 18, 176);
+    c.fillText(`VEL  ${speedKms(f.met, orbitKm).toFixed(2).padStart(5)} km/s`, 18, 176);
     c.fillStyle = "#ffc72c";
-    c.fillText(`LOAD ${gForce(f.met).toFixed(1).padStart(5)} g`, 18, 212);
+    c.fillText(`LOAD ${gForce(f.met, orbitKm).toFixed(1).padStart(5)} g`, 18, 212);
     // fuel/progress bar
     c.fillStyle = "#0e3b52";
     c.fillRect(330, 60, 160, 14);
     c.fillStyle = "#7ee7ff";
-    c.fillRect(330, 60, 160 * Math.min(1, f.met / INSERTION_MET), 14);
+    c.fillRect(330, 60, 160 * Math.min(1, f.met / insertionMet(orbitKm)), 14);
     if (f.alarm || f.mode === "failing") {
       const blink = Math.sin(clock.elapsedTime * 7) > 0;
       c.fillStyle = blink ? "#c1121f" : "#4a0a10";
@@ -965,7 +965,19 @@ function Console({
       c.font = "bold 28px monospace";
       c.fillText("MASTER ALARM", 262, 134);
       c.font = "bold 20px monospace";
-      c.fillText(failure?.code === "slow-climb" ? "THRUST < WEIGHT" : "STG2 PROPELLANT LOW", 262, 168);
+      c.fillText(
+        failure?.code === "slow-climb"
+          ? "THRUST < WEIGHT"
+          : failure?.code === "wind-shear"
+            ? "BENDING LOAD HIGH"
+            : failure?.code === "lightning"
+              ? "ELEC BUS TRANSIENT"
+              : failure?.code === "structural"
+                ? "Q > STRUCT LIMIT"
+                : "STG2 PROPELLANT LOW",
+        262,
+        168,
+      );
       c.fillText(f.mode === "failing" ? "ENGINE OUT" : "ABORT ARMED", 262, 200);
     }
     main.texture.needsUpdate = true;

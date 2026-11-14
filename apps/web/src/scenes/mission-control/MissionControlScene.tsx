@@ -27,13 +27,15 @@ import { addTrauma } from "@/game/shake";
 import { playSfx, setMasterVolume, startRumble, type Rumble } from "@/game/sfx";
 import { preloadCrowd, startCrowdBed, type CrowdBed } from "@/game/crowdAudio";
 import {
-  fetchLaunchTelemetryFromServer,
+  fetchLaunchPlan,
+  fetchLaunchSites,
+  fetchLaunchWindows,
   launchSimulator,
-  OFFLINE_APOLLO11_TELEMETRY,
-  type ServerLaunchTelemetry,
 } from "@/lib/simulation/launch.adapter";
-import { TRACE_TEXT } from "@/lib/simulation/launch.mock";
-import type { LaunchConfig, LaunchResult } from "@/lib/simulation/launch.types";
+import { assessLaunch, planRequestFor, TRACE_TEXT } from "@/lib/simulation/launch.engine";
+import type { LaunchPlan } from "@/lib/simulation/launch.physics";
+import type { LaunchConfig, LaunchResult, LaunchSite, LaunchWindowsData } from "@/lib/simulation/launch.types";
+import { DEFAULT_SITE_ID, LAUNCH_SITES, OFFLINE_KSC_WINDOWS } from "@/mocks/launch-options";
 import { useSimulationWasm } from "@/hooks/useSimulationWasm";
 import { useNasaData } from "@/hooks/useNasaData";
 import { useServerEngine } from "@/hooks/useServerEngine";
@@ -116,8 +118,8 @@ type Phase =
   | "orbit";
 
 /**
- * First attempt as the player finds it: the heavy rocket, the right payload, but 90 % fuel and
- * the windy first window. The poll teaches the weather rule; the flight teaches the fuel one.
+ * First attempt as the player finds it: the heavy rocket, the right payload, but 90 % fuel at
+ * Kennedy's first 1969 window. Whether that is enough is for the player to work out.
  */
 const INITIAL_CONFIG: LaunchConfig = {
   vehicle: "saros",
@@ -125,6 +127,7 @@ const INITIAL_CONFIG: LaunchConfig = {
   fuelPct: 90,
   orbitKm: 185,
   window: "w1",
+  site: DEFAULT_SITE_ID,
 };
 
 /**
@@ -141,6 +144,7 @@ export function MissionControlScene({
   const m = t.missionControl;
   const localize = useLocalized();
   const recordLaunch = useGameStore((s) => s.recordLaunch);
+  const makeDecision = useGameStore((s) => s.makeDecision);
 
   // The engines and tanks chosen in the assembly hall decide the vehicle and the first fuel load.
   const loadout = useGameStore((s) => s.log.loadout);
@@ -156,13 +160,7 @@ export function MissionControlScene({
   const [alarm, setAlarm] = useState(0);
   const [explodeAt, setExplodeAt] = useState<number | null>(null);
   const [boomFlash, setBoomFlash] = useState(false);
-  const [serverTelemetry, setServerTelemetry] = useState<ServerLaunchTelemetry>(OFFLINE_APOLLO11_TELEMETRY);
-  const {
-    validateLaunch: validateLaunchWasm,
-    lastValidation: wasmValidation,
-    evaluateMissionDesignBudget,
-    calculateDsnTelemetry,
-  } = useSimulationWasm();
+  const { evaluateMissionDesignBudget, calculateDsnTelemetry } = useSimulationWasm();
   const nasa = useNasaData();
   const serverEngine = useServerEngine();
   const evaluateBudget = useMemo(() => serverFirstBudget(evaluateMissionDesignBudget), [evaluateMissionDesignBudget]);
@@ -179,22 +177,48 @@ export function MissionControlScene({
   const cinematicTimers = useRef<number[]>([]);
   const pending = useRef<Promise<LaunchResult> | null>(null);
 
+  // Launch sites and, for the chosen one, its three windows with the real weather at the pad.
+  const [sites, setSites] = useState<LaunchSite[]>(LAUNCH_SITES);
   useEffect(() => {
     let active = true;
-    fetchLaunchTelemetryFromServer().then((telemetry) => {
-      if (active) setServerTelemetry(telemetry);
-    });
+    fetchLaunchSites().then((s) => active && setSites(s));
     return () => {
       active = false;
     };
   }, []);
-
+  const siteId = config.site ?? DEFAULT_SITE_ID;
+  const [windows, setWindows] = useState<LaunchWindowsData>(OFFLINE_KSC_WINDOWS);
+  const [windowsLoading, setWindowsLoading] = useState(true);
   useEffect(() => {
-    validateLaunchWasm({
-      target_orbit_km: config.orbitKm,
-      wind_speed_kmh: serverTelemetry.weather.wind_speed_kmh,
-    }).catch(() => {});
-  }, [config.orbitKm, serverTelemetry.weather.wind_speed_kmh, validateLaunchWasm]);
+    let active = true;
+    setWindowsLoading(true);
+    fetchLaunchWindows(siteId).then((w) => {
+      if (!active) return;
+      setWindows(w);
+      setWindowsLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [siteId]);
+  const launchWindow = windows.windows.find((w) => w.id === config.window) ?? windows.windows[0]!;
+
+  // Readouts: instant from the engine mirror, then replaced by the server engine's own answer.
+  const planKey = JSON.stringify(planRequestFor(config, launchWindow));
+  const [serverPlan, setServerPlan] = useState<{ key: string; plan: LaunchPlan } | null>(null);
+  useEffect(() => {
+    let active = true;
+    const id = window.setTimeout(() => {
+      fetchLaunchPlan(config, launchWindow).then((plan) => {
+        if (active && plan) setServerPlan({ key: planKey, plan });
+      });
+    }, 250);
+    return () => {
+      active = false;
+      window.clearTimeout(id);
+    };
+  }, [planKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const engineSource = serverPlan?.key === planKey ? "server" : "browser";
   // The liftoff roar is heard while the rocket is low; stopped early on adjust or leaving.
   const roar = useRef<() => void>(() => {});
   const rumbleRef = useRef<Rumble | null>(null);
@@ -223,14 +247,24 @@ export function MissionControlScene({
     setCollapsed(false);
   }, [phase]);
 
-  const assessment = useMemo(() => launchSimulator.assess(config), [config]);
+  const assessment = useMemo(
+    () => assessLaunch(config, launchWindow, serverPlan?.key === planKey ? serverPlan.plan : undefined),
+    [config, launchWindow, serverPlan, planKey],
+  );
 
   const startCountdown = useCallback(() => {
-    // Ask the simulator during the countdown, so the result is ready at T-0.
-    pending.current = launchSimulator.simulate(config);
+    // Ask the engine during the countdown, so the result is ready at T-0.
+    pending.current = launchSimulator.simulate(config, launchWindow);
     setConfigured(true);
     setPhase("countdown");
-  }, [config]);
+  }, [config, launchWindow]);
+
+  /** Lost to the weather: no replacement vehicle, the inquiry (ENDING-5) follows. */
+  const weatherLoss = Boolean(result?.weatherLoss);
+  const endInWeatherLoss = useCallback(() => {
+    makeDecision("weather", "severe_wind");
+    onComplete();
+  }, [makeDecision, onComplete]);
 
   const ignite = useCallback(async () => {
     const r = await pending.current;
@@ -715,18 +749,6 @@ export function MissionControlScene({
           )}
           {!collapsed && phase === "config" && (
             <>
-              <div className="mb-3 rounded border border-space-blue/60 bg-space-blue/25 px-3 py-2 font-mono text-[11px] text-foreground/85">
-                <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-primary">
-                  <span>{serverTelemetry.mission_id} — PAD 39A TELEMETRY</span>
-                  <span>{serverTelemetry.source === "api" ? "LIVE API" : "APOLLO 11 ARCHIVE"}</span>
-                </div>
-                <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5">
-                  <span>SITE: {serverTelemetry.launch_site.latitude_deg.toFixed(4)}°N, {Math.abs(serverTelemetry.launch_site.longitude_deg).toFixed(4)}°W</span>
-                  <span>GLOM: {(wasmValidation?.glom_kg ?? serverTelemetry.vehicle.glom_kg).toLocaleString()} kg</span>
-                  <span>WEATHER: {serverTelemetry.weather.temperature_c}°C / {serverTelemetry.weather.wind_speed_kmh} km/h ({serverTelemetry.weather.status})</span>
-                  <span>TWR / MAX-Q: {(wasmValidation?.liftoff_twr ?? serverTelemetry.vehicle.liftoff_twr).toFixed(3)} / {(wasmValidation?.max_q_kpa ?? serverTelemetry.vehicle.max_q_kpa).toFixed(1)} kPa</span>
-                </div>
-              </div>
               <details className="group mb-3 rounded border border-space-blue/60 bg-space-blue/15 px-3 py-2">
                 <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-wider text-primary">
                   NASA mission data &amp; design study
@@ -751,6 +773,10 @@ export function MissionControlScene({
                 onChange={setConfig}
                 assessment={assessment}
                 onProceed={() => setPhase("poll")}
+                sites={sites}
+                windows={windows}
+                windowsLoading={windowsLoading}
+                engineSource={engineSource}
               />
             </>
           )}
@@ -771,7 +797,7 @@ export function MissionControlScene({
               {m.anomalyTitle}
             </StatusBadge>
             <DialogTitle className="text-2xl">{m.anomalyTitle}</DialogTitle>
-            <DialogDescription>{m.anomalyBody}</DialogDescription>
+            <DialogDescription>{weatherLoss ? m.anomalyWeatherBody : m.anomalyBody}</DialogDescription>
           </DialogHeader>
           <section
             aria-labelledby="trace-title"
@@ -802,20 +828,26 @@ export function MissionControlScene({
               ))}
             </ol>
           </section>
-          <div>
-            <h3 className="text-sm font-medium">{m.whatToChange}</h3>
-            <p className="mt-1 text-sm text-foreground/85">
-              {overweight ? m.adviceOverweight : m.adviceFuel}
-            </p>
-            <p className="mt-2 text-xs text-foreground/65">{m.replacement}</p>
-          </div>
-          <StatusBadge status="demo" className="w-fit">
-            {t.common.demoData}
-          </StatusBadge>
+          {result?.reason && <p className="font-mono text-xs text-foreground/70">{result.reason}</p>}
+          {!weatherLoss && (
+            <div>
+              <h3 className="text-sm font-medium">{m.whatToChange}</h3>
+              <p className="mt-1 text-sm text-foreground/85">
+                {overweight ? m.adviceOverweight : m.adviceFuel}
+              </p>
+              <p className="mt-2 text-xs text-foreground/65">{m.replacement}</p>
+            </div>
+          )}
           <DialogFooter>
-            <Button size="lg" onClick={adjust}>
-              {m.adjust}
-            </Button>
+            {weatherLoss ? (
+              <Button size="lg" onClick={endInWeatherLoss}>
+                {m.weatherLossContinue}
+              </Button>
+            ) : (
+              <Button size="lg" onClick={adjust}>
+                {m.adjust}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

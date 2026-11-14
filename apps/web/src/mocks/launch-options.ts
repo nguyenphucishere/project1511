@@ -1,10 +1,19 @@
 import type { LocalizedText } from "@/i18n";
-import type { LaunchWindowId, ParkingOrbitKm, PayloadId, VehicleId } from "@/lib/simulation/launch.types";
+import type {
+  LaunchSite,
+  LaunchWindow,
+  LaunchWindowsData,
+  ParkingOrbitKm,
+  PayloadId,
+  VehicleId,
+} from "@/lib/simulation/launch.types";
 
 /**
- * Historical Apollo 11 Launch Vehicle, Payload, Orbit, and Weather configurations.
- * Sourced directly from NASA SP-4029 (Apollo by the Numbers) and Technical Catalog NASA-APOLLO-SIM-2026-REV1.
- * Retains backward-compatible aliases for existing test harnesses.
+ * The mission-control console's options. Vehicle performance (capacity, fuel needed, TWR, Max-Q)
+ * is not stored here: the engine computes it from each vehicle's stage data (`engineId` →
+ * sim-core `launch_vehicle_presets`). Payload masses are the sum of their parts. Launch sites
+ * and windows come from the server (`/api/launch/...`); the copies below are the offline
+ * fallback. Legacy vehicle aliases stay for saved games and test harnesses but are not offered.
  */
 
 export const BUDGET_M = 2500;
@@ -14,9 +23,11 @@ export interface VehicleOption {
   name: string;
   kind: LocalizedText;
   note: LocalizedText;
-  /** Tonnes the vehicle can send toward the Moon (TLI). */
-  capacityT: number;
+  /** Published TLI capacity (t), shown nowhere: the console asks the engine instead. */
+  capacityT?: number;
   costM: number;
+  /** sim-core launch vehicle preset this option flies as. */
+  engineId: "saturn-ib" | "saturn-v" | "saturn-v-uprated";
   /** Historical engineering telemetry */
   glomKg?: number;
   liftoffTwr?: number;
@@ -35,6 +46,7 @@ export const VEHICLES: VehicleOption[] = [
     },
     capacityT: 28,
     costM: 450,
+    engineId: "saturn-ib",
     glomKg: 589700,
     liftoffTwr: 1.23,
     stageCount: 2,
@@ -50,6 +62,7 @@ export const VEHICLES: VehicleOption[] = [
     },
     capacityT: 48,
     costM: 1200,
+    engineId: "saturn-v",
     glomKg: 2938315,
     liftoffTwr: 1.174,
     stageCount: 3,
@@ -65,6 +78,7 @@ export const VEHICLES: VehicleOption[] = [
     },
     capacityT: 70,
     costM: 2100,
+    engineId: "saturn-v-uprated",
     glomKg: 5480000,
     liftoffTwr: 1.80,
     stageCount: 3,
@@ -80,155 +94,177 @@ export const VEHICLES: VehicleOption[] = [
     },
     capacityT: 48,
     costM: 1200,
+    engineId: "saturn-v",
     glomKg: 2938315,
     liftoffTwr: 1.174,
     stageCount: 3,
   },
-  // Legacy aliases for backwards-compatibility with existing tests and mock launch configs
+  // The three vehicles the console offers (ids kept for saved games and the assembly-hall loadout).
   {
     id: "kestrel",
-    name: "Kestrel M (Saturn IB Alias)",
-    kind: { en: "Medium lift", vi: "Tải trung bình" },
-    note: { en: "Cheap and proven, but built for smaller missions.", vi: "Rẻ và đáng tin cậy, nhưng dành cho nhiệm vụ nhỏ hơn." },
-    capacityT: 28,
+    name: "Saturn IB",
+    kind: { en: "Two-stage, Earth-orbit launcher", vi: "Tên lửa hai tầng, quỹ đạo Trái Đất" },
+    note: {
+      en: "Flew Apollo 7 and the Skylab crews. S-IB + S-IVB-200, 7.1 MN at liftoff.",
+      vi: "Đã phóng Apollo 7 và các phi hành đoàn Skylab. S-IB + S-IVB-200, lực đẩy cất cánh 7,1 MN.",
+    },
     costM: 450,
-    glomKg: 589700,
-    liftoffTwr: 1.23,
+    engineId: "saturn-ib",
     stageCount: 2,
   },
   {
     id: "saros",
-    name: "Saros H (Saturn V AS-506 Alias)",
-    kind: { en: "Heavy lift", vi: "Tải nặng" },
-    note: { en: "The rocket you inspected in the assembly hall.", vi: "Tên lửa bạn vừa kiểm tra ở xưởng lắp ráp." },
-    capacityT: 48,
+    name: "Saturn V (AS-506)",
+    kind: { en: "Three-stage lunar launcher", vi: "Tên lửa ba tầng lên Mặt Trăng" },
+    note: {
+      en: "The Apollo 11 booster you inspected in the assembly hall. S-IC + S-II + S-IVB, 33.85 MN at liftoff.",
+      vi: "Tên lửa Apollo 11 bạn đã kiểm tra ở xưởng lắp ráp. S-IC + S-II + S-IVB, lực đẩy cất cánh 33,85 MN.",
+    },
     costM: 1200,
-    glomKg: 2938315,
-    liftoffTwr: 1.174,
+    engineId: "saturn-v",
     stageCount: 3,
   },
   {
     id: "orison",
-    name: "Orison SH (Uprated Saturn V Alias)",
-    kind: { en: "Super-heavy lift", vi: "Tải siêu nặng" },
-    note: { en: "Room to spare, at a price.", vi: "Dư sức chở, nhưng rất đắt." },
-    capacityT: 70,
+    name: "Saturn V uprated (MLV-V-4(S))",
+    kind: { en: "Study concept: F-1A / J-2S, stretched tanks", vi: "Bản nghiên cứu: F-1A / J-2S, bồn kéo dài" },
+    note: {
+      en: "A 1960s NASA upgrade study that never flew. Performance figures are approximate.",
+      vi: "Một nghiên cứu nâng cấp của NASA thập niên 1960, chưa từng bay. Số liệu chỉ gần đúng.",
+    },
     costM: 2100,
-    glomKg: 5480000,
-    liftoffTwr: 1.80,
+    engineId: "saturn-v-uprated",
     stageCount: 3,
   },
 ];
+
+/** What the console lists: one card per real vehicle (the long-id aliases above stay hidden). */
+export const CONSOLE_VEHICLES: VehicleOption[] = VEHICLES.filter((v) => ["kestrel", "saros", "orison"].includes(v.id));
+
+export interface PayloadComponent {
+  name: LocalizedText;
+  massKg: number;
+}
 
 export interface PayloadOption {
   id: PayloadId;
   name: LocalizedText;
   note: LocalizedText;
+  /** Sum of `components`, in tonnes. */
   massT: number;
   costM: number;
-  details?: {
-    csmMassKg: number;
-    lmMassKg: number;
-    scienceMassKg: number;
-  };
+  components: PayloadComponent[];
 }
 
+const payload = (o: Omit<PayloadOption, "massT">): PayloadOption => ({
+  ...o,
+  massT: o.components.reduce((m, c) => m + c.massKg, 0) / 1000,
+});
+
+const CM_107 = { name: { en: "Command Module Columbia", vi: "Khoang chỉ huy Columbia" }, massKg: 5_557 };
+const SM_107 = { name: { en: "Service Module (fuelled)", vi: "Khoang dịch vụ (đầy nhiên liệu)" }, massKg: 23_244 };
+const LM_5 = { name: { en: "Lunar Module Eagle", vi: "Mô-đun Mặt Trăng Eagle" }, massKg: 15_103 };
+
+/** Apollo 11 masses: NASA SP-4029; EASEP as served by /api/nasa/mission-design/easep. */
 export const PAYLOADS: PayloadOption[] = [
-  {
+  payload({
     id: "standard",
     name: { en: "CSM-107 Columbia + LM-5 Eagle", vi: "CSM-107 Columbia + LM-5 Eagle" },
     note: {
-      en: "Baseline lunar stack: Command Module (5,557 kg), Service Module (23,244 kg), and LM-5 Eagle (15,103 kg).",
-      vi: "Cấu hình Mặt Trăng tiêu chuẩn: Khoang chỉ huy (5.557 kg), Khoang dịch vụ (23.244 kg) và LM-5 Eagle (15.103 kg).",
+      en: "Crew and spacecraft only: CM 5,557 kg + SM 23,244 kg + LM 15,103 kg = 43,904 kg.",
+      vi: "Chỉ phi hành đoàn và tàu: CM 5.557 kg + SM 23.244 kg + LM 15.103 kg = 43.904 kg.",
     },
-    massT: 46,
     costM: 250,
-    details: {
-      csmMassKg: 28801,
-      lmMassKg: 15103,
-      scienceMassKg: 0,
-    },
-  },
-  {
+    components: [CM_107, SM_107, LM_5],
+  }),
+  payload({
     id: "science",
-    name: { en: "Apollo 11 + EASEP Package (PSEP + LRRR)", vi: "Cấu hình Apollo 11 + Gói khoa học EASEP" },
+    name: { en: "Apollo 11 as flown (+ EASEP)", vi: "Apollo 11 như đã bay (+ EASEP)" },
     note: {
-      en: "Columbia, Eagle, plus the Early Apollo Surface Experiments Package: PSEP Seismometer (47.6 kg) and LRRR Laser Reflector (23.6 kg).",
-      vi: "Columbia, Eagle cùng Gói thí nghiệm bề mặt sơ khai EASEP: Địa chấn kế PSEP (47,6 kg) và Gương phản xạ laser LRRR (23,6 kg).",
+      en: "The same stack plus the EASEP surface experiments: 43,904 kg + 77 kg (seismometer 48 kg, laser reflector 21 kg, solar-wind foil, pallet) = 43,981 kg.",
+      vi: "Cùng cấu hình cộng gói thí nghiệm bề mặt EASEP: 43.904 kg + 77 kg (địa chấn kế 48 kg, gương laser 21 kg, lá gió Mặt Trời, khung) = 43.981 kg.",
     },
-    massT: 50,
     costM: 330,
-    details: {
-      csmMassKg: 28801,
-      lmMassKg: 15103,
-      scienceMassKg: 77,
-    },
-  },
-  {
+    components: [CM_107, SM_107, LM_5, { name: { en: "EASEP science package", vi: "Gói khoa học EASEP" }, massKg: 77 }],
+  }),
+  payload({
     id: "rover",
-    name: { en: "J-Series + LRV Lunar Roving Vehicle", vi: "Cấu hình J-Series + Xe tự hành Mặt Trăng (LRV)" },
+    name: { en: "J-mission stack + Lunar Roving Vehicle", vi: "Cấu hình J-mission + Xe tự hành Mặt Trăng" },
     note: {
-      en: "Advanced lunar stack carrying the 210 kg Boeing/GM Lunar Roving Vehicle and full ALSEP geophysical suite.",
-      vi: "Cấu hình nâng cấp mang theo Xe tự hành Mặt Trăng LRV 210 kg cùng trạm địa chấn toàn diện ALSEP.",
+      en: "Extended CSM 29,500 kg + extended LM 16,400 kg + rover and ALSEP 360 kg = 46,260 kg (approximate J-mission masses).",
+      vi: "CSM mở rộng 29.500 kg + LM mở rộng 16.400 kg + xe tự hành và ALSEP 360 kg = 46.260 kg (khối lượng J-mission gần đúng).",
     },
-    massT: 58,
     costM: 450,
-    details: {
-      csmMassKg: 29500,
-      lmMassKg: 16400,
-      scienceMassKg: 360,
-    },
-  },
+    components: [
+      { name: { en: "Extended CSM", vi: "CSM mở rộng" }, massKg: 29_500 },
+      { name: { en: "Extended LM", vi: "LM mở rộng" }, massKg: 16_400 },
+      { name: { en: "Rover + ALSEP", vi: "Xe tự hành + ALSEP" }, massKg: 360 },
+    ],
+  }),
 ];
 
 export interface OrbitOption {
   km: ParkingOrbitKm;
   note: LocalizedText;
-  /** Percentage points added to the fuel requirement. */
-  fuelDelta: number;
 }
 
+/** The Δv each orbit costs is the engine's (sim-core `delta_v_required`). */
 export const ORBITS: OrbitOption[] = [
-  { km: 160, note: { en: "Low 160 km orbit (Higher atmospheric drag, less TLI margin)", vi: "Quỹ đạo thấp 160 km (Lực cản khí quyển lớn hơn, biên TLI hẹp)" }, fuelDelta: -3 },
-  { km: 185, note: { en: "Standard Apollo 11 Parking Orbit (183.2 x 185.9 km, period 88.2 min)", vi: "Quỹ đạo chờ chuẩn Apollo 11 (183,2 x 185,9 km, chu kỳ 88,2 phút)" }, fuelDelta: 0 },
-  { km: 250, note: { en: "High 250 km orbit (Decay safe, requires +4% insertion fuel)", vi: "Quỹ đạo cao 250 km (An toàn suy giảm quỹ đạo, tốn thêm 4% nhiên liệu)" }, fuelDelta: 4 },
+  { km: 160, note: { en: "Low parking orbit: a little less climb, but more drag and a shorter orbital life.", vi: "Quỹ đạo chờ thấp: leo ít hơn một chút, nhưng lực cản lớn hơn và tuổi thọ quỹ đạo ngắn hơn." } },
+  { km: 185, note: { en: "Apollo 11's parking orbit (183.2 × 185.9 km, 88.2 min).", vi: "Quỹ đạo chờ của Apollo 11 (183,2 × 185,9 km, 88,2 phút)." } },
+  { km: 250, note: { en: "High parking orbit: long orbital life, but more Δv to get there.", vi: "Quỹ đạo chờ cao: tuổi thọ dài, nhưng tốn thêm Δv để lên tới." } },
 ];
 
-export const WIND_LIMIT_KMH = 40;
+/* ------------------------------------------------------------ launch sites (offline copy) */
 
-export interface WindowOption {
-  id: LaunchWindowId;
-  time: LocalizedText;
-  windKmh: number;
-  /** Extra cost of waiting (pad crew, range booking). */
-  delayCostM: number;
-  condition?: LocalizedText;
-}
+/** Mirror of the server's LAUNCH_SITES (apps/server/src/services/launchSiteService.ts). */
+export const LAUNCH_SITES: LaunchSite[] = [
+  { id: "ksc-39a", name: "Kennedy Space Center", pad: "LC-39A", operator: "NASA", country: "USA", latitude_deg: 28.6084, longitude_deg: -80.6043, elevation_m: 3, time_zone: "America/New_York", windows: "historical" },
+  { id: "vandenberg-slc6", name: "Vandenberg", pad: "SLC-6", operator: "US Space Force", country: "USA", latitude_deg: 34.5813, longitude_deg: -120.6266, elevation_m: 120, time_zone: "America/Los_Angeles", windows: "live" },
+  { id: "baikonur-110", name: "Baikonur Cosmodrome", pad: "Site 110", operator: "Roscosmos", country: "Kazakhstan", latitude_deg: 45.9655, longitude_deg: 63.3052, elevation_m: 90, time_zone: "Asia/Almaty", windows: "live" },
+  { id: "kourou-ela", name: "Guiana Space Centre", pad: "ELA-3", operator: "ESA / CNES", country: "French Guiana", latitude_deg: 5.239, longitude_deg: -52.7684, elevation_m: 15, time_zone: "America/Cayenne", windows: "live" },
+  { id: "tanegashima", name: "Tanegashima Space Center", pad: "Yoshinobu LP-1", operator: "JAXA", country: "Japan", latitude_deg: 30.4009, longitude_deg: 130.9749, elevation_m: 30, time_zone: "Asia/Tokyo", windows: "live" },
+  { id: "wenchang", name: "Wenchang", pad: "LC-101", operator: "CNSA", country: "China", latitude_deg: 19.6145, longitude_deg: 110.951, elevation_m: 10, time_zone: "Asia/Shanghai", windows: "live" },
+  { id: "sriharikota", name: "Satish Dhawan Space Centre", pad: "SLP", operator: "ISRO", country: "India", latitude_deg: 13.7199, longitude_deg: 80.2304, elevation_m: 5, time_zone: "Asia/Kolkata", windows: "live" },
+];
+export const DEFAULT_SITE_ID = "ksc-39a";
 
-export const WINDOWS: WindowOption[] = [
+/**
+ * Apollo 11's three July 1969 opportunities at LC-39A with the ERA5 weather for those hours, as
+ * the server serves them. Used offline, and for any site until its windows arrive.
+ */
+export const WINDOWS: LaunchWindow[] = [
   {
     id: "w1",
-    time: { en: "July 16, 1969 — 09:32:00 EDT (Nominal T-0)", vi: "16 tháng 7, 1969 — 09:32:00 EDT (T-0 lịch sử)" },
-    windKmh: 48,
-    delayCostM: 0,
-    condition: { en: "Squall front: Wind gusts 48 km/h > 40 km/h structural limit", vi: "Dải mây đối lưu: Gió giật 48 km/h > giới hạn kết cấu 40 km/h" },
+    opens_at: "1969-07-16T13:32:00Z",
+    label: "July 16, 1969 — Apollo 11 T-0",
+    delay_cost_m: 0,
+    weather: { temperature_c: 28.1, humidity_pct: 81, wind_speed_kmh: 9.1, wind_gust_kmh: 16.6, wind_direction_deg: 156, precipitation_mm: 0.1, cloud_cover_pct: 100, weather_code: 3, thunderstorm: false },
   },
   {
     id: "w2",
-    time: { en: "July 16, 1969 — 12:15:00 EDT (Nominal Weather Window)", vi: "16 tháng 7, 1969 — 12:15:00 EDT (Cửa sổ thời tiết chuẩn)" },
-    windKmh: 18.5,
-    delayCostM: 0,
-    condition: { en: "Historical Cape weather: Winds 10 kts @ 100°, Temp 29.4°C, scattered cumulus (GO)", vi: "Thời tiết lịch sử Cape: Gió 10 kts hướng 100°, Nhiệt độ 29,4°C, mây tích rải rác (GO)" },
+    opens_at: "1969-07-18T13:32:00Z",
+    label: "July 18, 1969 — first backup opportunity",
+    delay_cost_m: 60,
+    weather: { temperature_c: 28.1, humidity_pct: 78, wind_speed_kmh: 15.3, wind_gust_kmh: 28.1, wind_direction_deg: 117, precipitation_mm: 0.2, cloud_cover_pct: 72, weather_code: 51, thunderstorm: false },
   },
   {
     id: "w3",
-    time: { en: "July 18, 1969 — 10:14:00 EDT (48-Hour Delay Recycle)", vi: "18 tháng 7, 1969 — 10:14:00 EDT (Hoãn 48 giờ chuẩn bị lại)" },
-    windKmh: 12,
-    delayCostM: 60,
-    condition: { en: "Next monthly lunar lighting window: Range re-booking, LOX boiloff replenishment ($60M)", vi: "Cửa sổ chiếu sáng Mặt Trăng tiếp theo: Đặt lại bãi phóng, bù bay hơi LOX ($60M)" },
+    opens_at: "1969-07-21T13:32:00Z",
+    label: "July 21, 1969 — second backup opportunity",
+    delay_cost_m: 120,
+    weather: { temperature_c: 27.1, humidity_pct: 83, wind_speed_kmh: 13.4, wind_gust_kmh: 22.7, wind_direction_deg: 172, precipitation_mm: 0, cloud_cover_pct: 50, weather_code: 2, thunderstorm: false },
   },
 ];
 
+export const OFFLINE_KSC_WINDOWS: LaunchWindowsData = {
+  site: LAUNCH_SITES[0]!,
+  kind: "historical",
+  provider: "Apollo 11 archive (offline)",
+  windows: WINDOWS,
+  source: "offline_fallback",
+};
+
 export const FUEL_MIN = 70;
 export const FUEL_MAX = 100;
-export const FUEL_STEP = 2;
+export const FUEL_STEP = 1;

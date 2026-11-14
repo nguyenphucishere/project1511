@@ -62,13 +62,13 @@ export const DECISIONS: Record<DecisionId, DecisionDefinition> = {
     speaker: "kranz",
     title: t("Launch weather", "Thời tiết phóng"),
     prompt: t(
-      "T−15 minutes and a squall line is building. The wind limit is 40 km/h. Launch, or hold?",
-      "T−15 phút, dải mây giông đang tới. Giới hạn gió là 40 km/h. Phóng hay hoãn?",
+      "T−15 minutes and a squall line is building over the Cape. Launch, or hold?",
+      "T−15 phút, dải mây giông đang hình thành trên mũi Cape. Phóng hay hoãn?",
     ),
     options: [
-      { id: "go", keyLabel: "A", title: t("GO for launch", "GO, phóng"), hint: t("Wind 18 km/h, within limits", "Gió 18 km/h, trong giới hạn"), historical: true },
-      { id: "hold", keyLabel: "B", title: t("Hold 48 hours", "Hoãn 48 giờ"), hint: t("Safe, but costly", "An toàn nhưng tốn kém") },
-      { id: "severe_wind", keyLabel: "C", title: t("Launch anyway", "Phóng bất chấp"), hint: t("Wind over 40 km/h: the rocket may break up", "Gió trên 40 km/h: tên lửa có thể vỡ") },
+      { id: "go", keyLabel: "A", title: t("GO in the lull", "GO khi gió lặng"), hint: t("Wind 18 km/h at the pad", "Gió 18 km/h tại bãi phóng"), historical: true },
+      { id: "hold", keyLabel: "B", title: t("Hold 48 hours", "Hoãn 48 giờ"), hint: t("Next opportunity, +$60M", "Cơ hội tiếp theo, +$60M") },
+      { id: "severe_wind", keyLabel: "C", title: t("GO now, into the squall", "GO ngay, vào dải giông"), hint: t("Wind 48 km/h, gusts 63 km/h at the pad", "Gió 48 km/h, giật 63 km/h tại bãi phóng") },
     ],
   },
 

@@ -185,7 +185,10 @@ export type EngineCalculationName =
   | "calculate_score"
   | "calculate_landing_radar"
   | "evaluate_mission_design_budget"
-  | "calculate_dsn_telemetry";
+  | "calculate_dsn_telemetry"
+  | "plan_launch"
+  | "simulate_ascent"
+  | "simulate_powered_descent";
 
 /** GET /api/engine/status */
 export interface EngineStatusData {

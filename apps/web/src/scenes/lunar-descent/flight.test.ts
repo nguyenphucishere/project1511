@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { KEYFRAMES } from "@/mocks/descent";
 import {
   CONTACT_HEIGHT,
   CRATER_EDGE_X,
   HOVER_THROTTLE,
   LUNAR_G,
   NO_INPUT,
-  RCS_ACCEL,
+  RCS_THRUST_N,
   THROTTLE_SLEW,
   ROD_MAX,
+  THROTTLE_MAX,
+  THROTTLE_MIN,
+  massAt,
   ROD_MIN,
   calloutFor,
   createFlight,
@@ -40,13 +44,29 @@ function goodPilot(s: FlightState): FlightInput | void {
 }
 
 describe("flight model", () => {
-  it("starts at the low gate with a hovering-class throttle", () => {
+  it("starts at the engine's low gate with a hovering-class throttle", () => {
     const s = createFlight("A");
-    expect(s.altM).toBe(150);
-    expect(s.vsMs).toBe(-3);
-    expect(s.fuelPct).toBe(18);
+    const gate = KEYFRAMES[2]!;
+    expect(s.altM).toBe(gate.altM);
+    expect(s.altM).toBeCloseTo(152.4, 0); // §4.3 low gate, 500 ft
+    expect(s.vsMs).toBe(gate.vsMs);
+    expect(s.fuelPct).toBe(gate.fuelPct);
     expect(s.throttle).toBeCloseTo(HOVER_THROTTLE, 6);
+    // §4.3: hover at the low gate takes 26–30 % of rated thrust.
+    expect(HOVER_THROTTLE).toBeGreaterThan(0.26);
+    expect(HOVER_THROTTLE).toBeLessThan(0.3);
+    expect(LUNAR_G).toBeCloseTo(1.6248, 6); // engine lunar constants, mascon included
     expect(s.status).toBe("flying");
+  });
+
+  it("keeps the throttle inside the P66 band (10–60 % of rated thrust)", () => {
+    const s = createFlight("A");
+    s.targetVs = ROD_MIN;
+    stepFlight(s, NO_INPUT, 5);
+    expect(s.throttle).toBeGreaterThanOrEqual(THROTTLE_MIN - 1e-12);
+    s.targetVs = ROD_MAX;
+    stepFlight(s, NO_INPUT, 5);
+    expect(s.throttle).toBeLessThanOrEqual(THROTTLE_MAX + 1e-12);
   });
 
   it("falls at lunar gravity with the engine out", () => {
@@ -72,8 +92,7 @@ describe("flight model", () => {
 
   it("holds the commanded rate of descent", () => {
     const s = createFlight("A");
-    nudgeTargetVs(s, -1);
-    nudgeTargetVs(s, -1); // -4 m/s
+    s.targetVs = -4;
     stepFlight(s, NO_INPUT, 12);
     expect(s.vsMs).toBeCloseTo(-4, 1);
     nudgeTargetVs(s, 1);
@@ -111,26 +130,29 @@ describe("flight model", () => {
     stepFlight(hover, NO_INPUT, 20);
     const drop = createFlight("A");
     stepFlight(drop, NO_INPUT, 20);
-    expect(hover.fuelPct).toBeLessThan(18);
+    expect(hover.fuelPct).toBeLessThan(KEYFRAMES[2]!.fuelPct);
     expect(hover.fuelPct).toBeLessThan(drop.fuelPct + 1e-9);
     expect(fuelSecondsLeft(hover)).toBeGreaterThan(60);
   });
 
-  it("drifts sideways until RCS stops it, and RCS costs fuel", () => {
+  it("drifts sideways until the RCS jets stop it (four 445 N jets, their own propellant)", () => {
     const s = createFlight("A");
+    const twin = createFlight("A");
     const x0 = s.xM;
     stepFlight(s, NO_INPUT, 5);
+    stepFlight(twin, NO_INPUT, 5);
     expect(s.xM).toBeCloseTo(x0 + 0.4 * 5, 2);
-    const fuel = s.fuelPct;
+    const accel = RCS_THRUST_N / massAt(s.fuelPct);
     stepFlight(s, { rcs: -1, nullDrift: false }, 1);
-    expect(s.hsMs).toBeCloseTo(0.4 - RCS_ACCEL * 1, 2);
+    stepFlight(twin, NO_INPUT, 1);
+    expect(s.hsMs).toBeCloseTo(0.4 - accel, 2);
     expect(s.rcs).toBe(-1);
-    expect(s.fuelPct).toBeLessThan(fuel);
+    expect(s.fuelPct).toBeCloseTo(twin.fuelPct, 9); // the DPS tank is untouched by the RCS
   });
 
   it("null-drift stops sideways speed without overshooting", () => {
     const s = createFlight("A", 2); // 0.5 m/s drift
-    for (let i = 0; i < 40; i++) stepFlight(s, { rcs: 0, nullDrift: true }, 0.05);
+    for (let i = 0; i < 80; i++) stepFlight(s, { rcs: 0, nullDrift: true }, 0.05);
     expect(s.hsMs).toBe(0);
     expect(s.rcs).toBe(0);
   });
@@ -291,11 +313,12 @@ describe("analog stick input", () => {
     const half = createFlight("A");
     const full = createFlight("A");
     half.hsMs = full.hsMs = 0;
+    const accel = RCS_THRUST_N / massAt(full.fuelPct);
     stepFlight(half, { rcs: 0.5, nullDrift: false }, 1);
     stepFlight(full, { rcs: 1, nullDrift: false }, 1);
-    expect(full.hsMs).toBeCloseTo(RCS_ACCEL, 2);
-    expect(half.hsMs).toBeCloseTo(RCS_ACCEL / 2, 2);
-    expect(half.fuelPct).toBeGreaterThan(full.fuelPct);
+    expect(full.hsMs).toBeCloseTo(accel, 2);
+    expect(half.hsMs).toBeCloseTo(accel / 2, 2);
+    expect(half.fuelPct).toBeCloseTo(full.fuelPct, 9);
   });
 
   it("slides the commanded rate of descent with the vertical stick, inside its limits", () => {

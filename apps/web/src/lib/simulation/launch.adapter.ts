@@ -1,6 +1,15 @@
-import { assessLaunch, mockLaunchSimulator, ORBIT_INSERTION_SEC, runLaunch, TRACE_TEXT } from "./launch.mock";
-import type { LaunchAssessment, LaunchConfig, LaunchResult, LaunchSimulator, LaunchTraceStep } from "./launch.types";
-import { PAYLOADS, VEHICLES, WINDOWS } from "@/mocks/launch-options";
+import { assessLaunch, costOf, planRequestFor, resultFromPlan } from "./launch.engine";
+import { planLaunch, type LaunchPlan } from "./launch.physics";
+import type {
+  LaunchAssessment,
+  LaunchConfig,
+  LaunchResult,
+  LaunchSimulator,
+  LaunchSite,
+  LaunchWindow,
+  LaunchWindowsData,
+} from "./launch.types";
+import { LAUNCH_SITES, OFFLINE_KSC_WINDOWS, WINDOWS } from "@/mocks/launch-options";
 
 export interface ServerLaunchWeather {
   temperature_c: number;
@@ -165,76 +174,78 @@ export async function fetchKscWeatherFromServer(baseUrl?: string): Promise<Serve
   }
 }
 
+async function getJson<T>(url: string, init?: RequestInit, timeoutMs = 6000): Promise<T | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...init, signal: controller.signal });
+    if (!res.ok) return null;
+    const data: unknown = await res.json();
+    return data && typeof data === "object" && !Array.isArray(data) ? (data as T) : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** GET /api/launch/sites, or the offline copy. */
+export async function fetchLaunchSites(baseUrl?: string): Promise<LaunchSite[]> {
+  const data = await getJson<{ sites?: LaunchSite[] }>(`${getServerBaseUrl(baseUrl)}/api/launch/sites`);
+  return Array.isArray(data?.sites) && data.sites.length > 0 ? data.sites : LAUNCH_SITES;
+}
+
+const isWindow = (w: unknown): w is LaunchWindow => {
+  const x = w as Partial<LaunchWindow> | null;
+  return (
+    !!x &&
+    (x.id === "w1" || x.id === "w2" || x.id === "w3") &&
+    typeof x.opens_at === "string" &&
+    !!x.weather &&
+    Number.isFinite(x.weather.wind_speed_kmh) &&
+    Number.isFinite(x.weather.wind_gust_kmh)
+  );
+};
+
 /**
- * Full-stack LaunchSimulator implementation bridging frontend LaunchConfig to
- * server validation (`/api/simulation/validate`) and local physics assessment.
+ * GET /api/launch/sites/:id/windows: three launch windows with the real weather at that pad
+ * (1969 reanalysis at Kennedy, live forecast elsewhere). Offline: Apollo 11's 1969 windows.
+ */
+export async function fetchLaunchWindows(siteId: string, baseUrl?: string): Promise<LaunchWindowsData> {
+  const url = `${getServerBaseUrl(baseUrl)}/api/launch/sites/${encodeURIComponent(siteId)}/windows`;
+  const data = await getJson<LaunchWindowsData>(url);
+  if (data && Array.isArray(data.windows) && data.windows.length === 3 && data.windows.every(isWindow) && data.site) {
+    return data;
+  }
+  const site = LAUNCH_SITES.find((s) => s.id === siteId) ?? OFFLINE_KSC_WINDOWS.site;
+  return { ...OFFLINE_KSC_WINDOWS, site };
+}
+
+/** POST /api/engine/launch/plan: the server's engine decides; null when it cannot be reached. */
+export async function fetchLaunchPlan(config: LaunchConfig, window: LaunchWindow, baseUrl?: string): Promise<LaunchPlan | null> {
+  const plan = await getJson<LaunchPlan>(`${getServerBaseUrl(baseUrl)}/api/engine/launch/plan`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(planRequestFor(config, window)),
+  });
+  return plan && typeof plan.is_go === "boolean" && !plan.error_message ? plan : null;
+}
+
+export const DEFAULT_WINDOW: LaunchWindow = WINDOWS[0]!;
+
+/**
+ * The console's simulator. Readouts are instant (the engine's TypeScript mirror); the flight's
+ * outcome is the server engine's answer, or the same calculation in the browser when offline.
  */
 export const launchSimulator: LaunchSimulator = {
-  assess(config: LaunchConfig): LaunchAssessment {
-    return assessLaunch(config);
+  assess(config: LaunchConfig, window: LaunchWindow): LaunchAssessment {
+    return assessLaunch(config, window);
   },
 
-  async simulate(config: LaunchConfig): Promise<LaunchResult> {
-    const localResult = runLaunch(config);
-
-    // If local assessment already flags overCapacity or fuelShort, preserve exact trajectory trace timing
-    if (!localResult.isSuccess) {
-      return mockLaunchSimulator.simulate(config);
-    }
-
-    // Attempt authoritative server validation round-trip when online
-    try {
-      const vehicle = VEHICLES.find((v) => v.id === config.vehicle);
-      const payload = PAYLOADS.find((p) => p.id === config.payload);
-      const windowOpt = WINDOWS.find((w) => w.id === config.window);
-
-      const url = `${getServerBaseUrl()}/api/simulation/validate`;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 1500);
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vehicle_id: vehicle?.id ?? "saturn_v_as506",
-          vehicle_name: vehicle?.name ?? "Saturn V AS-506",
-          payload_mass: (payload?.massT ?? 46) * 1000,
-          target_orbit_km: config.orbitKm,
-          target_destination: "TLI",
-          wind_speed_kmh: windowOpt?.windKmh ?? 18.5,
-        }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-
-      if (res.ok) {
-        const val = await res.json();
-        if (val.is_valid === false) {
-          const trace: LaunchTraceStep[] = [
-            {
-              code: "slow-climb",
-              timestampSec: 38,
-              subsystem: TRACE_TEXT["slow-climb"].subsystem.en,
-              anomaly: TRACE_TEXT["slow-climb"].anomaly.en,
-              consequence: val.failure_reason ?? TRACE_TEXT["slow-climb"].consequence.en,
-            },
-          ];
-          return {
-            isSuccess: false,
-            budgetCostMillions: localResult.budgetCostMillions,
-            failureTrace: trace,
-            endSec: Math.round(val.max_q_time_s || 83),
-          };
-        }
-      }
-    } catch {
-      // Offline or test environment: fall back seamlessly to deterministic local simulation
-    }
-
-    return {
-      isSuccess: true,
-      budgetCostMillions: localResult.budgetCostMillions,
-      failureTrace: [],
-      endSec: ORBIT_INSERTION_SEC,
-    };
+  async simulate(config: LaunchConfig, window: LaunchWindow): Promise<LaunchResult> {
+    const costM = costOf(config, window);
+    const server = await fetchLaunchPlan(config, window);
+    if (server) return resultFromPlan(server, costM, "server-engine");
+    return resultFromPlan(planLaunch(planRequestFor(config, window)), costM, "browser-engine");
   },
 };

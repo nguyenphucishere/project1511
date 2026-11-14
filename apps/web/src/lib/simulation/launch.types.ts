@@ -1,4 +1,5 @@
 import type { FailureTraceStep } from "@space-sim/shared-schema";
+import type { LaunchPlan } from "./launch.physics";
 
 /**
  * PROVISIONAL launch contract for the lunar demo. shared-schema has no lunar mission model yet
@@ -18,24 +19,74 @@ export interface LaunchConfig {
   fuelPct: number;
   orbitKm: ParkingOrbitKm;
   window: LaunchWindowId;
+  /** Launch site id (GET /api/launch/sites); saves from before sites existed mean Kennedy LC-39A. */
+  site?: string;
 }
 
-/** Live readouts the console shows while the player edits the config (DEMO rules). */
+/* ------------------------------------------------ launch sites and windows (GET /api/launch/...) */
+
+export interface LaunchSite {
+  id: string;
+  name: string;
+  pad: string;
+  operator: string;
+  country: string;
+  latitude_deg: number;
+  longitude_deg: number;
+  elevation_m: number;
+  time_zone: string;
+  /** "historical" = Apollo 11's July 1969 windows; "live" = upcoming forecast windows. */
+  windows: "historical" | "live";
+}
+
+/** Measured / forecast ground weather at a window. No verdict: judging it is the player's job. */
+export interface WindowWeather {
+  temperature_c: number;
+  humidity_pct: number;
+  wind_speed_kmh: number;
+  wind_gust_kmh: number;
+  wind_direction_deg: number;
+  precipitation_mm: number;
+  cloud_cover_pct: number;
+  /** WMO weather code (95–99 = thunderstorm). */
+  weather_code: number;
+  thunderstorm: boolean;
+}
+
+export interface LaunchWindow {
+  id: LaunchWindowId;
+  /** UTC instant the window opens. */
+  opens_at: string;
+  label: string;
+  delay_cost_m: number;
+  weather: WindowWeather;
+}
+
+export interface LaunchWindowsData {
+  site: LaunchSite;
+  kind: "historical" | "live";
+  provider: string;
+  windows: LaunchWindow[];
+  source: "api" | "offline_fallback";
+}
+
+/** Readouts the console shows while the player edits the config, computed by the engine. */
 export interface LaunchAssessment {
   payloadT: number;
+  /** Heaviest payload the chosen vehicle delivers to the chosen orbit at a full load (t). */
   capacityT: number;
-  /** Percent of a full load needed to reach orbit; above 100 means no fuel load can do it. */
-  requiredFuelPct: number;
+  /** Smallest propellant load (%) that delivers this payload; null when no load can. */
+  minFuelPct: number | null;
   costM: number;
   budgetM: number;
-  overCapacity: boolean;
-  fuelShort: boolean;
   overBudget: boolean;
-  weatherGo: boolean;
+  /** The engine's full answer for this configuration and the chosen window's weather. */
+  plan: LaunchPlan;
+  weather: WindowWeather;
 }
 
 /** Why a flight failed; the UI localises the trace and the advice from this code. */
-export type TraceCode = "slow-climb" | "fuel-depleted";
+export type TraceCode = "slow-climb" | "fuel-depleted" | "wind-shear" | "lightning" | "structural";
 
 export interface LaunchTraceStep extends FailureTraceStep {
   code: TraceCode;
@@ -48,9 +99,15 @@ export interface LaunchResult {
   failureTrace: LaunchTraceStep[];
   /** Mission time (s) at which the flight ends: orbit insertion or the final anomaly. */
   endSec: number;
+  /** Lost to the weather (wind shear or lightning): the mission ends, there is no second vehicle. */
+  weatherLoss?: boolean;
+  /** The engine's reason, for the anomaly report. */
+  reason?: string;
+  /** Who decided the outcome. */
+  source?: "server-engine" | "browser-engine";
 }
 
 export interface LaunchSimulator {
-  assess(config: LaunchConfig): LaunchAssessment;
-  simulate(config: LaunchConfig): Promise<LaunchResult>;
+  assess(config: LaunchConfig, window: LaunchWindow): LaunchAssessment;
+  simulate(config: LaunchConfig, window: LaunchWindow): Promise<LaunchResult>;
 }

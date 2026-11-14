@@ -107,8 +107,12 @@ export function getNextStepId(currentStepId: string, state?: any): string | null
       return "mission-control-briefing";
     case "mission-control-briefing":
       return "mission-control-scene";
-    case "mission-control-scene":
+    case "mission-control-scene": {
+      // Launched outside the weather limits from the console: the vehicle is lost (ENDING-5).
+      const weather = decisions.weather;
+      if (weather === "severe_wind" || weather === "severe-wind") return "end";
       return "weather-decision";
+    }
     case "weather-decision": {
       const weather = decisions.weather;
       if (weather === "severe_wind" || weather === "severe-wind") {
