@@ -1,2 +1,5 @@
 # TypeScript incremental build cache (tsconfig "incremental": true)
 *.tsbuildinfo
+
+# Production build for local testing (NEXT_DIST_DIR=.next-prod)
+.next-prod/

@@ -22,6 +22,8 @@ export const vi: Dictionary = {
     title: "Beyond The Earth",
     subtitle: "Bốn thành viên, một tên lửa, và chặng đường dài tới Mặt Trăng.",
     start: "Bắt đầu nhiệm vụ",
+    pressStart: "Nhấn để bắt đầu",
+    chaptersShort: "Các màn",
     continue: "Chơi tiếp",
     resumeAt: "Tiếp tục ở {chapter}",
     newGame: "Chơi mới",
