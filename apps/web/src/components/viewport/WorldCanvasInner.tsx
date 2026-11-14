@@ -22,8 +22,8 @@ export interface WorldCanvasInnerProps {
 /** The R3F canvas. Browser-only: always load it through WorldCanvas (dynamic, ssr: false). */
 export default function WorldCanvasInner({ children, label }: WorldCanvasInnerProps) {
   const pixelFX = useSettingsStore((s) => s.pixelFX);
-  // Starts sharp and steps the resolution down if the frame rate stays low (and back up if it recovers).
-  const [dpr, setDpr] = useState(1.25);
+  // Starts at 1x and steps the resolution down if the frame rate stays low (and back up if it recovers).
+  const [dpr, setDpr] = useState(1);
 
   return (
     <Canvas
@@ -41,10 +41,10 @@ export default function WorldCanvasInner({ children, label }: WorldCanvasInnerPr
     >
       <color attach="background" args={[PALETTE.deep]} />
       <PerformanceMonitor
-        flipflops={3}
-        onDecline={() => setDpr((d) => Math.max(0.75, d - 0.25))}
-        onIncline={() => setDpr((d) => Math.min(1.25, d + 0.25))}
-        onFallback={() => setDpr(0.75)}
+        flipflops={2}
+        onDecline={() => setDpr((d) => Math.max(0.6, d - 0.2))}
+        onIncline={() => setDpr((d) => Math.min(1.25, d + 0.15))}
+        onFallback={() => setDpr(0.6)}
       />
       <ResponsiveFov />
       <FirstPersonCamera />

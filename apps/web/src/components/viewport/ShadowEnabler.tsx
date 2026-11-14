@@ -24,19 +24,19 @@ function casterRadius(o: Mesh): number {
 
 /**
  * Turns shadows on for every opaque mesh in the scene. Scene content is authored declaratively
- * without per-mesh flags, so this walks the graph a few times a second to also catch meshes that
+ * without per-mesh flags, so this walks the graph about once a second to also catch meshes that
  * mount later (staff, vehicles, props). Transparent meshes (glass, dust, glow) never cast.
  */
 export function ShadowEnabler() {
   const frame = useRef(0);
   useFrame(({ scene, gl }) => {
-    // Re-render the shadow map every third frame, not every frame: the light and the set pieces
+    // Re-render the shadow map every fourth frame, not every frame: the light and the set pieces
     // barely move, and the shadow pass is one of the heaviest parts of the frame.
     gl.shadowMap.autoUpdate = false;
     if (process.env.NODE_ENV !== "production") (window as unknown as { __gl?: unknown; __scene?: unknown }).__gl = gl;
     if (process.env.NODE_ENV !== "production") (window as unknown as { __scene?: unknown }).__scene = scene;
-    if (frame.current % 3 === 0) gl.shadowMap.needsUpdate = true;
-    if (frame.current++ % 20 !== 0) return;
+    if (frame.current % 4 === 0) gl.shadowMap.needsUpdate = true;
+    if (frame.current++ % 45 !== 0) return;
     scene.traverse((o) => {
       if (!(o instanceof Mesh)) return;
       const mat = Array.isArray(o.material) ? o.material[0] : o.material;

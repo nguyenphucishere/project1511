@@ -51,12 +51,12 @@ export function Earth({ radius = 7, spin = 0.01, nightGlow = 0.35 }: { radius?: 
     <>
       <group ref={group} rotation={[0.1, 2.2, 0]}>
         <mesh>
-          <sphereGeometry args={[radius, 96, 64]} />
+          <sphereGeometry args={[radius, 72, 48]} />
           <meshStandardMaterial map={day} roughness={0.9} metalness={0} emissiveMap={day} emissive="#183A6B" emissiveIntensity={nightGlow} />
         </mesh>
         <group ref={cloudRef}>
           <mesh>
-            <sphereGeometry args={[radius * 1.012, 96, 64]} />
+            <sphereGeometry args={[radius * 1.012, 64, 40]} />
             <meshStandardMaterial map={clouds} alphaMap={clouds} transparent opacity={0.85} depthWrite={false} roughness={1} />
           </mesh>
         </group>
