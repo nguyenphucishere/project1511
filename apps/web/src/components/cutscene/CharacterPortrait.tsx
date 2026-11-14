@@ -49,7 +49,52 @@ export function CharacterPortrait({ character, className }: CharacterPortraitPro
 const COLS = 16;
 const ROWS = 20;
 
-type Cell = "shell" | "visor" | "glint" | "face" | "eye" | "hair" | "accent" | "suit" | "trim";
+type Cell =
+  | "shell"
+  | "shellShade"
+  | "visor"
+  | "visorHi"
+  | "visorDark"
+  | "glint"
+  | "face"
+  | "faceShade"
+  | "eye"
+  | "hair"
+  | "accent"
+  | "suit"
+  | "suitHi"
+  | "suitShade"
+  | "trim"
+  | "patch";
+
+/**
+ * Second pass: light from the upper left. Cells on the lower-right side of each shape get a
+ * shade, the upper-left of the visor a reflection, and the suit a lit shoulder and a mission patch.
+ */
+function shade(grid: (Cell | null)[][]): (Cell | null)[][] {
+  const at = (x: number, y: number) => grid[y]?.[x] ?? null;
+  return grid.map((row, y) =>
+    row.map((cell, x) => {
+      if (!cell) return cell;
+      const rightEdge = at(x + 1, y) !== cell || at(x + 1, y + 1) !== cell;
+      if (cell === "shell") {
+        if (x >= 10 && rightEdge) return "shellShade";
+        if (y >= 12 && at(x, y + 1) !== "shell" && x >= 7) return "shellShade";
+      }
+      if (cell === "face" && x >= 10 && rightEdge) return "faceShade";
+      if (cell === "visor") {
+        if (x + y <= 9) return "visorHi";
+        if (x + y >= 19) return "visorDark";
+      }
+      if (cell === "suit") {
+        if (y === 15 && x <= 6) return "suitHi";
+        if (x >= 12 || (y >= 18 && x >= 10)) return "suitShade";
+        if (y === 16 && x === 5) return "patch";
+      }
+      return cell;
+    }),
+  );
+}
 
 /** Builds the placeholder bust procedurally: an ellipse head, a role-specific top, shoulders. */
 function buildBust(head: PlaceholderHead): (Cell | null)[][] {
@@ -110,18 +155,25 @@ function buildBust(head: PlaceholderHead): (Cell | null)[][] {
 
 const FILL: Record<Cell, string> = {
   shell: "fill-space-mist",
-  visor: "fill-space-blue",
-  glint: "fill-space-gold",
+  shellShade: "fill-[#b8c4d6]",
+  visor: "fill-nasa-blue",
+  visorHi: "fill-nasa-blue-light",
+  visorDark: "fill-[#06224f]",
+  glint: "fill-space-white",
   face: "fill-space-mist",
+  faceShade: "fill-[#d3dbe7]",
   eye: "fill-space-deep",
   hair: "fill-space-blue",
   accent: "fill-space-gold",
-  suit: "fill-space-blue",
+  suit: "fill-nasa-blue",
+  suitHi: "fill-nasa-blue-light",
+  suitShade: "fill-[#082c69]",
   trim: "fill-space-gold",
+  patch: "fill-nasa-red",
 };
 
 function PixelBust({ head, label, className }: { head: PlaceholderHead; label: string; className?: string }) {
-  const grid = buildBust(head);
+  const grid = shade(buildBust(head));
   return (
     <svg
       role="img"

@@ -33,6 +33,7 @@ function token(name: string): string {
 export function ParallaxCanvas({ mode = "drift", horizon = false, className }: ParallaxCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
+  const animate = !reduced && mode !== "still";
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -51,10 +52,10 @@ export function ParallaxCanvas({ mode = "drift", horizon = false, className }: P
     let stars: Star[] = [];
     let ridge: number[] = [];
     const pointer = { x: 0.5, y: 0.5 };
-    const animate = !reduced && mode !== "still";
 
     const seedStars = () => {
-      const count = Math.round((w * h) / 220);
+      // The photo already has a dense starfield; the canvas adds only a sparse layer of moving stars.
+      const count = Math.round((w * h) / 520);
       stars = Array.from({ length: count }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
@@ -80,8 +81,8 @@ export function ParallaxCanvas({ mode = "drift", horizon = false, className }: P
     };
 
     const draw = (time: number) => {
-      ctx.fillStyle = colors.deep;
-      ctx.fillRect(0, 0, w, h);
+      // Transparent: the nebula photo underneath shows through and the pixel stars twinkle over it.
+      ctx.clearRect(0, 0, w, h);
 
       const px = animate ? (pointer.x - 0.5) * 6 : 0;
       const py = animate ? (pointer.y - 0.5) * 4 : 0;
@@ -100,8 +101,8 @@ export function ParallaxCanvas({ mode = "drift", horizon = false, className }: P
 
       if (horizon) {
         // Earth, high in the black sky.
-        const ex = Math.round(w * 0.78);
-        const ey = Math.round(h * 0.22);
+        const ex = Math.round(w * 0.64);
+        const ey = Math.round(h * 0.17);
         const er = Math.max(6, Math.round(Math.min(w, h) * 0.07));
         ctx.fillStyle = colors.blue;
         ctx.beginPath();
@@ -177,13 +178,24 @@ export function ParallaxCanvas({ mode = "drift", horizon = false, className }: P
       window.removeEventListener("pointermove", onPointer);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [mode, horizon, reduced]);
+  }, [mode, horizon, reduced, animate]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      aria-hidden
-      className={cn("block h-full w-full [image-rendering:pixelated]", className)}
-    />
+    <div aria-hidden className={cn("relative overflow-hidden bg-space-deep", className)}>
+      {/* Nebula photo, slightly oversized and slowly panning so the sky feels alive. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- static, pre-sized background */}
+      <img
+        src="/assets/env/nebula-bg.webp"
+        alt=""
+        draggable={false}
+        className={cn(
+          "absolute inset-0 h-full w-full select-none object-cover",
+          animate && "animate-nebula-pan",
+        )}
+      />
+      {/* Soft darkening so text and the stars on top stay readable. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-space-deep/30 via-transparent to-space-deep/50" />
+      <canvas ref={canvasRef} className="absolute inset-0 block h-full w-full [image-rendering:pixelated]" />
+    </div>
   );
 }
