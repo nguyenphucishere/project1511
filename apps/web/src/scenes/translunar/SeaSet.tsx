@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { BackSide, type Group, type ShaderMaterial, Vector3 } from "three";
 import { filmClock } from "./clock";
-import { SEA, SEA_ARRIVAL } from "./flight";
+import { SEA, T } from "./flight";
 
 /** Direction to the afternoon sun at the splashdown set (low, ahead and to the left). */
 export const SEA_SUN = new Vector3(-0.35, 0.42, -0.8).normalize();
@@ -93,7 +93,7 @@ export function SeaSet() {
   useFrame(({ clock }) => {
     const g = group.current;
     if (!g) return;
-    g.visible = filmClock.t >= SEA_ARRIVAL - 0.5;
+    g.visible = filmClock.t >= T.CHUTES - 0.5;
     if (sea.current) sea.current.uniforms.uTime.value = clock.elapsedTime;
   });
   return (

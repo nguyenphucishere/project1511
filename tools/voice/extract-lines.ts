@@ -134,10 +134,6 @@ async function main() {
   (ROOM_SCRIPT_ALL as any[]).forEach((b, i) =>
     add(b.voice, b.line, `launch-room#${i}`, b.panic >= 0.9 ? { tag: "(gasps) (pant) " } : b.panic >= 0.6 ? { tag: "(gasps) " } : {}),
   );
-  // The landing films: Collins, the Eagle crew and Houston on the air-to-ground loop.
-  const { BEATS: FILM_BEATS } = await load("scenes/lunar-descent/film/script.ts");
-  for (const [part, beats] of Object.entries(FILM_BEATS) as [string, any[]][])
-    beats.forEach((b, i) => add(b.who, b.line, `landing-film:${part}#${i}`, b.tag ? { tag: b.tag } : {}));
   const { LAUNCH_ENDINGS } = await load("scenes/mission-control/launchEndings.ts");
   for (const e of Object.values(LAUNCH_ENDINGS) as any[]) {
     add("kranz", e.call, `launch-ending:${e.id}:call`);
@@ -164,11 +160,8 @@ async function main() {
   // 6. Moon trip and flight home: the narrator.
   (story.PHASES as any[]).forEach((c, i) => add("narrator", c.text, `translunar:phase#${i}`));
   (story.READING as any[]).forEach((c, i) => add("narrator", c.text, `translunar:reading#${i}`));
-  (story.HOME_NOTES as any[]).forEach((c, i) => add("narrator", c.text, `translunar:home-note#${i}`));
   add("narrator", both(["translunar", "doneBody"]), "translunar:done");
   add("narrator", both(["translunar", "returnDoneBody"]), "translunar:return-done");
-  // The real air-to-ground traffic of the entry and recovery, each in its speaker's voice.
-  (story.RADIO_LOG as any[]).forEach((c, i) => add(c.role, c.text, `translunar:radio#${i}`));
 
   // 7. Lunar descent: Armstrong's calls and the narrator's outcomes.
   DESCENT_STEPS.forEach((d: any) => add("armstrong", d.cue, `descent:cue:${d.id}`));

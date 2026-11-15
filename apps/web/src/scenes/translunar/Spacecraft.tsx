@@ -12,22 +12,14 @@ import {
   type Group,
   type Mesh,
   type MeshBasicMaterial,
-  ShaderMaterial,
   Vector3,
 } from "three";
 import { filmClock } from "./clock";
-import { Plasma } from "./Plasma";
 import {
   SEA,
   T,
-  SEA_ARRIVAL,
   capsuleAltitude,
-  clamp01,
-  MAIN_DELAY,
-  homePosition,
-  landedTilt,
   norm,
-  sub,
   petals,
   plasma,
   reentryPosition,
@@ -143,15 +135,12 @@ function Plume({
 export function Stage() {
   const group = useRef<Group>(null);
   const pivots = useRef<(Group | null)[]>([]);
-  const stowed = useRef<Group>(null);
   useFrame(() => {
     const t = filmClock.t;
     const g = group.current;
     if (!g) return;
     g.visible = t < T.COAST + 8;
     if (!g.visible) return;
-    // Eagle rides inside the adapter, nose toward the ship, until the ship has docked with it and drawn it out.
-    if (stowed.current) stowed.current.visible = t < T.DOCK;
     orient(g, stagePose(t));
     const p = petals(t);
     pivots.current.forEach((pivot) => {
@@ -172,10 +161,6 @@ export function Stage() {
         <cylinderGeometry args={[0.06, 0.17, 0.26, 24, 1, true]} />
         <meshStandardMaterial {...GREY} side={DoubleSide} />
       </mesh>
-      {/* Eagle, folded inside the adapter, its docking ring at the joint. */}
-      <group ref={stowed} position={[0, 0, 1.1]} rotation={[0, Math.PI, 0]}>
-        <ScaledEagle />
-      </group>
       {/* The adapter petals, hinged at their aft edge. */}
       {[0, 1, 2, 3].map((i) => (
         <group key={i} rotation={[0, 0, (i * Math.PI) / 2]}>
@@ -250,16 +235,6 @@ function Eagle() {
   );
 }
 
-/** Eagle scaled to fit the adapter, keeping its docking ring where it is (at 1.1 along +Z). */
-const EAGLE_SCALE = 0.6;
-function ScaledEagle() {
-  return (
-    <group scale={EAGLE_SCALE} position={[0, 0, 1.1 * (1 - EAGLE_SCALE)]}>
-      <Eagle />
-    </group>
-  );
-}
-
 /** The command and service module. Origin: the aft end of the service module; the nose is +Z. */
 export function Ship() {
   const group = useRef<Group>(null);
@@ -268,15 +243,15 @@ export function Ship() {
     const t = filmClock.t;
     const g = group.current;
     if (!g) return;
-    g.visible = t < T.SM_SEP && viewKind(t) !== "cabin";
+    g.visible = t < T.REENTRY && viewKind(t) !== "cabin";
     if (g.visible) orient(g, shipPose(t));
-    // Eagle rides on the nose from the docking until the descent (the way home is flown by the command module alone).
-    if (eagle.current) eagle.current.visible = t >= T.DOCK && t < T.OUTBOUND_END;
+    // Eagle rides on the nose until the descent (the way home is flown by the command module alone).
+    if (eagle.current) eagle.current.visible = t < T.OUTBOUND_END;
   });
   return (
     <group ref={group}>
       <group ref={eagle}>
-        <ScaledEagle />
+        <Eagle />
       </group>
       <Tube r0={0.28} r1={0.28} h={0.62} z={0.31} mat={WHITE} />
       <Tube r0={0.283} r1={0.283} h={0.1} z={0.1} mat={DARK} />
@@ -316,38 +291,29 @@ export function Ship() {
 const PLASMA_CORE = new Color(3.2, 1.8, 0.8);
 const PLASMA_EDGE = new Color(2, 0.6, 0.25);
 
-/** Height of the canopies above the point on the capsule where every shroud line ends (the chute group's origin). */
-const CANOPY_HEIGHT = 9;
-
-/** The tilt of the heat shield to the airflow in the entry, radians (about 17 degrees). */
-const ANGLE_OF_ATTACK = -0.3;
-
-function Canopy({ x, z }: { x: number; z: number; lean?: number }) {
-  // Every line runs from the canopy's rim to the one point on the capsule, so the three chutes share it.
+function Canopy({ x, z, lean }: { x: number; z: number; lean: number }) {
   const lines = useMemo(() => {
     const geo = new BufferGeometry();
     const pts: number[] = [];
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      pts.push(x + Math.cos(a) * 3.2, CANOPY_HEIGHT, z + Math.sin(a) * 3.2, 0, 0, 0);
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      pts.push(Math.cos(a) * 3.2, 0, Math.sin(a) * 3.2, 0, -9, 0);
     }
     geo.setAttribute("position", new Float32BufferAttribute(pts, 3));
     return geo;
-  }, [x, z]);
+  }, []);
   return (
-    <>
-      <group position={[x, CANOPY_HEIGHT, z]}>
-        {Array.from({ length: 8 }, (_, i) => (
-          <mesh key={i} scale={[3.2, 2.1, 3.2]}>
-            <sphereGeometry args={[1, 8, 6, (i * Math.PI) / 4, Math.PI / 4, 0, Math.PI / 2]} />
-            <meshStandardMaterial color={i % 2 ? "#f4f1ea" : "#e8561c"} roughness={0.7} side={DoubleSide} />
-          </mesh>
-        ))}
-      </group>
+    <group position={[x, 9, z]} rotation={[lean, 0, 0]}>
+      {Array.from({ length: 8 }, (_, i) => (
+        <mesh key={i} scale={[3.2, 2.1, 3.2]}>
+          <sphereGeometry args={[1, 8, 6, (i * Math.PI) / 4, Math.PI / 4, 0, Math.PI / 2]} />
+          <meshStandardMaterial color={i % 2 ? "#f4f1ea" : "#e8561c"} roughness={0.7} side={DoubleSide} />
+        </mesh>
+      ))}
       <lineSegments geometry={lines}>
         <lineBasicMaterial color="#d8d3c8" />
       </lineSegments>
-    </>
+    </group>
   );
 }
 
@@ -355,7 +321,7 @@ function ExpandingRing() {
   const ring = useRef<Mesh>(null);
   useFrame(() => {
     const t = filmClock.t;
-    const k = (t - (T.TOUCHDOWN - 0.1)) / 4;
+    const k = (t - (T.FILM_END - 5.5)) / 4;
     const m = ring.current;
     if (!m) return;
     m.visible = k > 0 && k < 1.4;
@@ -378,109 +344,47 @@ export function ReentryCapsule() {
   const group = useRef<Group>(null);
   const body = useRef<Group>(null);
   const wake = useRef<Group>(null);
-  const heat = useRef(0);
+  const wakeMats = useRef<MeshBasicMaterial[]>([]);
   const chutes = useRef<Group>(null);
-  const sm = useRef<Group>(null);
-  const drogues = useRef<Group>(null);
-  const mains = useRef<Group>(null);
-  const flow = useRef<Group>(null);
   useFrame(({ clock }) => {
     const t = filmClock.t;
     const g = group.current;
     if (!g) return;
-    // From the service module's separation the command module flies alone, heat shield first, along the path home.
-    const burning = t >= T.SM_SEP && t < SEA_ARRIVAL;
-    const landing = t >= SEA_ARRIVAL;
+    const burning = t >= T.REENTRY && t < T.CHUTES;
+    const landing = t >= T.CHUTES;
     g.visible = burning || landing;
     const alt0 = landing ? capsuleAltitude(t) : 0;
     if (chutes.current) {
-      chutes.current.visible = landing && t >= T.CHUTES && alt0 > 1.2;
+      chutes.current.visible = landing && alt0 > 1.2;
       chutes.current.position.set(SEA[0], alt0 + 1.4, SEA[2]);
-      // Two stages: the small drogues bloom at once, are cut away as the three big mains open (with a little
-      // overshoot as each fills).
-      const bloom = (x: number) => {
-        const k = clamp01(x);
-        return k * k * (3 - 2 * k);
-      };
-      const ds = bloom((t - T.CHUTES) / 1) * (1 - bloom((t - (T.CHUTES + MAIN_DELAY + 0.4)) / 0.6));
-      const ms = bloom((t - (T.CHUTES + MAIN_DELAY)) / 1.8);
-      if (drogues.current) {
-        drogues.current.visible = ds > 0.01;
-        drogues.current.scale.setScalar(0.3 * Math.max(0.01, ds));
-      }
-      if (mains.current) {
-        mains.current.visible = ms > 0.01;
-        mains.current.scale.setScalar(0.1 + 0.9 * ms * (1 + 0.1 * Math.sin(Math.PI * ms)));
-      }
     }
-    if (sm.current && !burning) sm.current.visible = false;
     if (!g.visible) return;
     if (burning) {
-      const p = homePosition(t);
-      const d = norm(sub(homePosition(t + 0.05), homePosition(t - 0.05)));
+      const p = reentryPosition(t);
+      const d = norm([0, -1.9, -12]);
       // Heat shield (the -Z base of the cone) leads; the nose trails.
-      // Right after the separation it still points its nose the way it is going; it then turns end for end
-      // (about ten seconds on its thrusters) to put the heat shield first.
-      const turn = Math.min(1, Math.max(0, (t - T.SM_SEP - 1.5) / 10));
-      const k = turn * turn * (3 - 2 * turn);
-      const ang = Math.PI * k;
-      // The heading swings through a half circle in the horizontal plane: from the way it is going (nose first)
-      // to the opposite (heat shield first, nose trailing).
-      const side = norm([d[2], 0, -d[0]]);
-      const fwd: Vec = [d[0] * Math.cos(ang) + side[0] * Math.sin(ang), d[1] * Math.cos(ang), d[2] * Math.cos(ang) + side[2] * Math.sin(ang)];
-      orient(g, { pos: p, fwd: norm(fwd), up: [0, 1, 0] });
-      // The command module flies its heat shield forward, tipped about 17 degrees to the airflow (its lift
-      // attitude: the shield faces slightly down and the apex trails up and back). The wake follows the air,
-      // not the capsule, so it is turned back by the same angle.
-      const aoa = ANGLE_OF_ATTACK * Math.min(1, Math.max(0, (t - T.SM_SEP - 2) / 8));
-      g.rotateX(aoa);
-      if (flow.current) flow.current.rotation.x = -aoa;
-      // The service module drifts back and tumbles; in the air it glows and burns away.
-      const smNode = sm.current;
-      if (smNode) {
-        const q = t - T.SM_SEP;
-        smNode.visible = t < T.REENTRY + 14;
-        const dist = 3.2 + q * 0.35;
-        smNode.position.set(p[0] - d[0] * dist, p[1] - d[1] * dist + Math.sin(q * 0.2) * 0.3, p[2] - d[2] * dist);
-        smNode.rotation.set(q * 0.22, 0.4, q * 0.09);
-        smNode.scale.setScalar(Math.max(0.01, t < T.REENTRY ? 1 : 1 - (t - T.REENTRY) / 14));
-      }
+      orient(g, { pos: p, fwd: [-d[0], -d[1], -d[2]] as Vec, up: [0, 1, 0] });
       const hot = plasma(t);
       if (wake.current) {
-        // From inside the cabin the fire is not a shape around you but light at the window (see the scene's overlay).
-        wake.current.visible = hot > 0.004 && viewKind(t) !== "cabin";
+        wake.current.visible = hot > 0.02;
+        const flick = 1 + Math.sin(clock.elapsedTime * 38) * 0.08;
+        wake.current.scale.set(1, 1, hot * flick);
       }
-      heat.current = hot;
+      wakeMats.current.forEach((m, i) => (m.opacity = hot * (i ? 0.5 : 0.8)));
     } else {
       const alt = capsuleAltitude(t);
       const bob = alt < 1 ? Math.sin(clock.elapsedTime * 1.3) * 0.12 : 0;
       g.position.set(SEA[0], alt + bob, SEA[2]);
-      g.quaternion.setFromAxisAngle(new Vector3(1, 0, 0), landedTilt(t) + (alt < 1 ? Math.sin(clock.elapsedTime * 0.9) * 0.05 : 0.0));
+      g.quaternion.setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2 + (alt < 1 ? Math.sin(clock.elapsedTime * 0.9) * 0.06 : 0.0));
       if (wake.current) wake.current.visible = false;
     }
   });
   return (
     <>
-    <group ref={sm} visible={false}>
-      <mesh>
-        <cylinderGeometry args={[0.85, 0.85, 2.4, 24]} />
-        <meshStandardMaterial color="#cfcfcf" metalness={0.3} roughness={0.5} />
-      </mesh>
-      <mesh position={[0, -1.6, 0]}>
-        <coneGeometry args={[0.7, 1.0, 20, 1, true]} />
-        <meshStandardMaterial color="#2a2a2e" side={DoubleSide} />
-      </mesh>
-    </group>
     <group ref={chutes}>
-      <group ref={drogues} visible={false}>
-        <Canopy x={-3.4} z={0} lean={0.1} />
-        <Canopy x={3.4} z={0} lean={-0.1} />
-      </group>
-      <group ref={mains} visible={false}>
-        <Canopy x={-4.2} z={0} lean={0.12} />
-        <Canopy x={4.2} z={0} lean={-0.12} />
-        <Canopy x={0} z={-2.2} lean={0.05} />
-      </group>
+      <Canopy x={-4.2} z={0} lean={0.12} />
+      <Canopy x={4.2} z={0} lean={-0.12} />
+      <Canopy x={0} z={-2.2} lean={0.05} />
     </group>
     <group ref={group}>
       <group ref={body} scale={3}>
@@ -492,7 +396,27 @@ export function ReentryCapsule() {
         </mesh>
       </group>
       <group ref={wake}>
-        <Plasma heat={heat} flowRef={flow} />
+        {/* Plasma streaming back over the capsule: the wake runs toward +Z, behind the heat shield. */}
+        {[
+          [PLASMA_EDGE, 0.8, 0],
+          [PLASMA_CORE, 0.45, 1],
+        ].map(([c, r, i]) => (
+          <mesh key={i as number} position={[0, 0, 4.6]} rotation={[Math.PI / 2, 0, 0]} scale={[(r as number) * 1.2, 9, (r as number) * 1.2]}>
+            <coneGeometry args={[1, 1, 24, 1, true]} />
+            <meshBasicMaterial
+              ref={(m) => {
+                if (m) wakeMats.current[i as number] = m;
+              }}
+              color={c as Color}
+              transparent
+              opacity={0.6}
+              blending={AdditiveBlending}
+              depthWrite={false}
+              toneMapped={false}
+              side={DoubleSide}
+            />
+          </mesh>
+        ))}
       </group>
     </group>
     <ExpandingRing />

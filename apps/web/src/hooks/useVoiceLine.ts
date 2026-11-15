@@ -12,8 +12,6 @@ export interface VoiceLineOptions {
   as?: string;
   /** Wait for the line that is playing instead of cutting it off. */
   queue?: boolean;
-  /** A voice channel of its own, so this line is heard together with the narrator rather than after it. */
-  channel?: string;
   /** Force the radio filter on or off; by default it follows the speaker. */
   radio?: boolean;
   /** Start after this many milliseconds (e.g. to let a screen settle). */
@@ -31,14 +29,14 @@ export interface VoiceLineOptions {
  */
 export function useVoiceLine(text: string | null | undefined, options: VoiceLineOptions = {}) {
   const locale = useSettingsStore((s) => s.locale);
-  const { as, queue, radio, delayMs, channel } = options;
+  const { as, queue, radio, delayMs } = options;
   const lastId = useRef(0);
 
   useEffect(() => {
     if (!text) return;
     let id = 0;
     const start = () => {
-      id = speak(as ?? text, locale, { queue, radio, channel });
+      id = speak(as ?? text, locale, { queue, radio });
       lastId.current = id;
     };
     const timer = delayMs ? window.setTimeout(start, delayMs) : undefined;
@@ -47,7 +45,7 @@ export function useVoiceLine(text: string | null | undefined, options: VoiceLine
       if (timer !== undefined) window.clearTimeout(timer);
       if (id && !queue) stopSpeaking(id);
     };
-  }, [text, as, locale, queue, radio, delayMs, channel]);
+  }, [text, as, locale, queue, radio, delayMs]);
 
   // Leaving the screen silences whatever this hook last said (only if nothing newer is speaking).
   useEffect(

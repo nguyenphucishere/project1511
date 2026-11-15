@@ -39,8 +39,6 @@ import {
 } from "./layout";
 import { mood } from "./mood";
 import { SkyExplosion } from "./SkyExplosion";
-import { RocketBreakup } from "./RocketBreakup";
-import { boomShotAt } from "./boomFilm";
 
 interface ControlRoomWorldProps {
   /** performance.now() at ignition (T-0), or null while the rocket waits on the pad. */
@@ -102,7 +100,6 @@ export function ControlRoomWorld({
         ignitionAt={ignitionAt}
         burnEndT={burnEndT}
       />
-      {process.env.NODE_ENV !== "production" && <RocketBreakup ignitionAt={ignitionAt} />}
       {explodeAt !== null && <SkyExplosion explodeAt={explodeAt} cause={explodeCause} />}
     </>
   );
@@ -187,7 +184,7 @@ function LaunchCamera({
 
       // From ignition the launch is cut like a film: a new angle every few seconds.
       if (t >= 0 && !reduced) {
-        const shot = boomShotAt(t) ?? shotAt(t);
+        const shot = shotAt(t);
         const cut = shot.id !== lastShot;
         lastShot = shot.id;
         const f = shot.frame({
@@ -209,12 +206,10 @@ function LaunchCamera({
         camera.lookAt(aim);
         if (camera instanceof PerspectiveCamera) {
           lens = camera;
-          const want = f.lock
-            ? f.zoom
-            : Math.min(
-                MAX_ZOOM,
-                Math.max(f.zoom, camera.position.distanceTo(goal) / ZOOM_REF_DIST),
-              );
+          const want = Math.min(
+            MAX_ZOOM,
+            Math.max(f.zoom, camera.position.distanceTo(goal) / ZOOM_REF_DIST),
+          );
           camera.zoom = cut
             ? want
             : camera.zoom +
