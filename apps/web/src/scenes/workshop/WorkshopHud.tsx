@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronsDown, ChevronsUp, Crosshair, Megaphone, Minus, TriangleAlert } from "lucide-react";
 import { CharacterPortrait } from "@/components/cutscene/CharacterPortrait";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import { format } from "@/i18n";
 import { useLocalized } from "@/i18n/useT";
 import { CHARACTERS } from "@/game/characters";
@@ -480,7 +479,6 @@ export function LoadoutPanel({ value, onChange, onConfirm }: LoadoutPanelProps) 
     <section aria-label={localize(UI.loadout.title)} className={cn(panel, "bezel-gold max-h-[80dvh] w-full max-w-lg space-y-3 overflow-y-auto")}>
       <header className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold">{localize(UI.loadout.title)}</h2>
-        <StatusBadge status="demo">{localize({ en: "Demo data", vi: "Dữ liệu mẫu" })}</StatusBadge>
       </header>
 
       <div className="grid gap-3 sm:grid-cols-2">

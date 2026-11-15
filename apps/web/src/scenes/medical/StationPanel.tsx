@@ -119,9 +119,6 @@ export function StationPanel({ station, alreadyChecked, onMeasured, onClose }: S
           {reading}
           {station.unit && <span className="ml-2 text-base text-foreground/70">{station.unit}</span>}
         </p>
-        <StatusBadge status="demo" className="shrink-0">
-          {t.common.demoData}
-        </StatusBadge>
       </div>
       {phase === "measuring" && (
         <Progress value={progress * 100} aria-label={t.medical.measuring} className="mt-2 h-2" />
