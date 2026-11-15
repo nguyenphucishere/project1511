@@ -67,8 +67,12 @@ const JOBS: Record<SceneId, Job> = {
 
 /** The share of a scene's loading bar that is the voice recordings. */
 const VOICE_WEIGHT = 10;
-/** The longest a scene waits for the recordings: past it the scene starts and the rest arrive as they can. */
-const VOICE_WAIT_MS = 30_000;
+/**
+ * The longest a scene's loading screen waits for the recordings (13 MB per language): past it the
+ * scene starts and the rest keep arriving in the background. 30 s left players on a slow
+ * connection staring at a stuck loading bar.
+ */
+const VOICE_WAIT_MS = 6_000;
 const voiceWarm = new Map<string, Promise<unknown>>();
 
 /**
@@ -204,7 +208,6 @@ export function warmUpcoming(stepId: string): void {
   if (typeof window === "undefined") return;
   const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
   if (saveData) return;
-  void ensureVoicesWarm();
   const scenes = scenesToPreload(stepId).slice(0, 2).filter((s) => !warmQueued.has(s));
   for (const s of scenes) warmQueued.add(s);
   let chainWarm: Promise<void> = Promise.resolve();
@@ -237,6 +240,8 @@ export function warmUpcoming(stepId: string): void {
         for (const l of listeners) l();
       });
   }
+  // The voices come after the files the menu waits for, so the two never split the connection.
+  void chainWarm.then(() => ensureVoicesWarm());
 }
 
 /** Parallel downloads per scene during the title warm-up. */
