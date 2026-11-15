@@ -4,7 +4,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExterna
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import { LocaleToggle } from "@/components/hud/LocaleToggle";
 import { SoundToggle } from "@/components/hud/SoundToggle";
 import { playSfx } from "@/game/sfx";
@@ -383,9 +382,7 @@ export function TitleSplash() {
       <LoadingBar finished={warmed} />
 
       <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-4 px-4 py-4 sm:px-8">
-        <StatusBadge status="demo" className="bg-space-deep">
-          {t.common.demoData}
-        </StatusBadge>
+        <span aria-hidden />
         <div className="flex items-center gap-2">
           <SoundToggle />
           <LocaleToggle className="bg-space-deep" />
