@@ -709,9 +709,23 @@ export function startRumble(): Rumble {
   };
 }
 
+/** While set, everything but the voices stays at this share of its level, whatever else speaks or ends. */
+let duckHold: number | null = null;
+
+/**
+ * Holds everything but the voices down under a long recording played outside the voice player (the
+ * crew's broadcast), or lets it back up with null. A line ending meanwhile cannot lift it.
+ */
+export function holdDuck(level: number | null) {
+  duckHold = level;
+  if (!ctx || !master) return;
+  master.gain.setTargetAtTime(level === null ? masterVolume : masterVolume * level, ctx.currentTime, level === null ? 0.6 : 0.08);
+}
+
 /** While a voice speaks, everything else drops under it, so a line is heard over the roar, the score and the alarm. */
 function duckForVoice(on: boolean) {
   if (!ctx || !master) return;
+  if (duckHold !== null) return master.gain.setTargetAtTime(masterVolume * duckHold, ctx.currentTime, 0.08);
   master.gain.setTargetAtTime(on ? masterVolume * 0.35 : masterVolume, ctx.currentTime, on ? 0.05 : 0.6);
 }
 

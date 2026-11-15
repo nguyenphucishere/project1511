@@ -10,6 +10,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { Warmup } from "../../mission-control/Warmup";
 import { Dust } from "./Dust";
 import { Columbia, LunarModule, Terrain, makeMoonscape } from "./Models";
+import { MOON_COLOR, MOON_NORMAL } from "../../assets";
 import { filmClock } from "./clock";
 import { FILM_SECONDS, readout, type FilmPart } from "./script";
 
@@ -113,15 +114,18 @@ function Stars({ skyRef }: { skyRef: React.RefObject<Mesh | null> }) {
 
 /** The small Moon the orbit shots are set over: LRO imagery on a sphere that turns slowly beneath the ships. */
 function OrbitMoon({ moonRef }: { moonRef: React.RefObject<Group | null> }) {
-  const map = useTexture("/assets/textures/moon_4k.jpg", (t) => {
+  const map = useTexture(MOON_COLOR, (t) => {
     t.colorSpace = SRGBColorSpace;
+    t.anisotropy = 8;
+  });
+  const normalMap = useTexture(MOON_NORMAL, (t) => {
     t.anisotropy = 8;
   });
   return (
     <group ref={moonRef}>
       <mesh rotation={[0, 0, 0]}>
         <sphereGeometry args={[300, 96, 64]} />
-        <meshStandardMaterial map={map} color="#cfcfd4" roughness={1} metalness={0} />
+        <meshStandardMaterial map={map} normalMap={normalMap} color="#d8d8dc" roughness={1} metalness={0} />
       </mesh>
     </group>
   );
