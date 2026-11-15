@@ -273,9 +273,11 @@ export function reentryPosition(t: number): Vec {
  * long glow through the thick part from about 90 km down to 20, and gone under the parachutes.
  */
 export function plasma(t: number) {
+  // Nothing before the entry interface, and a few seconds to build as the first air arrives.
+  if (t < T.REENTRY) return 0;
   const { altKm, speedKms } = entryState(t);
   const rho = 1.225 * Math.exp(-altKm / 7.2);
-  return clamp01((Math.sqrt(rho) * speedKms ** 3) / 8);
+  return clamp01((Math.sqrt(rho) * speedKms ** 3) / 8) * smooth((t - T.REENTRY) / 4);
 }
 
 export type AtmosphereLayer = "thermosphere" | "mesosphere" | "stratosphere" | "troposphere";
@@ -414,7 +416,7 @@ export function cabinLook(t: number, pose: Pose) {
   if (t > T.OUTBOUND_END) {
     // Burning for home: looking back over the stern at the Moon falling away. In the entry: forward and down, at the glow and the Earth.
     if (t < T.REENTRY) return norm(add(mul(pose.fwd, -0.8), mul(pose.up, 0.25)));
-    return norm(add(mul(pose.fwd, 0.55), mul(pose.up, -0.5)));
+    return norm(add(mul(pose.fwd, 0.95), mul(pose.up, -0.12)));
   }
   if (t < T.CABIN) return earthriseLook(t, pose);
   // Christmas Eve: the surface slides by below, tilting slowly back toward the horizon.
@@ -530,7 +532,7 @@ export function frameAt(t: number): Shot {
     case "entry-orbit": {
       // A fly cam circling the capsule from above: the glow, and the Earth's curve and clouds below it.
       const p = reentryPosition(t);
-      const ang = -2.2 + (t - entryAt(0.35)) * 0.11;
+      const ang = -0.9 + (t - entryAt(0.35)) * 0.1;
       return { ...base, kind: "space", pos: add(p, [Math.cos(ang) * 11, 3.5 + Math.sin(t * 0.3) * 0.6, Math.sin(ang) * 11]), aim: p, fov: 34, shake: 0.012 };
     }
     case "reentry-low": {

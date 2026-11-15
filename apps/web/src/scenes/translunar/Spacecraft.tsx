@@ -16,6 +16,7 @@ import {
   Vector3,
 } from "three";
 import { filmClock } from "./clock";
+import { Plasma } from "./Plasma";
 import {
   SEA,
   T,
@@ -367,43 +368,6 @@ function ExpandingRing() {
 }
 
 /**
- * Soft plasma: brightest where the surface faces the camera (so the edges fade instead of cutting off
- * like a tube), fading along its length, from white-yellow at the shield to red-orange behind.
- */
-function plasmaMaterial(strength: number, sink: { current: ShaderMaterial[] }, trail = false) {
-  const m = new ShaderMaterial({
-    uniforms: { uHeat: { value: 0 }, uStrength: { value: strength }, uTrail: { value: trail ? 1 : 0 } },
-    vertexShader: `
-      varying vec3 vN; varying vec3 vV; varying float vT;
-      void main() {
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        vN = normalize(normalMatrix * normal);
-        vV = normalize(-mv.xyz);
-        vT = uv.y;
-        gl_Position = projectionMatrix * mv;
-      }`,
-    fragmentShader: `
-      uniform float uHeat; uniform float uStrength; uniform float uTrail;
-      varying vec3 vN; varying vec3 vV; varying float vT;
-      void main() {
-        float rim = pow(abs(dot(normalize(vN), normalize(vV))), 1.6);
-        float along = uTrail > 0.5 ? pow(vT, 1.3) * smoothstep(0.0, 0.2, 1.0 - vT) : pow(1.0 - vT, 1.4) * smoothstep(0.0, 0.18, vT);
-        vec3 hot = vec3(3.0, 2.2, 1.2);
-        vec3 cool = vec3(2.0, 0.55, 0.2);
-        vec3 col = mix(cool, hot, along);
-        gl_FragColor = vec4(col, rim * along * uHeat * uStrength);
-      }`,
-    transparent: true,
-    blending: AdditiveBlending,
-    depthWrite: false,
-    side: DoubleSide,
-    toneMapped: false,
-  });
-  sink.current.push(m);
-  return m;
-}
-
-/**
  * The command module alone: through the fire of reentry (heat shield first, a plasma wake behind),
  * then under three parachutes and down into the sea at the splashdown set.
  */
@@ -411,7 +375,7 @@ export function ReentryCapsule() {
   const group = useRef<Group>(null);
   const body = useRef<Group>(null);
   const wake = useRef<Group>(null);
-  const wakeMats = useRef<ShaderMaterial[]>([]);
+  const heat = useRef(0);
   const chutes = useRef<Group>(null);
   const sm = useRef<Group>(null);
   const flow = useRef<Group>(null);
@@ -434,7 +398,16 @@ export function ReentryCapsule() {
       const p = homePosition(t);
       const d = norm(sub(homePosition(t + 0.05), homePosition(t - 0.05)));
       // Heat shield (the -Z base of the cone) leads; the nose trails.
-      orient(g, { pos: p, fwd: [-d[0], -d[1], -d[2]] as Vec, up: [0, 1, 0] });
+      // Right after the separation it still points its nose the way it is going; it then turns end for end
+      // (about ten seconds on its thrusters) to put the heat shield first.
+      const turn = Math.min(1, Math.max(0, (t - T.SM_SEP - 1.5) / 10));
+      const k = turn * turn * (3 - 2 * turn);
+      const ang = Math.PI * k;
+      // The heading swings through a half circle in the horizontal plane: from the way it is going (nose first)
+      // to the opposite (heat shield first, nose trailing).
+      const side = norm([d[2], 0, -d[0]]);
+      const fwd: Vec = [d[0] * Math.cos(ang) + side[0] * Math.sin(ang), d[1] * Math.cos(ang), d[2] * Math.cos(ang) + side[2] * Math.sin(ang)];
+      orient(g, { pos: p, fwd: norm(fwd), up: [0, 1, 0] });
       // The command module flies its heat shield forward, tipped about 17 degrees to the airflow (its lift
       // attitude: the shield faces slightly down and the apex trails up and back). The wake follows the air,
       // not the capsule, so it is turned back by the same angle.
@@ -455,10 +428,8 @@ export function ReentryCapsule() {
       if (wake.current) {
         // From inside the cabin the fire is not a shape around you but light at the window (see the scene's overlay).
         wake.current.visible = hot > 0.02 && viewKind(t) !== "cabin";
-        const flick = 1 + Math.sin(clock.elapsedTime * 38) * 0.08;
-        wake.current.scale.set(1, 1, hot * flick);
       }
-      wakeMats.current.forEach((m) => (m.uniforms.uHeat.value = hot));
+      heat.current = hot;
     } else {
       const alt = capsuleAltitude(t);
       const bob = alt < 1 ? Math.sin(clock.elapsedTime * 1.3) * 0.12 : 0;
@@ -494,23 +465,7 @@ export function ReentryCapsule() {
         </mesh>
       </group>
       <group ref={wake}>
-        {/* Heat shield leads (-Z). A shock cap glows just in front of it, a thin sheath of hot gas hugs
-            the capsule's sides, and a slim trail streams from the nose, widening and fading as it goes. */}
-        <mesh position={[0, 0, -0.5]} scale={[1.1, 1.1, 0.45]}>
-          <sphereGeometry args={[1, 24, 16]} />
-          <primitive object={plasmaMaterial(0.45, wakeMats)} attach="material" />
-        </mesh>
-        <mesh position={[0, 0, 0.7]} rotation={[Math.PI / 2, 0, 0]} scale={[1.02, 1.6, 1.02]}>
-          <coneGeometry args={[1, 1, 32, 6, true]} />
-          <primitive object={plasmaMaterial(0.3, wakeMats)} attach="material" />
-        </mesh>
-        {/* The wake: widest just behind the capsule's shoulders, thinning and fading as it streams away */}
-        <group ref={flow}>
-          <mesh position={[0, 0, 6.2]} rotation={[Math.PI / 2, 0, 0]} scale={[1.0, 10, 1.0]}>
-            <coneGeometry args={[1, 1, 32, 8, true]} />
-            <primitive object={plasmaMaterial(0.5, wakeMats)} attach="material" />
-          </mesh>
-        </group>
+        <Plasma heat={heat} flowRef={flow} />
       </group>
     </group>
     <ExpandingRing />

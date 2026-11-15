@@ -153,19 +153,6 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
         <TranslunarWorld startAt={startAt} from={from} to={to} onReady={begin} />
       </WorldCanvas>
 
-      {/* Inside the capsule in the entry the fire is light at the window: orange, brightest to one side, and flickering */}
-      {part === "return" && viewKind(now) === "cabin" && now >= T.REENTRY && (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 z-[8]"
-          style={{
-            opacity: Math.min(1, plasma(now) * 1.3) * (0.78 + 0.22 * Math.sin(now * 41) * Math.sin(now * 13 + 1)),
-            background: "radial-gradient(ellipse 70% 60% at 72% 42%, rgba(255,170,80,0.85), rgba(255,110,40,0.4) 45%, rgba(120,40,10,0.35) 80%)",
-            mixBlendMode: "screen",
-          }}
-        />
-      )}
-
       {/* The radio: Houston's countdown through the blackout, and each line of the real air-to-ground traffic */}
       {part === "return" && ((now >= ENTRY_BLACKOUT[0] && now < ENTRY_BLACKOUT[1]) || radioLine) && (() => {
         const dead = now >= ENTRY_BLACKOUT[0] && now < ENTRY_BLACKOUT[1];
@@ -227,18 +214,9 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
         <div className="mt-1 text-xs text-white/70">{inEntry ? s.blackoutSub : part === "return" ? s.teiSub : s.signalLostSub}</div>
       </div>
 
-      {/* The air thickens as the capsule falls: a blue glow along the bottom edge, and the layers it passes through */}
+      {/* The layers of the air the capsule falls through */}
       {entry && now < T.CHUTES + MAIN_DELAY && (
         <>
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-[5]"
-            style={{
-              height: "55%",
-              opacity: skyAir(entry.altKm),
-              background: "linear-gradient(to top, rgba(120,180,255,0.75), rgba(60,120,230,0.35) 35%, transparent)",
-            }}
-          />
           <div aria-hidden className="pointer-events-none absolute right-4 top-[calc(8vh+5rem)] z-10 font-mono text-[10px] text-white/80 sm:right-10">
             <div className="mb-1 uppercase tracking-[0.2em] text-space-cyan">{s.layerTitle}</div>
             <div className="relative flex h-40 gap-2">

@@ -221,3 +221,6 @@ Ba câu trước mất liên lạc được đặt vào vài giây ngay trước
 4. Cường độ theo mật độ không khí và tốc độ (độ nóng ∝ √ρ·v³): gần như không có ở 120 km, đạt đỉnh từ khoảng 90 km xuống 20 km, tắt hẳn khi mở dù.
 
 **Dưới dù:** đáy hướng xuống, đỉnh hướng lên. Chạm nước thì đổ úp mũi xuống ("Stable 2"), rồi túi hơi lật đứng.
+
+### Cập nhật hiệu ứng lửa (lần 2)
+Lửa không còn là các hình nón mờ: nay là **luồng hạt cháy** (khoảng 1.800 hạt, trắng nóng → vàng → cam → đỏ sẫm, mỏng dần theo khoảng cách) đi theo hướng luồng khí, cộng với **chỏm sáng trắng-vàng phía trước tấm chắn nhiệt**. Không có lửa trước điểm vào khí quyển (122 km); lửa tăng dần trong 4 giây đầu. Trong khoang, lửa chỉ làm ánh cam nhấp nháy lên mặt phi hành đoàn, không còn lớp phủ mờ lên toàn màn hình. Sau khi tách mô-đun phục vụ, tàu quay đầu ngược lại khoảng 10 giây để đưa tấm chắn nhiệt lên trước.
