@@ -88,6 +88,14 @@ export function chapterNumber(chapter: ChapterId): number {
  * Dynamic state machine transition function.
  * Evaluates player narrative decisions to branch the flow toward nominal progression or terminal endings.
  */
+/**
+ * True for an ending that stops the mission where it is. ENDING-1 (the safe landing) is decided by the
+ * landing call too, but the flight goes on: the player's own descent, the touchdown film, the flag.
+ */
+export function missionLost(ending: string | null | undefined): boolean {
+  return !!ending && ending !== "ending-1";
+}
+
 export function getNextStepId(currentStepId: string, state?: any): string | null {
   const decisions = state?.narrative?.decisions ?? state?.decisions ?? {};
 
@@ -121,15 +129,15 @@ export function getNextStepId(currentStepId: string, state?: any): string | null
       return "trajectory-decision";
     case "trajectory-decision":
       return "translunar-briefing";
-    // The ship reaches lunar orbit and the landing chapter starts at once.
+    // In lunar orbit: the commander's briefing (the screen between the chapters), then the landing.
     case "translunar-scene":
-      return "lunar-descent-scene";
+      return "lunar-descent-briefing";
     case "lunar-descent-briefing":
       return "lunar-descent-scene";
     case "lunar-descent-scene":
       // The 1202 call and the landing call are made inside the scene: abort, a landing in the boulders
       // or a wave-off (ENDING-2, 3, 4) all leave an ending behind; a safe landing goes on to the film.
-      return state?.narrative?.ending ? "end" : "touchdown-film";
+      return missionLost(state?.narrative?.ending) ? "end" : "touchdown-film";
     case "touchdown-film":
       return "flag-video";
     case "flag-video":
