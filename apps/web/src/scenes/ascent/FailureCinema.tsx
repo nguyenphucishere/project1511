@@ -2,18 +2,23 @@
 
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { addTrauma } from "@/game/shake";
-import { playSfx, speak, startBreathing, startHeartbeat, startSuspense, type Pulse, type Suspense } from "@/game/sfx";
+import { playSfx, playVoiceLine, prefetchVoiceLines, startBreathing, startHeartbeat, startSuspense, stopVoiceLine, type Pulse, type Suspense } from "@/game/sfx";
+import { startCauseBed, type CauseBed } from "@/game/causeAudio";
 import { useSettingsStore } from "@/game/settingsStore";
 import { useLocalized } from "@/i18n/useT";
+import type { LocalizedText } from "@/i18n";
 import type { AscentFailure } from "@/game/ascentFlight";
 import type { AscentFlight } from "./AscentWorld";
 import { CREW_NAME, FLAVOR, SCRIPT, type Cue } from "./failureScript";
+import { GaugeShot } from "./GaugeShot";
 import { HelmetShot } from "./HelmetShot";
 import { CauseFx } from "./CauseFx";
 
-const GLOW_RGB = { red: "255, 45, 30", amber: "255, 165, 45", blue: "120, 175, 255" } as const;
+const GLOW_RGB = { red: "255, 45, 30", amber: "255, 165, 45", blue: "120, 175, 255", green: "70, 225, 150", white: "235, 238, 255" } as const;
 /** The performed recordings are already fast and high; the player only adds a little shake on top. */
 const CREW_RATE = 1;
+/** The crew's voices have their own channel: the computer and Houston (the "guide" channel) speak at the same time, not in turn. */
+const CREW_CHANNEL = "crew";
 
 /**
  * The cabin cutaways of a doomed flight, laid over the 3D view: cuts to the three helmets, the score
@@ -52,17 +57,36 @@ export function FailureCinema({
   const nextStrobe = useRef(0);
   const localeRef = useRef(locale);
   localeRef.current = locale;
+  const fearRef = useRef(0);
+  const localizeRef = useRef(localize);
+  localizeRef.current = localize;
+
+  // The voice starts the moment its shot is cut in, straight from the clock and on its own channel, so it
+  // does not depend on a frame being drawn (a slow frame must never hold a crew line back).
+  const say = (line: LocalizedText, k: number) => {
+    const text = localizeRef.current(line);
+    void playVoiceLine(text, localeRef.current, { channel: CREW_CHANNEL, rate: CREW_RATE, panic: 0.15 + k * 0.3 }).then((r) => {
+      if (r !== "played") console.warn(`[crew voice] ${r}: "${text}"`);
+    });
+  };
+  const sayRef = useRef(say);
+  sayRef.current = say;
 
   useEffect(() => {
     let heart: Pulse | null = null;
     let breath: Pulse | null = null;
     let music: Suspense | null = null;
+    let bed: CauseBed | null = null;
     const start = () => {
       if (heart) return;
       heart = startHeartbeat();
       breath = startBreathing();
       music = startSuspense();
+      bed = startCauseBed(flavor.bed);
     };
+    // Every line of this film is downloaded before it is needed, so a voice starts with its shot and not after.
+    // One at a time, a little apart: fetching all of them at once would block the line that is wanted now.
+    const prefetchTimers = script.flatMap((c) => (c.line ? [c.line] : [])).map((line, i) => window.setTimeout(() => prefetchVoiceLines([localize(line)], localeRef.current), 300 + i * 450));
 
     const id = window.setInterval(() => {
       const f = flight.current;
@@ -84,6 +108,7 @@ export function FailureCinema({
         breath?.setRate(18 + k * 52);
         breath?.setLevel(f.boom ? 0 : 0.35 + k * 0.65);
         music?.setIntensity(f.boom ? 0 : 0.15 + k * 0.85);
+        bed?.setLevel(f.boom ? 0 : flavor.hush && f.mode === "failing" ? 0.35 : 0.25 + k * 0.75);
 
         // The cutaways, each once, on the clock of the phase it belongs to.
         script.forEach((cue, i) => {
@@ -95,7 +120,8 @@ export function FailureCinema({
           window.clearTimeout(hide.current);
           setShot({ cue, n: i });
           addTrauma(0.15 + flavor.shake * 0.2);
-          if (cue.line) speak(localize(cue.line), localeRef.current, { queue: true, rate: CREW_RATE, panic: 0.15 + k * 0.3 });
+          fearRef.current = k;
+          if (cue.line) sayRef.current(cue.line, k);
           for (const fx of cue.fx ?? []) {
             if (fx === "stinger") {
               music?.stinger();
@@ -138,19 +164,25 @@ export function FailureCinema({
         heart?.stop();
         breath?.stop();
         music?.stop(0.2);
+        bed?.stop(0.3);
+        stopVoiceLine(CREW_CHANNEL);
         heart = null;
         breath = null;
         music = null;
+        bed = null;
         setShot(null);
       }
     }, 80);
 
     return () => {
       window.clearInterval(id);
+      prefetchTimers.forEach((t) => window.clearTimeout(t));
       window.clearTimeout(hide.current);
       heart?.stop();
       breath?.stop();
       music?.stop(0.2);
+      bed?.stop(0.2);
+      stopVoiceLine(CREW_CHANNEL);
     };
   }, [flight, flavor, script, localize, reduced]);
 
@@ -198,10 +230,14 @@ export function FailureCinema({
 
       {shot && (
         <div key={shot.n} className="absolute inset-0 animate-in fade-in duration-100">
-          <HelmetShot who={shot.cue.who} look={shot.cue.look} ms={shot.cue.ms} glow={flavor.glow} shake={flavor.shake} fear={fear} reduced={reduced} />
+          {shot.cue.shot === "gauge" ? (
+            <GaugeShot kind={flavor.gauge} phase={shot.cue.phase} glow={flavor.glow} ms={shot.cue.ms} fear={fear} reduced={reduced} />
+          ) : (
+            <HelmetShot who={shot.cue.who} look={shot.cue.look} ms={shot.cue.ms} glow={flavor.glow} lens={flavor.helmet} shake={flavor.shake} fear={fear} reduced={reduced} />
+          )}
           {fire && <div className="absolute inset-0 mix-blend-screen" style={{ background: "radial-gradient(ellipse at 50% 110%, rgba(255,110,30,0.7), transparent 60%)" }} />}
           <div className="absolute inset-x-0 bottom-[10dvh] flex flex-col items-center gap-1 px-6 text-center">
-            <p className="font-mono text-xs uppercase tracking-[0.3em] text-white/70">{localize(CREW_NAME[shot.cue.who])}</p>
+            {(shot.cue.shot !== "gauge" || shot.cue.line) && <p className="font-mono text-xs uppercase tracking-[0.3em] text-white/70">{localize(CREW_NAME[shot.cue.who])}</p>}
             {shot.cue.line && (
               <p className="max-w-2xl text-xl font-semibold text-white drop-shadow-[0_2px_8px_rgb(0_0_0/0.9)] sm:text-3xl">“{localize(shot.cue.line)}”</p>
             )}

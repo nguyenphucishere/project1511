@@ -172,8 +172,9 @@ export function AscentScene({ onComplete, failure, orbitKm: orbitOverride }: Asc
       setCallout({ id, n });
       timers.current.push(window.setTimeout(() => calloutSeq.current === n && setCallout(null), 5500));
       playSfx(caution ? "caution" : "chime");
-      // In a crisis the crew and the computer talk over each other: the computer waits its turn.
-      speak(textFor(id), localeRef.current, { queue: !!failure });
+      // In a crisis the computer speaks on its own channel, alongside the crew (not queued behind them, which
+      // used to push the crew's lines later and later); calls from the computer still take turns with each other.
+      speak(textFor(id), localeRef.current, failure ? { queue: true, channel: "guide" } : {});
     },
     [textFor, failure],
   );

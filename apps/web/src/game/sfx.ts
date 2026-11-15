@@ -1,5 +1,6 @@
 import { useSettingsStore } from "./settingsStore";
 import { createVoicePlayer, type PlayOptions, type PlayResult } from "./voicePlayer";
+import { createTracer } from "./voiceTrace";
 
 /**
  * Procedural sound effects (Web Audio, no files). Every sound is a small recipe of oscillators
@@ -714,7 +715,22 @@ function duckForVoice(on: boolean) {
   master.gain.setTargetAtTime(on ? masterVolume * 0.35 : masterVolume, ctx.currentTime, on ? 0.05 : 0.6);
 }
 
-const voicePlayer = createVoicePlayer({ audio, enabled, noise, duck: duckForVoice });
+/** The independent watcher of the spoken lines (see ./voiceTrace.ts): in development it warns in the console as a problem appears. */
+export const voiceTracer = createTracer(() => (typeof performance !== "undefined" ? performance.now() : 0), {
+  warn: (i) => {
+    if (process.env.NODE_ENV !== "production") console.warn(`[voice-trace] ${i.kind}: ${i.message}`);
+  },
+});
+if (typeof window !== "undefined") (window as unknown as { __voiceTrace?: unknown }).__voiceTrace = voiceTracer;
+const voicePlayer = createVoicePlayer({ audio, enabled, noise, duck: duckForVoice, trace: voiceTracer.record });
+
+/**
+ * Downloads every recording of this language into memory, so no line is fetched while the game runs
+ * (a download in the way of a line is what made voices come late). Calls `onProgress` as files arrive.
+ */
+export function warmAllVoices(locale: "en" | "vi", onProgress?: (done: number, total: number) => void) {
+  return voicePlayer.warmAll(locale, onProgress);
+}
 let speakToken = 0;
 
 export interface SpeakOptions {
@@ -728,6 +744,8 @@ export interface SpeakOptions {
   rate?: number;
   /** 0 to 1: a voice in panic (see PlayOptions). */
   panic?: number;
+  /** The speaker line-up this line belongs to: channels play at the same time (see PlayOptions). */
+  channel?: string;
 }
 
 /** The fallback: the browser's speech synthesis, for a line with no recording. */
@@ -760,10 +778,10 @@ export function speak(text: string, locale: "en" | "vi", opts: SpeakOptions = {}
 }
 
 /** Stops the voice. With an id, only if that line is still the latest one. */
-export function stopSpeaking(id?: number) {
+export function stopSpeaking(id?: number, channel?: string) {
   if (id !== undefined && id !== speakToken) return;
   speakToken++;
-  voicePlayer.stop();
+  voicePlayer.stop(channel);
   if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
 }
 
@@ -772,8 +790,19 @@ export function playVoiceLine(text: string, locale: "en" | "vi", opts: PlayOptio
   return voicePlayer.play(text, locale, opts);
 }
 
-export function stopVoiceLine() {
-  voicePlayer.stop();
+export function stopVoiceLine(channel?: string) {
+  voicePlayer.stop(channel);
+}
+
+/** Downloads the recordings of these lines now, so each one starts the moment a scene calls for it. */
+export function prefetchVoiceLines(texts: string[], locale: "en" | "vi"): void {
+  if (!enabled() || typeof window === "undefined") return;
+  for (const t of texts) void voicePlayer.prefetch(t, locale);
+}
+
+/** How long the recording of a line is, in seconds (null when there is none or the length is unknown). */
+export function voiceDuration(text: string, locale: "en" | "vi"): Promise<number | null> {
+  return voicePlayer.duration(text, locale);
 }
 
 export type ScoreMood = "ride" | "awe" | "dread" | "hush";
