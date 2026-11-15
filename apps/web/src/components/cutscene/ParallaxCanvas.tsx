@@ -9,7 +9,7 @@ export type StarfieldMode = "drift" | "rise" | "still";
 export interface ParallaxCanvasProps {
   /** drift: slow sideways float. rise: stars stream down, as if climbing. still: no motion. */
   mode?: StarfieldMode;
-  /** Draws a lunar horizon with the Moon photo in the sky. */
+  /** Adds a lunar horizon (the Moon photo is always in the sky). */
   horizon?: boolean;
   className?: string;
 }
@@ -181,13 +181,13 @@ export function ParallaxCanvas({ mode = "drift", horizon = false, className }: P
       />
       {/* Soft darkening so text and the stars on top stay readable. */}
       <div className="absolute inset-0 bg-gradient-to-b from-space-deep/30 via-transparent to-space-deep/50" />
-      {horizon && (
+      {(
         // eslint-disable-next-line @next/next/no-img-element -- static, pre-sized
         <img
           src="/assets/env/moon.jpg"
           alt=""
           draggable={false}
-          className="pointer-events-none absolute right-[10%] top-[8%] aspect-square w-[min(26vw,26vh)] select-none rounded-full mix-blend-screen [mask-image:radial-gradient(circle,#000_58%,transparent_72%)]"
+          className="pointer-events-none absolute right-[10%] top-[8%] aspect-square w-[min(24vw,24vh)] select-none rounded-full mix-blend-screen [mask-image:radial-gradient(circle,#000_58%,transparent_72%)]"
         />
       )}
       <canvas ref={canvasRef} className="absolute inset-0 block h-full w-full [image-rendering:pixelated]" />
