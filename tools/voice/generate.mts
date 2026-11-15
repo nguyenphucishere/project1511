@@ -18,7 +18,7 @@
 // (its built-in aac encoder is used; output is small mono .m4a files).
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,6 +30,8 @@ const OUT_DIR = resolve(ROOT, "apps/web/public/assets/voice");
 const BASE = "https://www.aimaxstudio.com/api/v1";
 const args = new Map(process.argv.slice(2).map((a) => [a.replace(/^--/, "").split("=")[0], a.split("=")[1] ?? "true"]));
 const DRY = args.has("dry-run");
+/** Only fill in the length (`d`, seconds) of each recording in the manifest; needs ffprobe, not the API key. */
+const DURATIONS = args.has("durations");
 const ONLY_ROLE = args.get("only-role");
 const LIMIT = args.has("limit") ? Number(args.get("limit")) : Infinity;
 const CONCURRENCY = args.has("concurrency") ? Number(args.get("concurrency")) : 10;
@@ -40,7 +42,7 @@ const BATCH_CUES = 40;
 const FFMPEG = process.env.FFMPEG || "ffmpeg";
 /** Speech needs little: mono AAC at 48 kbps is about 6 KB a second and plays in every current browser. */
 const AAC_BITRATE = process.env.VOICE_BITRATE || "48k";
-const HAVE_FFMPEG = !DRY && spawnSync(FFMPEG, ["-version"], { encoding: "utf8" }).status === 0;
+const HAVE_FFMPEG = !DRY && !DURATIONS && spawnSync(FFMPEG, ["-version"], { encoding: "utf8" }).status === 0;
 /** Without ffmpeg (single requests only) the API's own mp3 is stored as it comes. */
 const EXT = HAVE_FFMPEG || DRY ? "m4a" : "mp3";
 
@@ -54,7 +56,7 @@ function readKey(): string {
   }
   throw new Error("AIMAX_API_KEY not found (set it in the environment or in .env.local)");
 }
-const KEY = DRY ? "" : readKey();
+const KEY = DRY || DURATIONS ? "" : readKey();
 const H = { "X-API-Key": KEY };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -113,10 +115,55 @@ async function resolveVoice(name: string, locale: VoiceLocale, provider = "minim
 interface Job { crisis?: boolean; tag?: string; role: string; locale: VoiceLocale; text: string; voiceLocale: VoiceLocale; key: string; file: string; hash: string }
 const manifestPath = resolve(OUT_DIR, "manifest.json");
 const prev = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf8")) : { lines: {} };
-const manifest: { version: 1; model: string; roles: Record<string, { radio: boolean }>; lines: Record<string, { f: string; role: string; h: string }> } = {
+const manifest: { version: 1; model: string; roles: Record<string, { radio: boolean }>; lines: Record<string, { f: string; role: string; h: string; d?: number }> } = {
   version: 1, model: cfg.model, roles: {}, lines: { ...prev.lines },
 };
 for (const [role, c] of Object.entries(cfg.roles)) manifest.roles[role] = { radio: c.radio };
+
+// ---- lengths: the game cuts and times its scenes by how long each line lasts
+const FFPROBE = process.env.FFPROBE || FFMPEG.replace(/ffmpeg(.exe)?$/i, "ffprobe$1");
+function durationOf(file: string): number | null {
+  const r = spawnSync(FFPROBE, ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8" });
+  const d = parseFloat(r.stdout);
+  if (r.status === 0 && Number.isFinite(d)) return Math.round(d * 100) / 100;
+  return file.endsWith(".mp3") ? mp3Seconds(file) : null;
+}
+/** Without ffprobe: an mp3's length from its first frame's bitrate and the file size (exact for constant bitrate). */
+function mp3Seconds(file: string): number | null {
+  const buf = readFileSync(file);
+  let i = 0;
+  if (buf.toString("latin1", 0, 3) === "ID3") i = 10 + ((buf[6]! << 21) | (buf[7]! << 14) | (buf[8]! << 7) | buf[9]!);
+  for (; i + 4 < buf.length; i++) {
+    if (buf[i] !== 0xff || (buf[i + 1]! & 0xe0) !== 0xe0) continue;
+    const version = (buf[i + 1]! >> 3) & 3; // 3 = MPEG1, 2 = MPEG2
+    const layer = (buf[i + 1]! >> 1) & 3; // 1 = layer III
+    const br = buf[i + 2]! >> 4;
+    if (layer !== 1 || version === 1 || br === 0 || br === 15) continue;
+    const kbps = version === 3 ? [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320][br]! : [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160][br]!;
+    return Math.round(((buf.length - i) * 8 / (kbps * 1000)) * 100) / 100;
+  }
+  return null;
+}
+/** Sets `d` on every recording that has none (or all of them with --durations=all). Returns how many were set. */
+function fillDurations(all = false): number {
+  let n = 0;
+  for (const line of Object.values(manifest.lines)) {
+    if (!all && line.d !== undefined) continue;
+    const path = resolve(OUT_DIR, line.f);
+    const d = existsSync(path) ? durationOf(path) : null;
+    if (d !== null) {
+      line.d = d;
+      n++;
+    }
+  }
+  return n;
+}
+if (DURATIONS) {
+  const n = fillDurations(args.get("durations") === "all");
+  writeFileSync(resolve(OUT_DIR, "manifest.json"), JSON.stringify(manifest, null, 1) + "\n");
+  console.log(`lengths set for ${n} recordings`);
+  process.exit(0);
+}
 
 const jobs: Job[] = [];
 for (const l of lines) {
@@ -135,7 +182,7 @@ for (const l of lines) {
       .slice(0, 10);
     const file = `${locale}/${key}.${EXT}`;
     const known = manifest.lines[key];
-    if (known && known.h === hash && existsSync(resolve(OUT_DIR, file))) continue;
+    if (known && known.h === hash && existsSync(resolve(OUT_DIR, known.f ?? file))) continue; // whichever format it was recorded in
     jobs.push({ role: l.role, locale, text, voiceLocale, key, file, hash, crisis: !!crisis, tag: crisis ? l.tag : undefined });
   }
 }
@@ -156,9 +203,18 @@ if (!ONLY_ROLE) {
 }
 const chars = jobs.reduce((n, j) => n + j.text.length, 0);
 console.log(`${lines.length} lines x 2 languages: ${jobs.length} to record (${chars} characters), ${lines.length * 2 - jobs.length} already up to date`);
-if (DRY) process.exit(0);
+if (DRY) {
+  // Say which lines would be recorded, so a --dry-run answers "what changed?" and not just "how many?".
+  for (const j of jobs.slice(0, 40)) console.log(`  would record [${j.locale}] ${j.role}: ${j.text.slice(0, 60)}`);
+  if (jobs.length > 40) console.log(`  ... and ${jobs.length - 40} more`);
+  process.exit(0);
+}
 mkdirSync(resolve(OUT_DIR, "en"), { recursive: true });
 mkdirSync(resolve(OUT_DIR, "vi"), { recursive: true });
+// A run that was killed part-way may have left unfinished temp files: they are never real recordings, so clear them.
+for (const loc of ["en", "vi"]) {
+  for (const name of readdirSync(resolve(OUT_DIR, loc))) if (name.includes(".part.") || name.endsWith(".part")) rmSync(resolve(OUT_DIR, loc, name), { force: true });
+}
 
 // ---- one request per line (the fallback, and --no-batch)
 async function record(job: Job): Promise<{ audio: Buffer; chars: number }> {
@@ -246,13 +302,36 @@ function mapCues(cues: string[], segs: Seg[]): ({ start: number; end: number } |
   }
   return out;
 }
+/** Where a recording is written first. Only a finished file is renamed onto its real name, so the game (or an
+ * interrupted run) can never find a half-written recording there. The extension is kept so ffmpeg knows the format. */
+const partPath = (dest: string) => {
+  const dot = dest.lastIndexOf(".");
+  return dot > Math.max(dest.lastIndexOf("/"), dest.lastIndexOf("\\")) ? `${dest.slice(0, dot)}.part${dest.slice(dot)}` : `${dest}.part`;
+};
+/** Writes `data` to `dest` atomically (temp file, then rename). */
+function writeAtomic(dest: string, data: Buffer): void {
+  const part = partPath(dest);
+  try {
+    writeFileSync(part, data);
+    renameSync(part, dest);
+  } catch (e) {
+    rmSync(part, { force: true });
+    throw e;
+  }
+}
 function cut(src: string, start: number, end: number, dest: string): boolean {
+  const part = partPath(dest);
   const r = spawnSync(
     FFMPEG,
-    ["-y", "-hide_banner", "-loglevel", "error", "-ss", start.toFixed(3), "-t", (end - start + 0.12).toFixed(3), "-i", src, "-ac", "1", "-af", "afade=t=in:d=0.012", "-c:a", "aac", "-b:a", AAC_BITRATE, dest],
+    ["-y", "-hide_banner", "-loglevel", "error", "-ss", start.toFixed(3), "-t", (end - start + 0.12).toFixed(3), "-i", src, "-ac", "1", "-af", "afade=t=in:d=0.012", "-c:a", "aac", "-b:a", AAC_BITRATE, part],
     { encoding: "utf8" },
   );
-  return r.status === 0 && existsSync(dest);
+  if (r.status === 0 && existsSync(part)) {
+    renameSync(part, dest); // replaces an older recording in one step
+    return true;
+  }
+  rmSync(part, { force: true }); // never leave a partial file behind
+  return false;
 }
 const srtTime = (s: number) => {
   const ms = Math.round(s * 1000);
@@ -389,7 +468,7 @@ async function worker() {
         rmSync(tmpFile, { force: true });
         if (!ok) throw new Error("ffmpeg could not convert the recording");
       } else {
-        writeFileSync(resolve(OUT_DIR, job.file), audio);
+        writeAtomic(resolve(OUT_DIR, job.file), audio);
       }
       manifest.lines[job.key] = { f: job.file, role: job.role, h: job.hash };
       spent += c;
@@ -401,6 +480,7 @@ async function worker() {
   }
 }
 if (total) await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+fillDurations();
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 1) + "\n");
 // Remove recordings nothing refers to any more (an older format, a reworded line).
 if (!ONLY_ROLE && !Number.isFinite(LIMIT) === true) {

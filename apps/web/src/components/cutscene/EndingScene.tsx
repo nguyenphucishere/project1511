@@ -353,19 +353,29 @@ export function EndingScene({ ending }: { ending: EndingDefinition }) {
   const caption = localize(SCENE_CAPTION[key]);
 
   return (
-    <figure className="bezel w-full overflow-hidden bg-space-deep/95" data-ending-scene={key}>
+    <figure className="w-full" data-ending-scene={key}>
       <style>{STYLES}</style>
-      <svg
-        viewBox="0 0 600 180"
-        role="img"
-        aria-label={caption}
-        className="block h-auto w-full"
-        preserveAspectRatio="xMidYMid slice"
-      >
-        <rect width={600} height={180} fill="#070b16" />
-        <Scene />
-      </svg>
-      <figcaption className="px-3 py-1.5 text-left font-mono text-[11px] text-foreground/65">{caption}</figcaption>
+      {/* The broadcast on a television set, with the three of them watching it from the sofa. */}
+      <div className="mx-auto w-full max-w-xl rounded-2xl border-[6px] border-[#2b2f3a] bg-[#14161d] p-2 shadow-[0_0_40px_rgb(120_160_255/0.25)]">
+        <div className="overflow-hidden rounded-lg border border-black/70">
+          <svg viewBox="0 0 600 180" role="img" aria-label={caption} className="block h-auto w-full" preserveAspectRatio="xMidYMid slice">
+            <rect width={600} height={180} fill="#070b16" />
+            <Scene />
+          </svg>
+        </div>
+      </div>
+      <div className="mx-auto h-2 w-24 rounded-b bg-[#2b2f3a]" aria-hidden />
+      <div className="relative z-[1] mx-auto -mb-1 mt-2 flex max-w-md items-end justify-center gap-2 sm:gap-4" aria-hidden>
+        {[
+          ["orange", 447 / 600],
+          ["navy", 550 / 600],
+          ["pink", 505 / 600],
+        ].map(([name, aspect]) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={name as string} src={`/assets/characters/viewers/${name}.webp`} alt="" draggable={false} className="h-20 w-auto select-none sm:h-28" style={{ aspectRatio: String(aspect) }} />
+        ))}
+      </div>
+      <figcaption className="mt-1 px-3 py-1.5 text-center font-mono text-[11px] text-foreground/65">{caption}</figcaption>
     </figure>
   );
 }
