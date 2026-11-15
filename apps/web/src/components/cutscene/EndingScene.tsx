@@ -91,7 +91,6 @@ const HULL = "#d8c27a";
 const HULL_DARK = "#8f7b3d";
 const FLAME = "#ffb03a";
 const FLAME_HOT = "#fff1b0";
-const EARTH = "#2f6fb3";
 
 function Stars() {
   const pts = [
@@ -114,12 +113,22 @@ function Stars() {
   );
 }
 
+/** The Moon photo, faded at the rim so its black backdrop vanishes against the night sky. */
 function Earth({ cx, cy, r }: { cx: number; cy: number; r: number }) {
+  const id = `moon-fade-${cx}-${cy}`;
+  const d = r * 2.9;
   return (
-    <g>
-      <circle cx={cx} cy={cy} r={r} fill={EARTH} />
-      <rect x={cx - r * 0.5} y={cy - r * 0.3} width={r * 0.7} height={3} fill="#e8ecf4" opacity={0.8} />
-      <rect x={cx - r * 0.1} y={cy + r * 0.25} width={r * 0.6} height={3} fill="#e8ecf4" opacity={0.8} />
+    <g style={{ mixBlendMode: "screen" }}>
+      <defs>
+        <radialGradient id={id}>
+          <stop offset="58%" stopColor="#fff" />
+          <stop offset="72%" stopColor="#000" />
+        </radialGradient>
+        <mask id={`${id}-m`}>
+          <circle cx={cx} cy={cy} r={d / 2} fill={`url(#${id})`} />
+        </mask>
+      </defs>
+      <image href="/assets/env/moon.jpg" x={cx - d / 2} y={cy - d / 2} width={d} height={d} mask={`url(#${id}-m)`} />
     </g>
   );
 }
@@ -344,19 +353,29 @@ export function EndingScene({ ending }: { ending: EndingDefinition }) {
   const caption = localize(SCENE_CAPTION[key]);
 
   return (
-    <figure className="bezel w-full overflow-hidden bg-space-deep/95" data-ending-scene={key}>
+    <figure className="w-full" data-ending-scene={key}>
       <style>{STYLES}</style>
-      <svg
-        viewBox="0 0 600 180"
-        role="img"
-        aria-label={caption}
-        className="block h-auto w-full"
-        preserveAspectRatio="xMidYMid slice"
-      >
-        <rect width={600} height={180} fill="#070b16" />
-        <Scene />
-      </svg>
-      <figcaption className="px-3 py-1.5 text-left font-mono text-[11px] text-foreground/65">{caption}</figcaption>
+      {/* The broadcast on a television set, with the three of them watching it from the sofa. */}
+      <div className="mx-auto w-full max-w-xl rounded-2xl border-[6px] border-[#2b2f3a] bg-[#14161d] p-2 shadow-[0_0_40px_rgb(120_160_255/0.25)]">
+        <div className="overflow-hidden rounded-lg border border-black/70">
+          <svg viewBox="0 0 600 180" role="img" aria-label={caption} className="block h-auto w-full" preserveAspectRatio="xMidYMid slice">
+            <rect width={600} height={180} fill="#070b16" />
+            <Scene />
+          </svg>
+        </div>
+      </div>
+      <div className="mx-auto h-2 w-24 rounded-b bg-[#2b2f3a]" aria-hidden />
+      <div className="relative z-[1] mx-auto -mb-1 mt-2 flex max-w-md items-end justify-center gap-2 sm:gap-4" aria-hidden>
+        {[
+          ["orange", 447 / 600],
+          ["navy", 550 / 600],
+          ["pink", 505 / 600],
+        ].map(([name, aspect]) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={name as string} src={`/assets/characters/viewers/${name}.webp`} alt="" draggable={false} className="h-20 w-auto select-none sm:h-28" style={{ aspectRatio: String(aspect) }} />
+        ))}
+      </div>
+      <figcaption className="mt-1 px-3 py-1.5 text-center font-mono text-[11px] text-foreground/65">{caption}</figcaption>
     </figure>
   );
 }

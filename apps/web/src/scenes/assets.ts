@@ -12,6 +12,8 @@ const EARTH_NIGHT = "/assets/textures/earth_night_4k.jpg";
 const EARTH_CLOUDS = "/assets/textures/earth_clouds_4k.jpg";
 const MILKY_WAY = "/assets/textures/milky_way_4k.jpg";
 const MOON = "/assets/textures/moon_4k.jpg";
+/** The three crew drawn in the cabin (see translunar/Cabin.tsx), loaded one by one. */
+const CREW = ["orange", "navy", "pink"].map((n) => `/assets/characters/viewers/${n}.webp`);
 const CROWD = ["/assets/audio/crowd-murmur.mp3", "/assets/audio/crowd-awe.mp3", "/assets/audio/crowd-cheer.mp3"];
 const DOCTOR_FRAMES = ["/assets/characters/doctor/idle.webp", "/assets/characters/doctor/wave.webp"];
 
@@ -43,8 +45,8 @@ export const SCENE_ASSETS: Record<string, SceneAssets> = {
     hdr: [STUDIO_HDR],
   },
   translunar: {
-    files: [studio, { url: EARTH_DAY, weight: 4 }, { url: EARTH_CLOUDS, weight: 5 }, { url: MILKY_WAY, weight: 1 }, { url: MOON, weight: 6 }],
-    textures: [earthPair, MILKY_WAY, MOON],
+    files: [studio, { url: EARTH_DAY, weight: 4 }, { url: EARTH_CLOUDS, weight: 5 }, { url: MILKY_WAY, weight: 1 }, { url: MOON, weight: 6 }, ...CREW.map((url) => ({ url, weight: 0.3 }))],
+    textures: [earthPair, MILKY_WAY, MOON, ...CREW.map((url) => [url])],
     hdr: [STUDIO_HDR],
   },
   "lunar-descent": {

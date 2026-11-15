@@ -57,8 +57,8 @@
     },
     {
       "role": "armstrong",
-      "en": "Three days to the Moon. Sit back and watch; this part flies itself.",
-      "vi": "Ba ngày tới Mặt Trăng. Cứ ngồi xem nhé, đoạn này tự bay.",
+      "en": "After the burn we turn the ship around, dock with Eagle and pull it out of the third stage. Then three days to the Moon: sit back and watch, this part flies itself.",
+      "vi": "Sau khi đốt xong, ta quay đầu tàu, ghép với Eagle và kéo nó ra khỏi tầng ba. Rồi ba ngày tới Mặt Trăng: cứ ngồi xem nhé, đoạn này tự bay.",
       "src": "briefing:translunar"
     },
     {
@@ -69,8 +69,8 @@
     },
     {
       "role": "armstrong",
-      "en": "Computer flies the first part. At 150 metres the lander is yours: pick a site, brake, steer clear of the boulders.",
-      "vi": "Máy tính lo phần đầu. Đến độ cao 150 mét, tàu là của bạn: chọn điểm đáp, giảm tốc, tránh xa đá tảng.",
+      "en": "Eagle undocks and the computer flies the descent. When trouble comes the calls are yours: the alarm, then where to land. The last 150 metres, you fly.",
+      "vi": "Eagle tách ra và máy tính lo phần hạ cánh. Khi có sự cố, quyết định là của bạn: báo động, rồi chọn chỗ đáp. 150 mét cuối cùng, bạn tự lái.",
       "src": "briefing:lunar-descent"
     },
     {
@@ -872,13 +872,6 @@
       "src": "launch-count#10"
     },
     {
-      "role": "armstrong",
-      "en": "Houston! Houston, heavy vibration!",
-      "vi": "Houston! Houston, rung rất mạnh!",
-      "src": "failure-cabin:structural#0",
-      "tag": "(gasps) "
-    },
-    {
       "role": "aldrin",
       "en": "Neil! That is not right!",
       "vi": "Neil! Không ổn rồi!",
@@ -900,24 +893,17 @@
       "tag": "(gasps) "
     },
     {
-      "role": "aldrin",
-      "en": "She is shaking apart!",
-      "vi": "Nó đang rung nát ra!",
+      "role": "collins",
+      "en": "Master alarm!",
+      "vi": "Báo động chính!",
       "src": "failure-cabin:structural#4",
       "tag": "(gasps) "
     },
     {
-      "role": "collins",
-      "en": "Master alarm!",
-      "vi": "Báo động chính!",
+      "role": "aldrin",
+      "en": "She is shaking apart!",
+      "vi": "Nó đang rung nát ra!",
       "src": "failure-cabin:structural#5",
-      "tag": "(gasps) "
-    },
-    {
-      "role": "armstrong",
-      "en": "Houston, we are losing her! Losing her!",
-      "vi": "Houston, sắp mất nó rồi! Mất nó rồi!",
-      "src": "failure-cabin:structural#6",
       "tag": "(gasps) "
     },
     {
@@ -931,42 +917,28 @@
       "role": "aldrin",
       "en": "Abort! Abort!",
       "vi": "Huỷ bỏ! Huỷ bỏ!",
-      "src": "failure-cabin:structural#9",
+      "src": "failure-cabin:structural#8",
       "tag": "(gasps) "
     },
     {
       "role": "collins",
       "en": "Houston, Columbia! Mayday! Mayday!",
       "vi": "Houston, Columbia! Cấp cứu! Cấp cứu!",
-      "src": "failure-cabin:structural#10",
+      "src": "failure-cabin:structural#9",
       "tag": "(gasps) "
     },
     {
       "role": "armstrong",
       "en": "Buzz, look at me.",
       "vi": "Buzz, nhìn tôi này.",
-      "src": "failure-cabin:structural#11",
-      "tag": "(breath) "
-    },
-    {
-      "role": "aldrin",
-      "en": "Neil. I am here.",
-      "vi": "Neil. Tôi ở đây.",
-      "src": "failure-cabin:structural#13",
+      "src": "failure-cabin:structural#10",
       "tag": "(breath) "
     },
     {
       "role": "armstrong",
       "en": "It has been an honor.",
       "vi": "Thật vinh dự.",
-      "src": "failure-cabin:structural#14",
-      "tag": "(breath) "
-    },
-    {
-      "role": "armstrong",
-      "en": "Gentlemen. Thank you.",
-      "vi": "Các quý ông. Cảm ơn.",
-      "src": "failure-cabin:structural#16",
+      "src": "failure-cabin:structural#11",
       "tag": "(breath) "
     },
     {
@@ -977,59 +949,38 @@
       "tag": "(gasps) "
     },
     {
-      "role": "collins",
-      "en": "Gauge reads low! Neil, it reads low!",
-      "vi": "Đồng hồ báo thấp! Neil, nó báo thấp!",
-      "src": "failure-cabin:fuel-depleted#1",
-      "tag": "(gasps) "
-    },
-    {
-      "role": "aldrin",
-      "en": "How low?",
-      "vi": "Thấp cỡ nào?",
-      "src": "failure-cabin:fuel-depleted#2",
-      "tag": "(breath) "
-    },
-    {
-      "role": "collins",
-      "en": "Too low! Too low!",
-      "vi": "Quá thấp! Quá thấp!",
-      "src": "failure-cabin:fuel-depleted#3",
-      "tag": "(gasps) "
-    },
-    {
       "role": "armstrong",
       "en": "Check the tank pressures.",
       "vi": "Kiểm tra áp suất bình.",
-      "src": "failure-cabin:fuel-depleted#4",
+      "src": "failure-cabin:fuel-depleted#2",
       "tag": "(breath) "
     },
     {
       "role": "aldrin",
       "en": "Neil, we are short! Short!",
       "vi": "Neil, thiếu rồi! Thiếu rồi!",
-      "src": "failure-cabin:fuel-depleted#5",
+      "src": "failure-cabin:fuel-depleted#3",
       "tag": "(gasps) "
     },
     {
       "role": "armstrong",
       "en": "Come on! Come on!",
       "vi": "Nào! Nào!",
-      "src": "failure-cabin:fuel-depleted#6",
+      "src": "failure-cabin:fuel-depleted#4",
       "tag": "(gasps) "
     },
     {
       "role": "armstrong",
       "en": "Engines out! Engines are out!",
       "vi": "Động cơ tắt rồi! Tắt hết rồi!",
-      "src": "failure-cabin:fuel-depleted#7",
+      "src": "failure-cabin:fuel-depleted#5",
       "tag": "(gasps) "
     },
     {
       "role": "aldrin",
       "en": "It is so quiet.",
       "vi": "Yên lặng quá.",
-      "src": "failure-cabin:fuel-depleted#8",
+      "src": "failure-cabin:fuel-depleted#7",
       "tag": "(breath) "
     },
     {
@@ -1040,72 +991,37 @@
       "tag": "(gasps) "
     },
     {
-      "role": "aldrin",
-      "en": "Houston, do you read? Houston!",
-      "vi": "Houston, có nghe không? Houston!",
-      "src": "failure-cabin:fuel-depleted#11",
-      "tag": "(gasps) "
-    },
-    {
       "role": "collins",
       "en": "Houston? Anyone?",
       "vi": "Houston? Có ai không?",
-      "src": "failure-cabin:fuel-depleted#12",
-      "tag": "(breath) "
-    },
-    {
-      "role": "armstrong",
-      "en": "We did everything right.",
-      "vi": "Chúng ta đã làm đúng mọi thứ.",
-      "src": "failure-cabin:fuel-depleted#13",
-      "tag": "(breath) "
-    },
-    {
-      "role": "collins",
-      "en": "Neil...",
-      "vi": "Neil...",
-      "src": "failure-cabin:fuel-depleted#15",
+      "src": "failure-cabin:fuel-depleted#10",
       "tag": "(breath) "
     },
     {
       "role": "armstrong",
       "en": "We are not accelerating! Houston!",
       "vi": "Chúng ta không tăng tốc! Houston!",
-      "src": "failure-cabin:slow-climb#0",
+      "src": "failure-cabin:slow-climb#1",
       "tag": "(gasps) "
     },
     {
       "role": "aldrin",
       "en": "Altitude is not building.",
       "vi": "Độ cao không lên.",
-      "src": "failure-cabin:slow-climb#1",
+      "src": "failure-cabin:slow-climb#3",
       "tag": "(breath) "
     },
     {
       "role": "collins",
       "en": "Too heavy, Neil! Too heavy!",
       "vi": "Quá nặng, Neil! Quá nặng!",
-      "src": "failure-cabin:slow-climb#2",
+      "src": "failure-cabin:slow-climb#5",
       "tag": "(gasps) "
-    },
-    {
-      "role": "armstrong",
-      "en": "Full thrust. Give her everything.",
-      "vi": "Hết công suất. Dồn hết cho nó.",
-      "src": "failure-cabin:slow-climb#3",
-      "tag": "(breath) "
     },
     {
       "role": "aldrin",
       "en": "Climb rate zero!",
       "vi": "Tốc độ leo bằng không!",
-      "src": "failure-cabin:slow-climb#4",
-      "tag": "(gasps) "
-    },
-    {
-      "role": "armstrong",
-      "en": "Come on, lift! Lift!",
-      "vi": "Nào, bay lên! Bay lên!",
       "src": "failure-cabin:slow-climb#6",
       "tag": "(gasps) "
     },
@@ -1120,7 +1036,7 @@
       "role": "aldrin",
       "en": "We are coming down!",
       "vi": "Chúng ta đang rơi xuống!",
-      "src": "failure-cabin:slow-climb#8",
+      "src": "failure-cabin:slow-climb#9",
       "tag": "(gasps) "
     },
     {
@@ -1134,21 +1050,14 @@
       "role": "collins",
       "en": "Neil, the water!",
       "vi": "Neil, mặt nước!",
-      "src": "failure-cabin:slow-climb#12",
+      "src": "failure-cabin:slow-climb#11",
       "tag": "(gasps) "
     },
     {
       "role": "armstrong",
       "en": "Hold on, boys.",
       "vi": "Bám chắc, các chàng trai.",
-      "src": "failure-cabin:slow-climb#13",
-      "tag": "(breath) "
-    },
-    {
-      "role": "aldrin",
-      "en": "Neil. It was an honor.",
-      "vi": "Neil. Thật vinh dự khi bay cùng anh.",
-      "src": "failure-cabin:slow-climb#15",
+      "src": "failure-cabin:slow-climb#12",
       "tag": "(breath) "
     },
     {
@@ -1156,13 +1065,6 @@
       "en": "The winds are throwing us!",
       "vi": "Gió đang quăng chúng ta!",
       "src": "failure-cabin:wind-shear#0",
-      "tag": "(gasps) "
-    },
-    {
-      "role": "collins",
-      "en": "Yawing! I am losing the horizon!",
-      "vi": "Lệch hướng! Tôi mất chân trời!",
-      "src": "failure-cabin:wind-shear#1",
       "tag": "(gasps) "
     },
     {
@@ -1188,13 +1090,6 @@
     },
     {
       "role": "armstrong",
-      "en": "We are out of control! Out of control!",
-      "vi": "Chúng ta mất kiểm soát! Mất kiểm soát!",
-      "src": "failure-cabin:wind-shear#6",
-      "tag": "(gasps) "
-    },
-    {
-      "role": "armstrong",
       "en": "She is tumbling! We are tumbling!",
       "vi": "Nó đang lật nhào! Chúng ta đang lật!",
       "src": "failure-cabin:wind-shear#7",
@@ -1204,7 +1099,7 @@
       "role": "collins",
       "en": "I cannot tell up from down!",
       "vi": "Tôi không phân biệt được trên dưới!",
-      "src": "failure-cabin:wind-shear#9",
+      "src": "failure-cabin:wind-shear#8",
       "tag": "(gasps) "
     },
     {
@@ -1218,21 +1113,21 @@
       "role": "collins",
       "en": "Tell them we tried.",
       "vi": "Hãy nói với họ là chúng tôi đã cố.",
-      "src": "failure-cabin:wind-shear#12",
+      "src": "failure-cabin:wind-shear#11",
       "tag": "(breath) "
     },
     {
       "role": "armstrong",
       "en": "Buzz!",
       "vi": "Buzz!",
-      "src": "failure-cabin:wind-shear#13",
+      "src": "failure-cabin:wind-shear#12",
       "tag": "(gasps) "
     },
     {
       "role": "aldrin",
       "en": "Neil!",
       "vi": "Neil!",
-      "src": "failure-cabin:wind-shear#14",
+      "src": "failure-cabin:wind-shear#13",
       "tag": "(gasps) "
     },
     {
@@ -1257,73 +1152,38 @@
       "tag": "(gasps) "
     },
     {
-      "role": "armstrong",
-      "en": "Status! Report!",
-      "vi": "Báo cáo tình trạng!",
-      "src": "failure-cabin:lightning#3",
-      "tag": "(gasps) "
-    },
-    {
-      "role": "collins",
-      "en": "Telemetry is dropping!",
-      "vi": "Dữ liệu đang mất!",
-      "src": "failure-cabin:lightning#4",
-      "tag": "(gasps) "
-    },
-    {
       "role": "aldrin",
       "en": "Neil, the lights!",
       "vi": "Neil, đèn!",
-      "src": "failure-cabin:lightning#5",
-      "tag": "(gasps) "
-    },
-    {
-      "role": "armstrong",
-      "en": "Houston? Houston! Come in, Houston!",
-      "vi": "Houston? Houston! Trả lời đi, Houston!",
-      "src": "failure-cabin:lightning#6",
+      "src": "failure-cabin:lightning#4",
       "tag": "(gasps) "
     },
     {
       "role": "armstrong",
       "en": "We lost everything! Everything!",
       "vi": "Chúng ta mất hết rồi! Mất hết!",
-      "src": "failure-cabin:lightning#7",
-      "tag": "(gasps) "
-    },
-    {
-      "role": "aldrin",
-      "en": "Abort! No guidance!",
-      "vi": "Huỷ bỏ! Mất dẫn đường!",
-      "src": "failure-cabin:lightning#8",
+      "src": "failure-cabin:lightning#6",
       "tag": "(gasps) "
     },
     {
       "role": "collins",
       "en": "The radio is dead!",
       "vi": "Radio chết rồi!",
-      "src": "failure-cabin:lightning#9",
+      "src": "failure-cabin:lightning#8",
       "tag": "(gasps) "
-    },
-    {
-      "role": "armstrong",
-      "en": "Stay calm.",
-      "vi": "Bình tĩnh.",
-      "src": "failure-cabin:lightning#10",
-      "tag": "(breath) "
     },
     {
       "role": "collins",
       "en": "Is anyone there?",
       "vi": "Có ai không?",
-      "src": "failure-cabin:lightning#12",
+      "src": "failure-cabin:lightning#10",
       "tag": "(breath) "
     },
     {
       "role": "armstrong",
-      "en": "Stay calm. Stay calm.",
-      "vi": "Bình tĩnh. Bình tĩnh.",
-      "src": "failure-cabin:lightning#13",
+      "en": "Stay calm.",
+      "vi": "Bình tĩnh.",
+      "src": "failure-cabin:lightning#11",
       "tag": "(breath) "
     },
     {
@@ -1455,6 +1315,106 @@
       "en": "Columbia... Houston...",
       "vi": "Columbia... Houston...",
       "src": "launch-room#18"
+    },
+    {
+      "role": "collins",
+      "en": "Eagle, Columbia. I think you've got a fine-looking flying machine there, despite the fact you're upside down.",
+      "vi": "Eagle, Columbia đây. Tôi thấy cỗ máy bay của anh trông tuyệt đấy, dù nó đang lộn ngược.",
+      "src": "landing-film:approach#0"
+    },
+    {
+      "role": "armstrong",
+      "en": "Somebody's upside down.",
+      "vi": "Có người đang lộn ngược đấy.",
+      "src": "landing-film:approach#1"
+    },
+    {
+      "role": "capcom",
+      "en": "Eagle, Houston. You are go for powered descent.",
+      "vi": "Eagle, Houston đây. Các anh được phép hạ cánh có động cơ.",
+      "src": "landing-film:approach#2"
+    },
+    {
+      "role": "aldrin",
+      "en": "Ignition.",
+      "vi": "Đánh lửa.",
+      "src": "landing-film:approach#3"
+    },
+    {
+      "role": "capcom",
+      "en": "Eagle, Houston. You are looking good.",
+      "vi": "Eagle, Houston đây. Mọi thứ đang tốt.",
+      "src": "landing-film:approach#4"
+    },
+    {
+      "role": "armstrong",
+      "en": "Program alarm.",
+      "vi": "Báo động chương trình.",
+      "src": "landing-film:approach#5",
+      "tag": "(breath) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Give us a reading on the 1202 program alarm.",
+      "vi": "Cho chúng tôi biết báo động 1202 này là gì.",
+      "src": "landing-film:approach#6",
+      "tag": "(breath) "
+    },
+    {
+      "role": "bales",
+      "en": "Flight, we are go on that alarm!",
+      "vi": "Flight, chúng ta vẫn tiếp tục với báo động này!",
+      "src": "landing-film:approach#7",
+      "tag": "(breath) "
+    },
+    {
+      "role": "capcom",
+      "en": "Roger. We are go on that alarm.",
+      "vi": "Rõ. Chúng tôi cho phép tiếp tục với báo động này.",
+      "src": "landing-film:approach#8"
+    },
+    {
+      "role": "aldrin",
+      "en": "Seven thousand feet. We are pitching over.",
+      "vi": "Hai nghìn một trăm mét. Chúng ta đang lật dựng.",
+      "src": "landing-film:approach#9"
+    },
+    {
+      "role": "armstrong",
+      "en": "Houston, we are long. I am taking it manual.",
+      "vi": "Houston, chúng ta bay quá xa. Tôi sẽ lái tay.",
+      "src": "landing-film:approach#10",
+      "tag": "(breath) "
+    },
+    {
+      "role": "aldrin",
+      "en": "Forty feet, down two and a half. Picking up some dust.",
+      "vi": "Mười hai mét, đang hạ hai mét rưỡi. Bụi bắt đầu bay lên.",
+      "src": "landing-film:touchdown#0"
+    },
+    {
+      "role": "aldrin",
+      "en": "Contact light.",
+      "vi": "Đèn tiếp đất sáng.",
+      "src": "landing-film:touchdown#1"
+    },
+    {
+      "role": "armstrong",
+      "en": "Shutdown.",
+      "vi": "Tắt máy.",
+      "src": "landing-film:touchdown#2"
+    },
+    {
+      "role": "armstrong",
+      "en": "Houston, Tranquility Base here. The Eagle has landed.",
+      "vi": "Houston, Căn cứ Tĩnh Lặng đây. Eagle đã hạ cánh.",
+      "src": "landing-film:touchdown#3"
+    },
+    {
+      "role": "capcom",
+      "en": "Roger, Tranquility. We copy you on the ground. You got a bunch of guys about to turn blue. We are breathing again. Thanks a lot.",
+      "vi": "Rõ, Tĩnh Lặng. Chúng tôi nghe các anh trên mặt đất. Ở đây có cả đám người sắp tím tái vì nín thở. Chúng tôi lại thở được rồi. Cảm ơn nhiều.",
+      "src": "landing-film:touchdown#4"
     },
     {
       "role": "kranz",
@@ -1914,57 +1874,87 @@
     },
     {
       "role": "narrator",
-      "en": "Eagle in tow: one last look back",
-      "vi": "Eagle đã gắn liền: ngoảnh nhìn lại lần cuối",
+      "en": "Separation: the ship leaves the spent third stage",
+      "vi": "Tách khỏi tầng 3 đã cạn nhiên liệu",
       "src": "translunar:phase#1"
+    },
+    {
+      "role": "narrator",
+      "en": "Transposition: the ship turns around to face Eagle",
+      "vi": "Quay đầu tàu để hướng về Eagle",
+      "src": "translunar:phase#2"
+    },
+    {
+      "role": "narrator",
+      "en": "Docking: Eagle is drawn out of the adapter",
+      "vi": "Ghép nối: Eagle được kéo ra khỏi tầng 3",
+      "src": "translunar:phase#3"
     },
     {
       "role": "narrator",
       "en": "Three days of silence",
       "vi": "Ba ngày trong im lặng",
-      "src": "translunar:phase#2"
+      "src": "translunar:phase#4"
     },
     {
       "role": "narrator",
       "en": "The Moon fills the sky",
       "vi": "Mặt Trăng choán cả bầu trời",
-      "src": "translunar:phase#3"
+      "src": "translunar:phase#5"
     },
     {
       "role": "narrator",
       "en": "Behind the Moon: orbit insertion burn",
       "vi": "Sau lưng Mặt Trăng: đốt nhập quỹ đạo",
-      "src": "translunar:phase#4"
+      "src": "translunar:phase#6"
     },
     {
       "role": "narrator",
       "en": "Fourth orbit: the Earth rises",
       "vi": "Vòng quỹ đạo thứ tư: Trái Đất mọc",
-      "src": "translunar:phase#5"
+      "src": "translunar:phase#7"
     },
     {
       "role": "narrator",
       "en": "Christmas Eve, 1968",
       "vi": "Đêm Giáng Sinh, 1968",
-      "src": "translunar:phase#6"
+      "src": "translunar:phase#8"
     },
     {
       "role": "narrator",
       "en": "Trans-Earth injection: homeward",
       "vi": "Đốt về nhà: hướng về Trái Đất",
-      "src": "translunar:phase#7"
+      "src": "translunar:phase#9"
     },
     {
       "role": "narrator",
-      "en": "Reentry: four minutes of radio blackout",
-      "vi": "Tái nhập khí quyển: bốn phút mất liên lạc",
-      "src": "translunar:phase#8"
+      "en": "Two and a half days home",
+      "vi": "Hai ngày rưỡi trên đường về",
+      "src": "translunar:phase#10"
+    },
+    {
+      "role": "narrator",
+      "en": "Service module jettisoned",
+      "vi": "Thả mô-đun phục vụ",
+      "src": "translunar:phase#11"
+    },
+    {
+      "role": "narrator",
+      "en": "Reentry: three and a half minutes of radio blackout",
+      "vi": "Tái nhập khí quyển: ba phút rưỡi mất liên lạc",
+      "src": "translunar:phase#12"
     },
     {
       "role": "narrator",
       "en": "Splashdown in the Pacific",
       "vi": "Hạ xuống Thái Bình Dương",
-      "src": "translunar:phase#9"
+      "src": "translunar:phase#13"
+    },
+    {
+      "role": "narrator",
+      "en": "Recovery: swimmers and the carrier Hornet",
+      "vi": "Vớt tàu: thợ lặn và tàu sân bay Hornet",
+      "src": "translunar:phase#14"
     },
     {
       "role": "narrator",
@@ -1992,6 +1982,30 @@
     },
     {
       "role": "narrator",
+      "en": "Three men, and 384,000 kilometres of dark to cross.",
+      "vi": "Ba con người, và 384.000 km bóng tối phía trước.",
+      "src": "translunar:home-note#0"
+    },
+    {
+      "role": "narrator",
+      "en": "The ship rolls slowly, like a chicken on a spit, so the Sun heats it evenly.",
+      "vi": "Con tàu xoay chậm như quay gà nướng, để Mặt Trời làm nóng đều.",
+      "src": "translunar:home-note#1"
+    },
+    {
+      "role": "narrator",
+      "en": "In the cabin: 21.55 kilograms of the Moon.",
+      "vi": "Trong khoang có 21,55 kg đá Mặt Trăng.",
+      "src": "translunar:home-note#2"
+    },
+    {
+      "role": "narrator",
+      "en": "The Earth swells in the window, a little more each hour.",
+      "vi": "Trái Đất lớn dần ngoài cửa sổ, mỗi giờ thêm một chút.",
+      "src": "translunar:home-note#3"
+    },
+    {
+      "role": "narrator",
       "en": "The Earth is a small blue marble now. Three people have looked back at everyone they know. Next: the descent.",
       "vi": "Trái Đất giờ chỉ còn là viên bi xanh nhỏ. Ba con người đã nhìn lại tất cả những ai họ quen biết. Tiếp theo: hạ cánh.",
       "src": "translunar:done"
@@ -2001,6 +2015,84 @@
       "en": "Splashdown. Salt air, a calm sea, and the sky wide open. The flag is up on the Moon, and you are back.",
       "vi": "Hạ xuống biển. Gió mặn, biển lặng và bầu trời mở rộng. Lá cờ đã cắm trên Mặt Trăng, và bạn đã trở về.",
       "src": "translunar:return-done"
+    },
+    {
+      "role": "capcom",
+      "en": "We'll have you for about 3 or 4 minutes through Redstone, and then pick you up after blackout through ARIA.",
+      "vi": "Chúng tôi giữ liên lạc với các bạn khoảng ba đến bốn phút qua trạm Redstone, rồi bắt lại sau thời gian mất liên lạc qua máy bay ARIA.",
+      "src": "translunar:radio#0"
+    },
+    {
+      "role": "capcom",
+      "en": "You're looking mighty fine to us.",
+      "vi": "Trông các bạn rất ổn.",
+      "src": "translunar:radio#1"
+    },
+    {
+      "role": "armstrong",
+      "en": "See you later.",
+      "vi": "Hẹn gặp lại.",
+      "src": "translunar:radio#2"
+    },
+    {
+      "role": "capcom",
+      "en": "Apollo 11, Houston through ARIA.",
+      "vi": "Apollo 11, Houston gọi qua ARIA.",
+      "src": "translunar:radio#3"
+    },
+    {
+      "role": "capcom",
+      "en": "Apollo 11, Houston through ARIA. Standing by. Over.",
+      "vi": "Apollo 11, Houston gọi qua ARIA. Đang chờ. Hết.",
+      "src": "translunar:radio#4"
+    },
+    {
+      "role": "capcom",
+      "en": "Apollo 11, Houston in the blind. Air Boss has visual contact.",
+      "vi": "Apollo 11, Houston gọi mà chưa nghe hồi âm. Chỉ huy không lực đã nhìn thấy tàu.",
+      "src": "translunar:radio#5"
+    },
+    {
+      "role": "capcom",
+      "en": "Drogues.",
+      "vi": "Dù hãm đã mở.",
+      "src": "translunar:radio#6"
+    },
+    {
+      "role": "booster",
+      "en": "Apollo 11, Apollo 11. This is Hornet. Over.",
+      "vi": "Apollo 11, Apollo 11. Hornet đây. Hết.",
+      "src": "translunar:radio#7"
+    },
+    {
+      "role": "armstrong",
+      "en": "Hello, Hornet. This is Apollo 11, reading you loud and clear.",
+      "vi": "Chào Hornet. Apollo 11 đây, nghe rất rõ.",
+      "src": "translunar:radio#8"
+    },
+    {
+      "role": "booster",
+      "en": "11, this is Hornet. What's your error of splashdown and condition of crew? Over.",
+      "vi": "11, Hornet đây. Sai số điểm hạ cánh và tình trạng phi hành đoàn thế nào? Hết.",
+      "src": "translunar:radio#9"
+    },
+    {
+      "role": "booster",
+      "en": "Roger. Twenty-five hundred on chutes.",
+      "vi": "Rõ. Hai nghìn năm trăm feet trên dù.",
+      "src": "translunar:radio#10"
+    },
+    {
+      "role": "bales",
+      "en": "Roger. You're looking real good.",
+      "vi": "Rõ. Trông các bạn rất tốt.",
+      "src": "translunar:radio#11"
+    },
+    {
+      "role": "bales",
+      "en": "Splashdown!",
+      "vi": "Đã chạm nước!",
+      "src": "translunar:radio#12"
     },
     {
       "role": "armstrong",
