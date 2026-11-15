@@ -207,3 +207,17 @@ Nguồn: NASA, *Apollo 11 Technical Air-to-Ground Voice Transcription* (GOSS NET
 | 195:18:18 | Swim 1 | "SPLASHDOWN!" |
 
 Ba câu trước mất liên lạc được đặt vào vài giây ngay trước điểm vào khí quyển (trên phim, giờ nhiệm vụ trôi quá nhanh để đặt đúng mốc). Các câu bị cắt hoặc nhiễu trong bản ghi được bỏ qua. Điều đáng chú ý thật: sau mất liên lạc, Houston gọi suốt gần 5 phút mà không nghe hồi âm cho tới khi dù mở.
+
+---
+
+## Chốt: đầu nào của tàu chúi xuống lúc tái nhập, và hình dạng lửa
+
+**Quyết định:** tàu vào khí quyển **đáy rộng (tấm chắn nhiệt) hướng về phía trước**, đỉnh nhọn (mũi có cổng nối) **chổng ra sau**. Mũi nhọn chúi xuống trước là sai về vật lý: phần nhọn không chịu được nhiệt, còn tấm chắn nhiệt bằng vật liệu cháy dần (ablator) chỉ có ở mặt đáy. Tàu không bay thẳng hàng với luồng khí mà **nghiêng khoảng 17–20° so với hướng bay** ("lift-up": đáy hơi chúi xuống, đỉnh hất lên sau), nhờ đó tạo lực nâng để kéo dài đường bay và giảm tải g (~6,5 g thay vì hơn 10 g nếu rơi thẳng).
+
+**Hình dạng lửa (từ trước ra sau):**
+1. **Sóng xung kích tách rời phía trước đáy:** lớp khí cực nóng, sáng trắng-vàng, hình chỏm cầu dẹt nằm cách mặt đáy một khoảng nhỏ, dày nhất ở giữa.
+2. **Màng khí nóng ôm hai bên thân nón:** mỏng, cam.
+3. **Vệt lửa phía sau:** rộng nhất ngay sau vai tàu, thon dần và mờ dần khi trôi xa, đi theo hướng **luồng khí** (không theo trục tàu: vì tàu nghiêng nên vệt hơi lệch khỏi trục).
+4. Cường độ theo mật độ không khí và tốc độ (độ nóng ∝ √ρ·v³): gần như không có ở 120 km, đạt đỉnh từ khoảng 90 km xuống 20 km, tắt hẳn khi mở dù.
+
+**Dưới dù:** đáy hướng xuống, đỉnh hướng lên. Chạm nước thì đổ úp mũi xuống ("Stable 2"), rồi túi hơi lật đứng.

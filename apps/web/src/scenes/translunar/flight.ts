@@ -81,14 +81,14 @@ export const T = {
   /** The way home (about four minutes in all): the engine burns for home... */
   TEI_END: 158,
   /** ...the command module sheds the service module... */
-  SM_SEP: 204,
+  SM_SEP: 184,
   /** ...meets the air at the entry interface... */
-  REENTRY: 226,
+  REENTRY: 206,
   /** ...opens the drogue parachutes... */
-  CHUTES: 300,
+  CHUTES: 280,
   /** ...and touches the sea (the touchdown sound plays here, twenty seconds before the film ends). */
-  TOUCHDOWN: 352,
-  FILM_END: 372,
+  TOUCHDOWN: 332,
+  FILM_END: 352,
 } as const;
 
 /** Seconds from the drogues to the main parachutes in the film (the real gap was 48 s). */
@@ -370,6 +370,7 @@ export const SHOT_STARTS: [number, string][] = [
   [T.OUTBOUND_END, "tei"],
   [T.OUTBOUND_END + 9, "tei-cabin"],
   [T.TEI_END, "coast-fly"],
+  [T.TEI_END + 13, "coast-earth"],
   [T.SM_SEP, "sm-sep"],
   [T.REENTRY, "reentry"],
   [entryAt(0.135), "entry-cabin"],
@@ -511,6 +512,11 @@ export function frameAt(t: number): Shot {
       const ang = 0.4 + q * 0.05;
       const r = 6 + q * 0.12;
       return { ...base, kind: "space", pos: add(pose.pos, [Math.sin(ang) * r, 1.4 + Math.cos(ang) * 1.6, -Math.cos(ang) * r * 0.8]), aim: add(pose.pos, mul(pose.fwd, 2.5)), fov: 36 };
+    }
+    case "coast-earth": {
+      // From behind the ship, looking ahead at the Earth swelling in the dark.
+      const q = t - (T.TEI_END + 13);
+      return { ...base, kind: "space", pos: add(pose.pos, [-2.4 + q * 0.05, 1.1, -5.5]), aim: add(pose.pos, mul(pose.fwd, 9)), fov: 38 - q * 0.4, shake: 0.004 };
     }
     case "sm-sep": {
       // Beside the command module as the service module falls away behind it.

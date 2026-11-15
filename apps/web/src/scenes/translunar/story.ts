@@ -99,6 +99,18 @@ export function radioLineAt(t: number): RadioLine | undefined {
   return t < Math.min(line.t + RADIO_HOLD, next) ? line : undefined;
 }
 
+/**
+ * What the crew and the film have to say on the long glide home, so the wait is not empty. The distance is
+ * the Earth-Moon distance (about 384,000 km); the 21.55 kg is NASA's figure for Apollo 11's samples; rolling
+ * slowly "like a chicken on a spit" is the passive thermal control the Apollo ships used on the way.
+ */
+export const HOME_NOTES: Caption[] = [
+  { from: T.TEI_END + 3, to: T.TEI_END + 8.5, text: { en: "Three men, and 384,000 kilometres of dark to cross.", vi: "Ba con người, và 384.000 km bóng tối phía trước." } },
+  { from: T.TEI_END + 9, to: T.TEI_END + 14.5, text: { en: "The ship rolls slowly, like a chicken on a spit, so the Sun heats it evenly.", vi: "Con tàu xoay chậm như quay gà nướng, để Mặt Trời làm nóng đều." } },
+  { from: T.TEI_END + 15, to: T.TEI_END + 20, text: { en: "In the cabin: 21.55 kilograms of the Moon.", vi: "Trong khoang có 21,55 kg đá Mặt Trăng." } },
+  { from: T.TEI_END + 20.5, to: T.SM_SEP - 0.5, text: { en: "The Earth swells in the window, a little more each hour.", vi: "Trái Đất lớn dần ngoài cửa sổ, mỗi giờ thêm một chút." } },
+];
+
 export function captionAt(list: Caption[], t: number): Caption | undefined {
   return list.find((c) => t >= c.from && t < c.to);
 }

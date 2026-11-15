@@ -37,3 +37,11 @@ describe("the radio traffic of the entry and recovery", () => {
     }
   });
 });
+
+describe("the notes read on the glide home", () => {
+  it("each is recorded and fits the time it is on screen, in both languages", async () => {
+    const { HOME_NOTES } = await import("./story");
+    for (const locale of ["en", "vi"] as const)
+      for (const n of HOME_NOTES) expect(seconds(locale, n.text[locale])).toBeLessThanOrEqual(n.to - n.from);
+  });
+});

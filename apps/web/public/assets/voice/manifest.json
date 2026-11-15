@@ -4536,6 +4536,54 @@
    "role": "armstrong",
    "h": "1e953c3672",
    "d": 13.39
+  },
+  "vi-9d5b85e54c21df12": {
+   "f": "vi/vi-9d5b85e54c21df12.mp3",
+   "role": "narrator",
+   "h": "99f85428fe",
+   "d": 4.68
+  },
+  "vi-31207ec1f5eb68d8": {
+   "f": "vi/vi-31207ec1f5eb68d8.mp3",
+   "role": "narrator",
+   "h": "3155873ec1",
+   "d": 3.82
+  },
+  "en-bb27c8286cbb89db": {
+   "f": "en/en-bb27c8286cbb89db.mp3",
+   "role": "narrator",
+   "h": "90bc743b50",
+   "d": 5.15
+  },
+  "en-5b87f59ee4666a01": {
+   "f": "en/en-5b87f59ee4666a01.mp3",
+   "role": "narrator",
+   "h": "3731530558",
+   "d": 4.72
+  },
+  "en-141eb8baf8175cf5": {
+   "f": "en/en-141eb8baf8175cf5.mp3",
+   "role": "narrator",
+   "h": "04721aae66",
+   "d": 3.67
+  },
+  "vi-2b3fff84f1cd3d6b": {
+   "f": "vi/vi-2b3fff84f1cd3d6b.mp3",
+   "role": "narrator",
+   "h": "33369441d6",
+   "d": 4.25
+  },
+  "en-8112ea45f87d300c": {
+   "f": "en/en-8112ea45f87d300c.mp3",
+   "role": "narrator",
+   "h": "6ecef3093c",
+   "d": 4.75
+  },
+  "vi-7e3980f3dae140c0": {
+   "f": "vi/vi-7e3980f3dae140c0.mp3",
+   "role": "narrator",
+   "h": "f3424b76c6",
+   "d": 4.32
   }
  }
 }

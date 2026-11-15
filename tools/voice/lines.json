@@ -1982,6 +1982,30 @@
     },
     {
       "role": "narrator",
+      "en": "Three men, and 384,000 kilometres of dark to cross.",
+      "vi": "Ba con người, và 384.000 km bóng tối phía trước.",
+      "src": "translunar:home-note#0"
+    },
+    {
+      "role": "narrator",
+      "en": "The ship rolls slowly, like a chicken on a spit, so the Sun heats it evenly.",
+      "vi": "Con tàu xoay chậm như quay gà nướng, để Mặt Trời làm nóng đều.",
+      "src": "translunar:home-note#1"
+    },
+    {
+      "role": "narrator",
+      "en": "In the cabin: 21.55 kilograms of the Moon.",
+      "vi": "Trong khoang có 21,55 kg đá Mặt Trăng.",
+      "src": "translunar:home-note#2"
+    },
+    {
+      "role": "narrator",
+      "en": "The Earth swells in the window, a little more each hour.",
+      "vi": "Trái Đất lớn dần ngoài cửa sổ, mỗi giờ thêm một chút.",
+      "src": "translunar:home-note#3"
+    },
+    {
+      "role": "narrator",
       "en": "The Earth is a small blue marble now. Three people have looked back at everyone they know. Next: the descent.",
       "vi": "Trái Đất giờ chỉ còn là viên bi xanh nhỏ. Ba con người đã nhìn lại tất cả những ai họ quen biết. Tiếp theo: hạ cánh.",
       "src": "translunar:done"

@@ -315,6 +315,9 @@ const PLASMA_EDGE = new Color(2, 0.6, 0.25);
 /** Height of the canopies above the point on the capsule where every shroud line ends (the chute group's origin). */
 const CANOPY_HEIGHT = 9;
 
+/** The tilt of the heat shield to the airflow in the entry, radians (about 17 degrees). */
+const ANGLE_OF_ATTACK = -0.3;
+
 function Canopy({ x, z }: { x: number; z: number; lean?: number }) {
   // Every line runs from the canopy's rim to the one point on the capsule, so the three chutes share it.
   const lines = useMemo(() => {
@@ -411,6 +414,7 @@ export function ReentryCapsule() {
   const wakeMats = useRef<ShaderMaterial[]>([]);
   const chutes = useRef<Group>(null);
   const sm = useRef<Group>(null);
+  const flow = useRef<Group>(null);
   useFrame(({ clock }) => {
     const t = filmClock.t;
     const g = group.current;
@@ -431,6 +435,12 @@ export function ReentryCapsule() {
       const d = norm(sub(homePosition(t + 0.05), homePosition(t - 0.05)));
       // Heat shield (the -Z base of the cone) leads; the nose trails.
       orient(g, { pos: p, fwd: [-d[0], -d[1], -d[2]] as Vec, up: [0, 1, 0] });
+      // The command module flies its heat shield forward, tipped about 17 degrees to the airflow (its lift
+      // attitude: the shield faces slightly down and the apex trails up and back). The wake follows the air,
+      // not the capsule, so it is turned back by the same angle.
+      const aoa = ANGLE_OF_ATTACK * Math.min(1, Math.max(0, (t - T.SM_SEP - 2) / 8));
+      g.rotateX(aoa);
+      if (flow.current) flow.current.rotation.x = -aoa;
       // The service module drifts back and tumbles; in the air it glows and burns away.
       const smNode = sm.current;
       if (smNode) {
@@ -494,10 +504,13 @@ export function ReentryCapsule() {
           <coneGeometry args={[1, 1, 32, 6, true]} />
           <primitive object={plasmaMaterial(0.3, wakeMats)} attach="material" />
         </mesh>
-        <mesh position={[0, 0, 6.3]} rotation={[-Math.PI / 2, 0, 0]} scale={[0.85, 10, 0.85]}>
-          <coneGeometry args={[1, 1, 32, 8, true]} />
-          <primitive object={plasmaMaterial(0.4, wakeMats, true)} attach="material" />
-        </mesh>
+        {/* The wake: widest just behind the capsule's shoulders, thinning and fading as it streams away */}
+        <group ref={flow}>
+          <mesh position={[0, 0, 6.2]} rotation={[Math.PI / 2, 0, 0]} scale={[1.0, 10, 1.0]}>
+            <coneGeometry args={[1, 1, 32, 8, true]} />
+            <primitive object={plasmaMaterial(0.5, wakeMats)} attach="material" />
+          </mesh>
+        </group>
       </group>
     </group>
     <ExpandingRing />

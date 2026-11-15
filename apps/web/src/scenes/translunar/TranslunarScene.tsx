@@ -12,7 +12,7 @@ import { useLocalized, useT } from "@/i18n/useT";
 import { cn } from "@/lib/utils";
 import { filmClock } from "./clock";
 import { ATMOSPHERE, ENTRY_BLACKOUT, FILM_END, MAIN_DELAY, frameAt, homePosition, plasma, viewKind, cutDip, OUTBOUND_END, OUTBOUND_FILM_END, RETURN_LOG, SIGNAL_LOST, T, TEI_LOS, atmosphereLayer, entryState, formatMet, skyAir, missionElapsed, thrust } from "./flight";
-import { CUES, HOUSTON, PHASES, RADIO_WHO, radioLineAt, READING, captionAt, moodAt } from "./story";
+import { CUES, HOUSTON, HOME_NOTES, PHASES, RADIO_WHO, radioLineAt, READING, captionAt, moodAt } from "./story";
 import { TranslunarWorld } from "./TranslunarWorld";
 
 /** The camera is a scripted rig; the store just needs a viewpoint to exist. */
@@ -128,7 +128,7 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
   }
 
   const phase = captionAt(PHASES, now);
-  const reading = captionAt(READING, now);
+  const reading = captionAt(READING, now) ?? (part === "return" ? captionAt(HOME_NOTES, now) : undefined);
   // The narrator reads each stretch's title and the cabin reading as they appear, one after the other.
   useVoiceLine(phase ? localize(phase.text) : null, { queue: true });
   useVoiceLine(reading ? localize(reading.text) : null, { queue: true });
