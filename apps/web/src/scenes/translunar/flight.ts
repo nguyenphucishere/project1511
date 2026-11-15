@@ -545,8 +545,8 @@ export function frameAt(t: number): Shot {
     case "recovery": {
       // Close on the capsule as it is righted and the swimmers reach it, the helicopters overhead.
       const q = t - (T.TOUCHDOWN + 2);
-      const a = 0.9 + q * 0.04;
-      return { ...base, kind: "sea", pos: add(SEA, [Math.sin(a) * 15, 2.6 + q * 0.04, Math.cos(a) * 15]), aim: add(SEA, [0, 2.2, 0]), fov: 40, shake: 0.012 };
+      const a = 0.9 + q * 0.03;
+      return { ...base, kind: "sea", pos: add(SEA, [Math.sin(a) * 27, 4 + q * 0.03, Math.cos(a) * 27]), aim: add(SEA, [0, 5.5, 0]), fov: 48, shake: 0.012 };
     }
     default: {
       // "splash": wide over the water as the capsule settles.
