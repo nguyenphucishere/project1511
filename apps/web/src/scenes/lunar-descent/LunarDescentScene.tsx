@@ -11,6 +11,7 @@ import { useLocalized, useT } from "@/i18n/useT";
 import { useVoiceLine } from "@/hooks/useVoiceLine";
 import { BRIEFINGS } from "@/game/script";
 import { useGameStore } from "@/game/gameStore";
+import { missionLost } from "@/game/flow";
 import { inputLock, isTypingTarget } from "@/game/input";
 import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
@@ -731,7 +732,7 @@ function LunarDescentPlay({ onComplete }: { onComplete: () => void }) {
 const ALARM_CUT = 43;
 
 /** A call that ends the mission: the abort at the 1202 alarm, landing in the boulders, or the wave-off. */
-const missionEnded = () => useGameStore.getState().narrative.ending !== null;
+const missionEnded = () => missionLost(useGameStore.getState().narrative.ending);
 
 /**
  * The landing chapter, straight after the ship reaches lunar orbit, in the order it happened: the
