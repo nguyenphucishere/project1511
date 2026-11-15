@@ -163,7 +163,7 @@ async function main() {
 
   // 6. Moon trip and flight home: the narrator.
   (story.PHASES as any[]).forEach((c, i) => add("narrator", c.text, `translunar:phase#${i}`));
-  (story.READING as any[]).forEach((c, i) => add("narrator", c.text, `translunar:reading#${i}`));
+  // READING is not voiced by the narrator: it is the Apollo 8 crew's own broadcast (assets/audio/apollo8-genesis.mp3).
   (story.HOME_NOTES as any[]).forEach((c, i) => add("narrator", c.text, `translunar:home-note#${i}`));
   add("narrator", both(["translunar", "doneBody"]), "translunar:done");
   add("narrator", both(["translunar", "returnDoneBody"]), "translunar:return-done");
