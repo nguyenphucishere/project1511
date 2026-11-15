@@ -62,7 +62,7 @@ export const en = {
   },
   end: {
     title: "Mission complete",
-    body: "The crew is on the Moon. The trip home is a story for another day.",
+    body: "The crew walked on the Moon, and came home.",
     playAgain: "Play again",
     backToTitle: "Back to title",
     summaryTitle: "Mission summary",

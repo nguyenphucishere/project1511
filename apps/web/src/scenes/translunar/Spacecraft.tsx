@@ -139,12 +139,15 @@ function Plume({
 export function Stage() {
   const group = useRef<Group>(null);
   const pivots = useRef<(Group | null)[]>([]);
+  const stowed = useRef<Group>(null);
   useFrame(() => {
     const t = filmClock.t;
     const g = group.current;
     if (!g) return;
     g.visible = t < T.COAST + 8;
     if (!g.visible) return;
+    // Eagle rides inside the adapter, nose toward the ship, until the ship has docked with it and drawn it out.
+    if (stowed.current) stowed.current.visible = t < T.DOCK;
     orient(g, stagePose(t));
     const p = petals(t);
     pivots.current.forEach((pivot) => {
@@ -165,6 +168,10 @@ export function Stage() {
         <cylinderGeometry args={[0.06, 0.17, 0.26, 24, 1, true]} />
         <meshStandardMaterial {...GREY} side={DoubleSide} />
       </mesh>
+      {/* Eagle, folded inside the adapter, its docking ring at the joint. */}
+      <group ref={stowed} position={[0, 0, 1.1]} rotation={[0, Math.PI, 0]}>
+        <ScaledEagle />
+      </group>
       {/* The adapter petals, hinged at their aft edge. */}
       {[0, 1, 2, 3].map((i) => (
         <group key={i} rotation={[0, 0, (i * Math.PI) / 2]}>
@@ -239,6 +246,16 @@ function Eagle() {
   );
 }
 
+/** Eagle scaled to fit the adapter, keeping its docking ring where it is (at 1.1 along +Z). */
+const EAGLE_SCALE = 0.6;
+function ScaledEagle() {
+  return (
+    <group scale={EAGLE_SCALE} position={[0, 0, 1.1 * (1 - EAGLE_SCALE)]}>
+      <Eagle />
+    </group>
+  );
+}
+
 /** The command and service module. Origin: the aft end of the service module; the nose is +Z. */
 export function Ship() {
   const group = useRef<Group>(null);
@@ -249,13 +266,13 @@ export function Ship() {
     if (!g) return;
     g.visible = t < T.SM_SEP && viewKind(t) !== "cabin";
     if (g.visible) orient(g, shipPose(t));
-    // Eagle rides on the nose until the descent (the way home is flown by the command module alone).
-    if (eagle.current) eagle.current.visible = t < T.OUTBOUND_END;
+    // Eagle rides on the nose from the docking until the descent (the way home is flown by the command module alone).
+    if (eagle.current) eagle.current.visible = t >= T.DOCK && t < T.OUTBOUND_END;
   });
   return (
     <group ref={group}>
       <group ref={eagle}>
-        <Eagle />
+        <ScaledEagle />
       </group>
       <Tube r0={0.28} r1={0.28} h={0.62} z={0.31} mat={WHITE} />
       <Tube r0={0.283} r1={0.283} h={0.1} z={0.1} mat={DARK} />

@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { addTrauma } from "@/game/shake";
-import { playSfx, prefetchVoiceLines, speak, startBreathing, startHeartbeat, startSuspense, stopVoiceLine, type Pulse, type Suspense } from "@/game/sfx";
+import { playSfx, playVoiceLine, prefetchVoiceLines, startBreathing, startHeartbeat, startSuspense, stopVoiceLine, type Pulse, type Suspense } from "@/game/sfx";
 import { startCauseBed, type CauseBed } from "@/game/causeAudio";
 import { useSettingsStore } from "@/game/settingsStore";
 import { useLocalized } from "@/i18n/useT";
+import type { LocalizedText } from "@/i18n";
 import type { AscentFailure } from "@/game/ascentFlight";
 import type { AscentFlight } from "./AscentWorld";
 import { CREW_NAME, FLAVOR, SCRIPT, type Cue } from "./failureScript";
@@ -60,15 +61,16 @@ export function FailureCinema({
   const localizeRef = useRef(localize);
   localizeRef.current = localize;
 
-  // The voice starts in the very frame that draws its shot, on its own channel: nothing waits for it and it
-  // waits for nothing. (Started from the timer instead, it would run ahead of a slow frame and be heard
-  // before the picture it belongs to.)
-  useEffect(() => {
-    const line = shot?.cue.line;
-    if (!line) return;
-    const id = window.requestAnimationFrame(() => speak(localizeRef.current(line), localeRef.current, { channel: CREW_CHANNEL, rate: CREW_RATE, panic: 0.15 + fearRef.current * 0.3 }));
-    return () => window.cancelAnimationFrame(id);
-  }, [shot]);
+  // The voice starts the moment its shot is cut in, straight from the clock and on its own channel, so it
+  // does not depend on a frame being drawn (a slow frame must never hold a crew line back).
+  const say = (line: LocalizedText, k: number) => {
+    const text = localizeRef.current(line);
+    void playVoiceLine(text, localeRef.current, { channel: CREW_CHANNEL, rate: CREW_RATE, panic: 0.15 + k * 0.3 }).then((r) => {
+      if (r !== "played") console.warn(`[crew voice] ${r}: "${text}"`);
+    });
+  };
+  const sayRef = useRef(say);
+  sayRef.current = say;
 
   useEffect(() => {
     let heart: Pulse | null = null;
@@ -83,7 +85,8 @@ export function FailureCinema({
       bed = startCauseBed(flavor.bed);
     };
     // Every line of this film is downloaded before it is needed, so a voice starts with its shot and not after.
-    prefetchVoiceLines(script.flatMap((c) => (c.line ? [localize(c.line)] : [])), localeRef.current);
+    // One at a time, a little apart: fetching all of them at once would block the line that is wanted now.
+    const prefetchTimers = script.flatMap((c) => (c.line ? [c.line] : [])).map((line, i) => window.setTimeout(() => prefetchVoiceLines([localize(line)], localeRef.current), 300 + i * 450));
 
     const id = window.setInterval(() => {
       const f = flight.current;
@@ -118,6 +121,7 @@ export function FailureCinema({
           setShot({ cue, n: i });
           addTrauma(0.15 + flavor.shake * 0.2);
           fearRef.current = k;
+          if (cue.line) sayRef.current(cue.line, k);
           for (const fx of cue.fx ?? []) {
             if (fx === "stinger") {
               music?.stinger();
@@ -172,6 +176,7 @@ export function FailureCinema({
 
     return () => {
       window.clearInterval(id);
+      prefetchTimers.forEach((t) => window.clearTimeout(t));
       window.clearTimeout(hide.current);
       heart?.stop();
       breath?.stop();

@@ -57,8 +57,8 @@
     },
     {
       "role": "armstrong",
-      "en": "Three days to the Moon. Sit back and watch; this part flies itself.",
-      "vi": "Ba ngày tới Mặt Trăng. Cứ ngồi xem nhé, đoạn này tự bay.",
+      "en": "After the burn we turn the ship around, dock with Eagle and pull it out of the third stage. Then three days to the Moon: sit back and watch, this part flies itself.",
+      "vi": "Sau khi đốt xong, ta quay đầu tàu, ghép với Eagle và kéo nó ra khỏi tầng ba. Rồi ba ngày tới Mặt Trăng: cứ ngồi xem nhé, đoạn này tự bay.",
       "src": "briefing:translunar"
     },
     {
@@ -69,8 +69,8 @@
     },
     {
       "role": "armstrong",
-      "en": "Computer flies the first part. At 150 metres the lander is yours: pick a site, brake, steer clear of the boulders.",
-      "vi": "Máy tính lo phần đầu. Đến độ cao 150 mét, tàu là của bạn: chọn điểm đáp, giảm tốc, tránh xa đá tảng.",
+      "en": "Eagle undocks and the computer flies the descent. When trouble comes the calls are yours: the alarm, then where to land. The last 150 metres, you fly.",
+      "vi": "Eagle tách ra và máy tính lo phần hạ cánh. Khi có sự cố, quyết định là của bạn: báo động, rồi chọn chỗ đáp. 150 mét cuối cùng, bạn tự lái.",
       "src": "briefing:lunar-descent"
     },
     {
@@ -1317,6 +1317,106 @@
       "src": "launch-room#18"
     },
     {
+      "role": "collins",
+      "en": "Eagle, Columbia. I think you've got a fine-looking flying machine there, despite the fact you're upside down.",
+      "vi": "Eagle, Columbia đây. Tôi thấy cỗ máy bay của anh trông tuyệt đấy, dù nó đang lộn ngược.",
+      "src": "landing-film:approach#0"
+    },
+    {
+      "role": "armstrong",
+      "en": "Somebody's upside down.",
+      "vi": "Có người đang lộn ngược đấy.",
+      "src": "landing-film:approach#1"
+    },
+    {
+      "role": "capcom",
+      "en": "Eagle, Houston. You are go for powered descent.",
+      "vi": "Eagle, Houston đây. Các anh được phép hạ cánh có động cơ.",
+      "src": "landing-film:approach#2"
+    },
+    {
+      "role": "aldrin",
+      "en": "Ignition.",
+      "vi": "Đánh lửa.",
+      "src": "landing-film:approach#3"
+    },
+    {
+      "role": "capcom",
+      "en": "Eagle, Houston. You are looking good.",
+      "vi": "Eagle, Houston đây. Mọi thứ đang tốt.",
+      "src": "landing-film:approach#4"
+    },
+    {
+      "role": "armstrong",
+      "en": "Program alarm.",
+      "vi": "Báo động chương trình.",
+      "src": "landing-film:approach#5",
+      "tag": "(breath) "
+    },
+    {
+      "role": "armstrong",
+      "en": "Give us a reading on the 1202 program alarm.",
+      "vi": "Cho chúng tôi biết báo động 1202 này là gì.",
+      "src": "landing-film:approach#6",
+      "tag": "(breath) "
+    },
+    {
+      "role": "bales",
+      "en": "Flight, we are go on that alarm!",
+      "vi": "Flight, chúng ta vẫn tiếp tục với báo động này!",
+      "src": "landing-film:approach#7",
+      "tag": "(breath) "
+    },
+    {
+      "role": "capcom",
+      "en": "Roger. We are go on that alarm.",
+      "vi": "Rõ. Chúng tôi cho phép tiếp tục với báo động này.",
+      "src": "landing-film:approach#8"
+    },
+    {
+      "role": "aldrin",
+      "en": "Seven thousand feet. We are pitching over.",
+      "vi": "Hai nghìn một trăm mét. Chúng ta đang lật dựng.",
+      "src": "landing-film:approach#9"
+    },
+    {
+      "role": "armstrong",
+      "en": "Houston, we are long. I am taking it manual.",
+      "vi": "Houston, chúng ta bay quá xa. Tôi sẽ lái tay.",
+      "src": "landing-film:approach#10",
+      "tag": "(breath) "
+    },
+    {
+      "role": "aldrin",
+      "en": "Forty feet, down two and a half. Picking up some dust.",
+      "vi": "Mười hai mét, đang hạ hai mét rưỡi. Bụi bắt đầu bay lên.",
+      "src": "landing-film:touchdown#0"
+    },
+    {
+      "role": "aldrin",
+      "en": "Contact light.",
+      "vi": "Đèn tiếp đất sáng.",
+      "src": "landing-film:touchdown#1"
+    },
+    {
+      "role": "armstrong",
+      "en": "Shutdown.",
+      "vi": "Tắt máy.",
+      "src": "landing-film:touchdown#2"
+    },
+    {
+      "role": "armstrong",
+      "en": "Houston, Tranquility Base here. The Eagle has landed.",
+      "vi": "Houston, Căn cứ Tĩnh Lặng đây. Eagle đã hạ cánh.",
+      "src": "landing-film:touchdown#3"
+    },
+    {
+      "role": "capcom",
+      "en": "Roger, Tranquility. We copy you on the ground. You got a bunch of guys about to turn blue. We are breathing again. Thanks a lot.",
+      "vi": "Rõ, Tĩnh Lặng. Chúng tôi nghe các anh trên mặt đất. Ở đây có cả đám người sắp tím tái vì nín thở. Chúng tôi lại thở được rồi. Cảm ơn nhiều.",
+      "src": "landing-film:touchdown#4"
+    },
+    {
       "role": "kranz",
       "en": "All stations, Flight. We have lost the vehicle. I repeat, vehicle lost.",
       "vi": "Toàn trung tâm, Flight đây. Chúng ta đã mất tàu. Nhắc lại, mất tàu.",
@@ -1774,75 +1874,87 @@
     },
     {
       "role": "narrator",
-      "en": "Eagle in tow: one last look back",
-      "vi": "Eagle đã gắn liền: ngoảnh nhìn lại lần cuối",
+      "en": "Separation: the ship leaves the spent third stage",
+      "vi": "Tách khỏi tầng 3 đã cạn nhiên liệu",
       "src": "translunar:phase#1"
+    },
+    {
+      "role": "narrator",
+      "en": "Transposition: the ship turns around to face Eagle",
+      "vi": "Quay đầu tàu để hướng về Eagle",
+      "src": "translunar:phase#2"
+    },
+    {
+      "role": "narrator",
+      "en": "Docking: Eagle is drawn out of the adapter",
+      "vi": "Ghép nối: Eagle được kéo ra khỏi tầng 3",
+      "src": "translunar:phase#3"
     },
     {
       "role": "narrator",
       "en": "Three days of silence",
       "vi": "Ba ngày trong im lặng",
-      "src": "translunar:phase#2"
+      "src": "translunar:phase#4"
     },
     {
       "role": "narrator",
       "en": "The Moon fills the sky",
       "vi": "Mặt Trăng choán cả bầu trời",
-      "src": "translunar:phase#3"
+      "src": "translunar:phase#5"
     },
     {
       "role": "narrator",
       "en": "Behind the Moon: orbit insertion burn",
       "vi": "Sau lưng Mặt Trăng: đốt nhập quỹ đạo",
-      "src": "translunar:phase#4"
+      "src": "translunar:phase#6"
     },
     {
       "role": "narrator",
       "en": "Fourth orbit: the Earth rises",
       "vi": "Vòng quỹ đạo thứ tư: Trái Đất mọc",
-      "src": "translunar:phase#5"
+      "src": "translunar:phase#7"
     },
     {
       "role": "narrator",
       "en": "Christmas Eve, 1968",
       "vi": "Đêm Giáng Sinh, 1968",
-      "src": "translunar:phase#6"
+      "src": "translunar:phase#8"
     },
     {
       "role": "narrator",
       "en": "Trans-Earth injection: homeward",
       "vi": "Đốt về nhà: hướng về Trái Đất",
-      "src": "translunar:phase#7"
+      "src": "translunar:phase#9"
     },
     {
       "role": "narrator",
       "en": "Two and a half days home",
       "vi": "Hai ngày rưỡi trên đường về",
-      "src": "translunar:phase#8"
+      "src": "translunar:phase#10"
     },
     {
       "role": "narrator",
       "en": "Service module jettisoned",
       "vi": "Thả mô-đun phục vụ",
-      "src": "translunar:phase#9"
+      "src": "translunar:phase#11"
     },
     {
       "role": "narrator",
       "en": "Reentry: three and a half minutes of radio blackout",
       "vi": "Tái nhập khí quyển: ba phút rưỡi mất liên lạc",
-      "src": "translunar:phase#10"
+      "src": "translunar:phase#12"
     },
     {
       "role": "narrator",
       "en": "Splashdown in the Pacific",
       "vi": "Hạ xuống Thái Bình Dương",
-      "src": "translunar:phase#11"
+      "src": "translunar:phase#13"
     },
     {
       "role": "narrator",
       "en": "Recovery: swimmers and the carrier Hornet",
       "vi": "Vớt tàu: thợ lặn và tàu sân bay Hornet",
-      "src": "translunar:phase#12"
+      "src": "translunar:phase#14"
     },
     {
       "role": "narrator",

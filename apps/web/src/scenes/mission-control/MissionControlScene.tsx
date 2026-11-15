@@ -29,6 +29,7 @@ import {
 import { assessLaunch, planRequestFor, TRACE_TEXT } from "@/lib/simulation/launch.engine";
 import type { LaunchPlan } from "@/lib/simulation/launch.physics";
 import type { LaunchConfig, LaunchResult, LaunchSite, LaunchWindowsData } from "@/lib/simulation/launch.types";
+import { BOOM_T, boomFilm } from "./boomFilm";
 import { DEFAULT_SITE_ID, LAUNCH_SITES, OFFLINE_KSC_WINDOWS } from "@/mocks/launch-options";
 import { useSimulationWasm } from "@/hooks/useSimulationWasm";
 import { useNasaData } from "@/hooks/useNasaData";
@@ -265,6 +266,12 @@ export function MissionControlScene({
     onComplete();
   }, [makeDecision, onComplete]);
 
+  /** A launch that reached orbit inside the weather limits: the weather call was GO (for the debrief). */
+  const launchedOk = useCallback(() => {
+    makeDecision("weather", "go");
+    onComplete();
+  }, [makeDecision, onComplete]);
+
   const ignite = useCallback(async () => {
     const r = await pending.current;
     if (!r) return;
@@ -336,6 +343,20 @@ export function MissionControlScene({
       explode: () => startExplosion(),
       // Jumps the launch film to `t` seconds after ignition (use with a frozen performance.now).
       seek: (t: number) => setIgnitionAt(performance.now() - t * 1000),
+      // Skips the countdown and lights the engines with the current loadout (for recording the film).
+      // Arms the boom film: the vehicle breaks up `t` seconds after ignition (default BOOM_T).
+      boom: (t?: number) => {
+        boomFilm.t = t ?? BOOM_T;
+        return boomFilm.t;
+      },
+      // `good` flies a full-fuel standard stack in the offline calm window, so it reaches orbit.
+      fly: (good?: boolean) => {
+        pending.current = good
+          ? launchSimulator.simulate({ ...config, vehicle: "saros", payload: "standard", fuelPct: 100, orbitKm: 185 }, OFFLINE_KSC_WINDOWS.windows[0]!)
+          : launchSimulator.simulate(config, launchWindow);
+        setConfigured(true);
+        void ignite();
+      },
     };
   }
 
@@ -857,7 +878,7 @@ export function MissionControlScene({
         title={m.orbitTitle}
         description={format(m.orbitBody, { km: config.orbitKm })}
         continueLabel={m.continue}
-        onContinue={assessment.overBudget ? () => setPhase("budget-cut") : onComplete}
+        onContinue={assessment.overBudget ? () => setPhase("budget-cut") : launchedOk}
       />
     </section>
   );
