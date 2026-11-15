@@ -208,6 +208,7 @@ export function warmUpcoming(stepId: string): void {
   if (typeof window === "undefined") return;
   const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
   if (saveData) return;
+  void ensureVoicesWarm();
   const scenes = scenesToPreload(stepId).slice(0, 2).filter((s) => !warmQueued.has(s));
   for (const s of scenes) warmQueued.add(s);
   let chainWarm: Promise<void> = Promise.resolve();
