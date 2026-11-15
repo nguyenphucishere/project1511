@@ -59,7 +59,7 @@ export const vi: Dictionary = {
   },
   end: {
     title: "Hoàn thành nhiệm vụ",
-    body: "Phi hành đoàn đã đặt chân lên Mặt Trăng. Hành trình về nhà là câu chuyện của một ngày khác.",
+    body: "Phi hành đoàn đã đặt chân lên Mặt Trăng và trở về nhà bình an.",
     playAgain: "Chơi lại",
     backToTitle: "Về màn hình chính",
     summaryTitle: "Tổng kết nhiệm vụ",
