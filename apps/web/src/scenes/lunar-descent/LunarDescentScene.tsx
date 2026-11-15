@@ -9,6 +9,7 @@ import { useLocalized, useT } from "@/i18n/useT";
 import { useVoiceLine } from "@/hooks/useVoiceLine";
 import { BRIEFINGS } from "@/game/script";
 import { useGameStore } from "@/game/gameStore";
+import { missionLost } from "@/game/flow";
 import { inputLock, isTypingTarget } from "@/game/input";
 import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
@@ -711,4 +712,50 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
       </SignOffDialog>
     </section>
   );
+}
+
+/**
+ * The landing chapter: the approach film (undocking, powered descent, the program alarm, the
+ * pitch-over), then the player's own descent. The touchdown film is its own step after a safe landing.
+ */
+/** The film pauses here, a moment after the computer's alarm and the commander's question, to ask the player. */
+const ALARM_CUT = 43;
+
+/** A call that ends the mission: the abort at the 1202 alarm, landing in the boulders, or the wave-off. */
+const missionEnded = () => missionLost(useGameStore.getState().narrative.ending);
+
+/**
+ * The landing chapter, straight after the ship reaches lunar orbit, in the order it happened: the
+ * first part of the approach film (undocking, powered descent, the 1202 alarm), your call on the
+ * alarm, the rest of the film (pitch-over, the boulders ahead), your call on where to land, and then
+ * your own final descent from the low gate. The touchdown film is its own step after a safe landing.
+ */
+export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
+  const stepId = useGameStore((s) => s.stepId);
+  const [stage, setStage] = useState<"film-a" | "alarm" | "film-b" | "landing" | "play">("film-a");
+  if (stepId === "touchdown-film") return <LandingFilm part="touchdown" onComplete={onComplete} />;
+  switch (stage) {
+    case "film-a":
+      return <LandingFilm part="approach" to={ALARM_CUT} onComplete={() => setStage("alarm")} />;
+    case "alarm":
+      return (
+        <DecisionOverlay
+          decisionId="agc-alarm-decision"
+          chapter="lunar-descent"
+          onDone={() => (missionEnded() ? onComplete() : setStage("film-b"))}
+        />
+      );
+    case "film-b":
+      return <LandingFilm part="approach" from={ALARM_CUT} onComplete={() => setStage("landing")} />;
+    case "landing":
+      return (
+        <DecisionOverlay
+          decisionId="landing-decision"
+          chapter="lunar-descent"
+          onDone={() => (missionEnded() ? onComplete() : setStage("play"))}
+        />
+      );
+    case "play":
+      return <LunarDescentPlay onComplete={onComplete} />;
+  }
 }

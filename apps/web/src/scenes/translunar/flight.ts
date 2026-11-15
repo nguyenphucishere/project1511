@@ -84,6 +84,12 @@ export const T = {
 } as const;
 
 export const OUTBOUND_END = T.OUTBOUND_END;
+/**
+ * The outbound film runs to the end of its stretch: lunar orbit, the pass behind the Moon, the
+ * Earthrise and the Genesis reading from the cabin (READING, 119.5-139.6 s), as on main. Ending it
+ * at 88 s cut the reading.
+ */
+export const OUTBOUND_FILM_END = OUTBOUND_END;
 export const FILM_END = T.FILM_END;
 
 /** Orbit angle around the Moon (0 = the point facing the Earth, π = the far side). */

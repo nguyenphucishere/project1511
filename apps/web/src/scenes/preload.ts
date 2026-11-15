@@ -61,6 +61,34 @@ const JOBS: Record<SceneId, Job> = {
   "lunar-descent": assetJob("lunar-descent", () => import("./lunar-descent/LunarDescentScene")),
 };
 
+/* ---------------------------------------------------------------- the voices */
+
+/** The share of a scene's loading bar that is the voice recordings. */
+const VOICE_WEIGHT = 10;
+/**
+ * The longest a scene's loading screen waits for the recordings (13 MB per language): past it the
+ * scene starts and the rest keep arriving in the background. 30 s left players on a slow
+ * connection staring at a stuck loading bar.
+ */
+const VOICE_WAIT_MS = 6_000;
+const voiceWarm = new Map<string, Promise<unknown>>();
+
+/**
+ * Downloads every voice recording of the player's language into memory (once), so no line is fetched
+ * while a scene is running: a download in the way is what made voices start late against the picture.
+ * Starts on the title screen; a scene's loading screen waits for it.
+ */
+export function ensureVoicesWarm(): Promise<unknown> {
+  if (typeof window === "undefined") return Promise.resolve();
+  const locale = useSettingsStore.getState().locale;
+  let p = voiceWarm.get(locale);
+  if (!p) {
+    p = warmAllVoices(locale).catch(() => undefined);
+    voiceWarm.set(locale, p);
+  }
+  return p;
+}
+
 const states = new Map<SceneId, PreloadState>();
 const running = new Map<SceneId, Promise<void>>();
 const listeners = new Set<() => void>();
@@ -208,6 +236,8 @@ export function warmUpcoming(stepId: string): void {
         for (const l of listeners) l();
       });
   }
+  // The voices come after the files the menu waits for, so the two never split the connection.
+  void chainWarm.then(() => ensureVoicesWarm());
 }
 
 /** Parallel downloads per scene during the title warm-up. */
