@@ -39,7 +39,7 @@ const VERT = /* glsl */ `
     vAlpha = min(1.0, uHeat * 1.1) * 0.32 * pow(1.0 - age, 1.5) * smoothstep(0.0, 0.03, age);
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     float size = (0.55 + 1.0 * aSeed.z) * (1.0 - 0.5 * age);
-    gl_PointSize = max(1.0, size * uScale / -mv.z);
+    gl_PointSize = clamp(size * uScale / -mv.z, 1.0, 70.0);
     gl_Position = projectionMatrix * mv;
   }
 `.replace("STREAM_LENGTH", STREAM_LENGTH.toFixed(1));

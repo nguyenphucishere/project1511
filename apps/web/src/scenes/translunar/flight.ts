@@ -375,11 +375,12 @@ export const SHOT_STARTS: [number, string][] = [
   [T.TEI_END + 13, "coast-earth"],
   [T.SM_SEP, "sm-sep"],
   [T.REENTRY, "reentry"],
-  [entryAt(0.135), "entry-cabin"],
-  [entryAt(0.35), "entry-orbit"],
-  [entryAt(0.53), "reentry-low"],
-  [entryAt(0.73), "entry-cabin"],
-  [entryAt(0.92), "reentry"],
+  // The fall from space to the thick air, all seen from outside: the fire building, circled from above, the
+  // heat shield close up, the capsule streaking down past a fixed camera, and the fire dying in the lower air.
+  [entryAt(0.12), "entry-orbit"],
+  [entryAt(0.32), "reentry-low"],
+  [entryAt(0.48), "entry-fall"],
+  [entryAt(0.72), "reentry"],
   [T.CHUTES, "chutes"],
   [T.CHUTES + 22, "heli"],
   [T.CHUTES + 38, "splash"],
@@ -389,7 +390,7 @@ export const SHOT_STARTS: [number, string][] = [
 /** Which set the camera is in: out in space, inside the cabin looking out, or at the sea. */
 export function viewKind(t: number): ViewKind {
   const id = shotIdAt(t);
-  if (id === "earthrise" || id === "cabin-window" || id === "cabin-crew" || id === "tei-cabin" || id === "entry-cabin") return "cabin";
+  if (id === "earthrise" || id === "cabin-window" || id === "cabin-crew" || id === "tei-cabin") return "cabin";
   if (id === "chutes" || id === "heli" || id === "splash" || id === "recovery") return "sea";
   return "space";
 }
@@ -504,9 +505,8 @@ export function frameAt(t: number): Shot {
       const q = t - T.OUTBOUND_END;
       return { ...base, kind: "space", pos: shipAt(pose, 3.6 + q * 0.25, 0.8, -0.2 - q * 0.15), aim: shipAt(pose, 0, 0, -0.5), fov: 38, shake: 0.01 };
     }
-    case "tei-cabin":
-    case "entry-cabin": {
-      return { ...base, kind: "cabin", pos: pose.pos, aim: add(pose.pos, cabinLook(t, pose)), up: pose.up, fov: id === "tei-cabin" ? 42 : 46 };
+    case "tei-cabin": {
+      return { ...base, kind: "cabin", pos: pose.pos, aim: add(pose.pos, cabinLook(t, pose)), up: pose.up, fov: 42 };
     }
     case "coast-fly": {
       // A fly cam around the ship as it glides home: the Moon behind, the Earth growing ahead.
@@ -532,13 +532,19 @@ export function frameAt(t: number): Shot {
     case "entry-orbit": {
       // A fly cam circling the capsule from above: the glow, and the Earth's curve and clouds below it.
       const p = reentryPosition(t);
-      const ang = -0.9 + (t - entryAt(0.35)) * 0.1;
+      const ang = -0.9 + (t - entryAt(0.12)) * 0.1;
       return { ...base, kind: "space", pos: add(p, [Math.cos(ang) * 11, 3.5 + Math.sin(t * 0.3) * 0.6, Math.sin(ang) * 11]), aim: p, fov: 34, shake: 0.012 };
+    }
+    case "entry-fall": {
+      // A fixed camera off to the side, panning to follow the capsule as it streaks down through the air.
+      const at = reentryPosition(entryAt(0.48));
+      const p = reentryPosition(t);
+      return { ...base, kind: "space", pos: add(at, [-30, 4, 14]), aim: p, fov: 30, shake: 0.006 };
     }
     case "reentry-low": {
       // Low and ahead, looking back up at the heat shield taking the fire.
       const p = reentryPosition(t);
-      return { ...base, kind: "space", pos: add(p, [-9, -3.6, 8]), aim: add(p, [0, 0.4, -0.5]), fov: 36, shake: 0.016 };
+      return { ...base, kind: "space", pos: add(p, [-13, -3, 11]), aim: add(p, [0, 0.4, 1.5]), fov: 36, shake: 0.016 };
     }
     case "chutes": {
       const alt = capsuleAltitude(t);

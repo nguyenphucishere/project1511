@@ -224,3 +224,6 @@ Ba câu trước mất liên lạc được đặt vào vài giây ngay trước
 
 ### Cập nhật hiệu ứng lửa (lần 2)
 Lửa không còn là các hình nón mờ: nay là **luồng hạt cháy** (khoảng 1.800 hạt, trắng nóng → vàng → cam → đỏ sẫm, mỏng dần theo khoảng cách) đi theo hướng luồng khí, cộng với **chỏm sáng trắng-vàng phía trước tấm chắn nhiệt**. Không có lửa trước điểm vào khí quyển (122 km); lửa tăng dần trong 4 giây đầu. Trong khoang, lửa chỉ làm ánh cam nhấp nháy lên mặt phi hành đoàn, không còn lớp phủ mờ lên toàn màn hình. Sau khi tách mô-đun phục vụ, tàu quay đầu ngược lại khoảng 10 giây để đưa tấm chắn nhiệt lên trước.
+
+### Cảnh rơi từ ngoài vũ trụ xuống (đã dựng lại)
+Bỏ hẳn các cảnh nhìn từ trong khoang trong lúc tái nhập (phần nhìn trong khoang chỉ còn ở lúc đốt về nhà). Toàn bộ cú rơi nhìn từ ngoài, liền mạch: chase cam lửa mới bùng → fly cam vòng từ trên nhìn xuống → góc thấp sát tấm chắn nhiệt → máy cố định, tàu vụt qua và rơi xuống → chase cam lửa nguội dần. Bầu trời đổi màu theo độ cao (đen ở 100 km, xanh thẫm ở tầng bình lưu, xanh dịu rồi sáng ở dưới 12 km) và sao tắt dần; lửa chuyển từ trắng nóng sang cam rồi nhạt khi xuống.

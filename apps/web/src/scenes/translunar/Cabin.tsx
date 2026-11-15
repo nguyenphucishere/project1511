@@ -2,11 +2,7 @@
 
 import { forwardRef } from "react";
 import { useTexture } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
-import { AdditiveBlending, CanvasTexture, Color, DoubleSide, SRGBColorSpace, type Group, type Mesh, type MeshBasicMaterial } from "three";
-import { filmClock } from "./clock";
-import { T, plasma } from "./flight";
+import { Color, DoubleSide, SRGBColorSpace, type Group } from "three";
 
 const WALL = { color: "#2a2c32", roughness: 0.85, metalness: 0.15 } as const;
 const SUIT = { color: "#b9b6af", roughness: 0.8, metalness: 0.02 } as const;
@@ -70,45 +66,8 @@ function CrewMember({ x, z, art, width = 0.3 }: { x: number; z: number; art: str
 export const Cabin = forwardRef<Group>(function Cabin(_, ref) {
   const w = AP_W / 2;
   const h = AP_H / 2;
-  const crew = useRef<Group>(null);
-  const glow = useRef<Mesh>(null);
-  const glowTex = useMemo(() => {
-    const c = document.createElement("canvas");
-    c.width = c.height = 128;
-    const x = c.getContext("2d")!;
-    const g = x.createRadialGradient(64, 64, 4, 64, 64, 64);
-    g.addColorStop(0, "rgba(255,235,190,1)");
-    g.addColorStop(0.35, "rgba(255,150,60,0.8)");
-    g.addColorStop(1, "rgba(200,60,15,0.25)");
-    x.fillStyle = g;
-    x.fillRect(0, 0, 128, 128);
-    return new CanvasTexture(c);
-  }, []);
-  const tint = useMemo(() => new Color(), []);
-  const base = useMemo(() => new Color("#d9d3cc"), []);
-  const fireColor = useMemo(() => new Color("#ff9a55"), []);
-  // In the entry the only light in the cabin is the fire outside: it glows in the window and lights the crew.
-  useFrame(() => {
-    const t = filmClock.t;
-    const fire = t >= T.REENTRY && t < T.CHUTES ? plasma(t) : 0;
-    const flick = 0.8 + 0.2 * Math.sin(t * 41) * Math.sin(t * 13 + 1);
-    const level = fire > 0.01 ? Math.min(1, 0.45 + fire * 1.4) * flick : 0;
-    if (glow.current) {
-      glow.current.visible = level > 0.02;
-      (glow.current.material as MeshBasicMaterial).opacity = level;
-    }
-    tint.copy(base).lerp(fireColor, Math.min(1, fire * 1.4) * flick);
-    crew.current?.traverse((o) => {
-      const m = (o as Mesh).material as MeshBasicMaterial | undefined;
-      if (m && m.map) m.color.copy(tint);
-    });
-  });
   return (
     <group ref={ref}>
-      <mesh ref={glow} position={[0, 0, WINDOW_Z - 0.03]} visible={false}>
-        <planeGeometry args={[AP_W + 0.02, AP_H + 0.02]} />
-        <meshBasicMaterial map={glowTex} color={[2.4, 1.6, 0.9]} transparent blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
-      </mesh>
       {/* Room shell: floor, ceiling, side walls and the back, but no front (that is the window wall) */}
       <mesh position={[0, -0.5, 0.45]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[1.5, 1.7]} />
@@ -160,11 +119,9 @@ export const Cabin = forwardRef<Group>(function Cabin(_, ref) {
       </group>
       <Panel x={0.72} rows={5} />
       <Panel x={-0.72} rows={5} />
-      <group ref={crew}>
-        <CrewMember x={-0.25} z={0.3} art={CREW_ART[0]!} width={0.19} />
-        <CrewMember x={0} z={0.33} art={CREW_ART[1]!} width={0.21} />
-        <CrewMember x={0.25} z={0.3} art={CREW_ART[2]!} width={0.19} />
-      </group>
+      <CrewMember x={-0.25} z={0.3} art={CREW_ART[0]!} width={0.19} />
+      <CrewMember x={0} z={0.33} art={CREW_ART[1]!} width={0.21} />
+      <CrewMember x={0.25} z={0.3} art={CREW_ART[2]!} width={0.19} />
     </group>
   );
 });
