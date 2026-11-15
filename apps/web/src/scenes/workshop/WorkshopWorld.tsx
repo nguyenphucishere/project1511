@@ -17,13 +17,13 @@ import type { EngineId } from "./loadout";
 import type { StationId } from "./checks";
 import {
   CryoSupplyTanks,
+  FloorEngineer,
   FloorInspector,
   IndustrialForklift,
   Level2Technician,
   Level3Technician,
   Props,
 } from "./Living";
-import { CharacterSprite } from "../CharacterSprite";
 import { HallSoundscape } from "./Soundscape";
 import { PartModel } from "./RocketModel";
 import { Stations } from "./Stations";
@@ -114,7 +114,7 @@ export function WorkshopWorld({ level, phase, inspected, activeId, onInspect, on
         <CryoSupplyTanks />
       </StaticBatch>
 
-      <FloorEngineerDesk />
+      <FloorEngineer />
       <FloorInspector />
       <Level2Technician />
       <Level3Technician />
@@ -200,29 +200,5 @@ export function WorkshopWorld({ level, phase, inspected, activeId, onInspect, on
         ),
       )}
     </>
-  );
-}
-
-/** The lead engineer, drawn by hand, leaning on a standing desk on the hall floor with his wrench. */
-function FloorEngineerDesk() {
-  return (
-    <group position={[0, 0, 5.5]}>
-      <CharacterSprite
-        position={[0, 0.92, -0.18]}
-        frames={["/assets/characters/engineer/smile.webp", "/assets/characters/engineer/laugh.webp"]}
-        height={0.95}
-        aspect={643 / 700}
-        holdSeconds={[3.6, 1.8]}
-        shadow={false}
-      />
-      <mesh position={[0, 0.46, 0]}>
-        <boxGeometry args={[1.1, 0.92, 0.45]} />
-        <meshStandardMaterial color="#374151" roughness={0.6} />
-      </mesh>
-      <mesh position={[0, 0.93, 0]}>
-        <boxGeometry args={[1.16, 0.04, 0.5]} />
-        <meshStandardMaterial color="#9CA3AF" roughness={0.4} metalness={0.3} />
-      </mesh>
-    </group>
   );
 }

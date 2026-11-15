@@ -11,7 +11,6 @@ import { VITAL_STATIONS, type StationId } from "@/mocks/vitals";
 import type { LocalizedText } from "@/i18n";
 import { BACK_Z, CORRIDOR_LENGTH, DOOR, DOOR_PANEL, ROOM, STATIONS } from "./layout";
 import { DoctorSprite } from "./DoctorSprite";
-import { CharacterSprite } from "../CharacterSprite";
 
 interface MedicalWorldProps {
   doorOpen: boolean;
@@ -61,14 +60,7 @@ export function MedicalWorld({ doorOpen, checked, onOpenDoor, onInspect }: Medic
 
       {/* Lively Staff */}
       <DoctorSprite position={[-0.95, 0, BACK_Z + 1.4]} />
-      <CharacterSprite
-        position={[1.6, 0, BACK_Z + 2.2]}
-        frames={["/assets/characters/nurse/idle.webp", "/assets/characters/nurse/read.webp"]}
-        height={1.72}
-        aspect={327 / 1000}
-        holdSeconds={[3.2, 3.6]}
-        pace={{ range: 0.45, speed: 0.6 }}
-      />
+      <MedicalTechnician />
 
       {(
         [
