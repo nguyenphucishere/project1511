@@ -132,8 +132,8 @@ export const BRIEFINGS: Record<BriefingId, Briefing> = {
       {
         speaker: "astronaut",
         text: {
-          en: "After the burn we turn the ship around, dock with Eagle and pull it out of the third stage. Then three days to the Moon: sit back and watch, this part flies itself.",
-          vi: "Sau khi đốt xong, ta quay đầu tàu, ghép với Eagle và kéo nó ra khỏi tầng ba. Rồi ba ngày tới Mặt Trăng: cứ ngồi xem nhé, đoạn này tự bay.",
+          en: "Three days to the Moon. Sit back and watch; this part flies itself.",
+          vi: "Ba ngày tới Mặt Trăng. Cứ ngồi xem nhé, đoạn này tự bay.",
         },
       },
     ],
@@ -152,13 +152,13 @@ export const BRIEFINGS: Record<BriefingId, Briefing> = {
       {
         speaker: "astronaut",
         text: {
-          en: "Eagle undocks and the computer flies the descent. When trouble comes the calls are yours: the alarm, then where to land. The last 150 metres, you fly.",
-          vi: "Eagle tách ra và máy tính lo phần hạ cánh. Khi có sự cố, quyết định là của bạn: báo động, rồi chọn chỗ đáp. 150 mét cuối cùng, bạn tự lái.",
+          en: "Computer flies the first part. At 150 metres the lander is yours: pick a site, brake, steer clear of the boulders.",
+          vi: "Máy tính lo phần đầu. Đến độ cao 150 mét, tàu là của bạn: chọn điểm đáp, giảm tốc, tránh xa đá tảng.",
         },
       },
     ],
     objectives: [
-      { en: "Make the calls, pick a landing site and take the stick", vi: "Ra quyết định, chọn điểm đáp và nắm cần lái" },
+      { en: "Start the descent and pick a landing site", vi: "Bắt đầu hạ cánh và chọn điểm đáp" },
       { en: "Touch down under 3 m/s, clear of hazards", vi: "Chạm đất dưới 3 m/s, tránh khu nguy hiểm" },
       { en: "Cut the engine at the contact light", vi: "Tắt động cơ khi đèn tiếp đất sáng" },
     ],

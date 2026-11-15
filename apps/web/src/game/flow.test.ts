@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { getNextStepId, missionLost } from "./flow";
 
 describe("mission control → next step", () => {
-  it("a normal launch goes on to the capsule", () => {
-    expect(getNextStepId("mission-control-scene", { narrative: { decisions: {} } })).toBe("launch-video");
+  it("a normal launch goes on to the weather call", () => {
+    expect(getNextStepId("mission-control-scene", { narrative: { decisions: {} } })).toBe("weather-decision");
   });
 
   it("a vehicle lost to the weather from the console ends the mission (ENDING-5)", () => {

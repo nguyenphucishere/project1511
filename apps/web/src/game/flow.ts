@@ -35,8 +35,7 @@ export const CHAPTERS: Chapter[] = [
 ];
 
 /**
- * Apollo 11 Mission Flow. Five calls shape the ending: the LOX check and the trajectory are steps of their own;
- * the weather call is made at the launch console, the 1202 alarm and the landing site inside the landing scene.
+ * Apollo 11 Mission Flow including 5 interactive decision nodes.
  */
 export const FLOW: Step[] = [
   { id: "intro-video", kind: "cutscene", video: "intro", chapter: "medical", enter: "none" },
@@ -47,6 +46,7 @@ export const FLOW: Step[] = [
   { id: "workshop-decision", kind: "decision", decision: "workshop-decision", chapter: "workshop", enter: "fade" },
   { id: "mission-control-briefing", kind: "briefing", briefing: "mission-control", chapter: "mission-control", enter: "fade" },
   { id: "mission-control-scene", kind: "scene", scene: "mission-control", chapter: "mission-control", enter: "fade" },
+  { id: "weather-decision", kind: "decision", decision: "weather-decision", chapter: "mission-control", enter: "fade" },
   { id: "launch-video", kind: "cutscene", video: "launch", chapter: "mission-control", enter: "fade" },
   { id: "ascent-briefing", kind: "briefing", briefing: "ascent", chapter: "ascent", enter: "black-hold" },
   { id: "ascent-scene", kind: "scene", scene: "ascent", chapter: "ascent", enter: "fade" },
@@ -54,8 +54,9 @@ export const FLOW: Step[] = [
   { id: "translunar-briefing", kind: "briefing", briefing: "translunar", chapter: "translunar", enter: "black-hold" },
   { id: "translunar-scene", kind: "scene", scene: "translunar", chapter: "translunar", enter: "fade" },
   { id: "lunar-descent-briefing", kind: "briefing", briefing: "lunar-descent", chapter: "lunar-descent", enter: "black-hold" },
+  { id: "agc-alarm-decision", kind: "decision", decision: "agc-alarm-decision", chapter: "lunar-descent", enter: "fade" },
   { id: "lunar-descent-scene", kind: "scene", scene: "lunar-descent", chapter: "lunar-descent", enter: "fade" },
-  { id: "touchdown-film", kind: "scene", scene: "lunar-descent", chapter: "lunar-descent", enter: "fade" },
+  { id: "landing-decision", kind: "decision", decision: "landing-decision", chapter: "lunar-descent", enter: "fade" },
   { id: "flag-video", kind: "cutscene", video: "flagPlanting", chapter: "lunar-descent", enter: "fade" },
   { id: "epilogue", kind: "briefing", briefing: "epilogue", chapter: "epilogue", enter: "black-hold" },
   { id: "return-briefing", kind: "briefing", briefing: "return", chapter: "return", enter: "fade" },
@@ -115,10 +116,16 @@ export function getNextStepId(currentStepId: string, state?: any): string | null
     case "mission-control-briefing":
       return "mission-control-scene";
     case "mission-control-scene": {
-      // The weather call is made at the console (the launch window and the pad weather): a vehicle
-      // lost to the weather there ends the mission (ENDING-5); a launch goes on to the capsule.
+      // Launched outside the weather limits from the console: the vehicle is lost (ENDING-5).
       const weather = decisions.weather;
       if (weather === "severe_wind" || weather === "severe-wind") return "end";
+      return "weather-decision";
+    }
+    case "weather-decision": {
+      const weather = decisions.weather;
+      if (weather === "severe_wind" || weather === "severe-wind") {
+        return "end"; // Triggers ENDING-5
+      }
       return "launch-video";
     }
     case "launch-video":
@@ -133,7 +140,14 @@ export function getNextStepId(currentStepId: string, state?: any): string | null
     case "translunar-scene":
       return "lunar-descent-briefing";
     case "lunar-descent-briefing":
+      return "agc-alarm-decision";
+    case "agc-alarm-decision": {
+      const agc = decisions.agc_alarm ?? decisions.agcAlarm;
+      if (agc === "abort_stage" || agc === "abort") {
+        return "end"; // Triggers ENDING-2
+      }
       return "lunar-descent-scene";
+    }
     case "lunar-descent-scene":
       // The 1202 call and the landing call are made inside the scene: abort, a landing in the boulders
       // or a wave-off (ENDING-2, 3, 4) all leave an ending behind; a safe landing goes on to the film.

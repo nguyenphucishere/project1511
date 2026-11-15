@@ -16,7 +16,7 @@ import { BRIEFINGS } from "@/game/script";
 import { useGameStore } from "@/game/gameStore";
 import { useSceneViewpoints } from "@/game/sceneStore";
 import { addTrauma } from "@/game/shake";
-import { playExplosion, playSfx, prefetchVoiceLines, setMasterVolume, speak, startRumble, stopSpeaking, type Rumble } from "@/game/sfx";
+import { playExplosion, playSfx, setMasterVolume, speak, startRumble, stopSpeaking, type Rumble } from "@/game/sfx";
 import { ROOM_SPEAKER, roomScript, type RoomBeat } from "./controlRoomScript";
 import { useVoiceLine } from "@/hooks/useVoiceLine";
 import { preloadCrowd, startCrowdBed, type CrowdBed } from "@/game/crowdAudio";
@@ -29,7 +29,6 @@ import {
 import { assessLaunch, planRequestFor, TRACE_TEXT } from "@/lib/simulation/launch.engine";
 import type { LaunchPlan } from "@/lib/simulation/launch.physics";
 import type { LaunchConfig, LaunchResult, LaunchSite, LaunchWindowsData } from "@/lib/simulation/launch.types";
-import { BOOM_T, boomFilm } from "./boomFilm";
 import { DEFAULT_SITE_ID, LAUNCH_SITES, OFFLINE_KSC_WINDOWS } from "@/mocks/launch-options";
 import { useSimulationWasm } from "@/hooks/useSimulationWasm";
 import { useNasaData } from "@/hooks/useNasaData";
@@ -67,7 +66,7 @@ import {
   STAGE3_T,
 } from "./ascent";
 import { shotAt } from "./launchShots";
-import { CALLOUTS, KEYWORD_SECONDS, calloutsDue } from "./callouts";
+import { KEYWORD_SECONDS, calloutsDue } from "./callouts";
 import { radioCall, stopRadio } from "@/game/radio";
 import { useSettingsStore } from "@/game/settingsStore";
 import {
@@ -266,12 +265,6 @@ export function MissionControlScene({
     onComplete();
   }, [makeDecision, onComplete]);
 
-  /** A launch that reached orbit inside the weather limits: the weather call was GO (for the debrief). */
-  const launchedOk = useCallback(() => {
-    makeDecision("weather", "go");
-    onComplete();
-  }, [makeDecision, onComplete]);
-
   const ignite = useCallback(async () => {
     const r = await pending.current;
     if (!r) return;
@@ -343,20 +336,6 @@ export function MissionControlScene({
       explode: () => startExplosion(),
       // Jumps the launch film to `t` seconds after ignition (use with a frozen performance.now).
       seek: (t: number) => setIgnitionAt(performance.now() - t * 1000),
-      // Skips the countdown and lights the engines with the current loadout (for recording the film).
-      // Arms the boom film: the vehicle breaks up `t` seconds after ignition (default BOOM_T).
-      boom: (t?: number) => {
-        boomFilm.t = t ?? BOOM_T;
-        return boomFilm.t;
-      },
-      // `good` flies a full-fuel standard stack in the offline calm window, so it reaches orbit.
-      fly: (good?: boolean) => {
-        pending.current = good
-          ? launchSimulator.simulate({ ...config, vehicle: "saros", payload: "standard", fuelPct: 100, orbitKm: 185 }, OFFLINE_KSC_WINDOWS.windows[0]!)
-          : launchSimulator.simulate(config, launchWindow);
-        setConfigured(true);
-        void ignite();
-      },
     };
   }
 
@@ -490,11 +469,7 @@ export function MissionControlScene({
   // It gasps as the capsule climbs past them and cheers when it reaches orbit.
   const crowd = useRef<CrowdBed | null>(null);
   useEffect(() => {
-    if (phase === "countdown") {
-      preloadCrowd();
-      // Fetch every radio call now, so each starts the instant its moment comes instead of after a download.
-      prefetchVoiceLines(CALLOUTS.map((c) => c.line[localeRef.current]), localeRef.current);
-    }
+    if (phase === "countdown") preloadCrowd();
     if (phase === "countdown" || phase === "flight") {
       crowd.current ??= startCrowdBed();
       return;
@@ -516,8 +491,7 @@ export function MissionControlScene({
       if (shot === lastShot) return;
       lastShot = shot;
       const close = shot.startsWith("crowd-");
-      // Nobody on the ground can be heard from inside the capsule.
-      bed.setLevel(shot.startsWith("cabin") ? 0 : shot === "crowd-cheer" ? 1 : close ? 0.85 : 0.2);
+      bed.setLevel(shot === "crowd-cheer" ? 1 : close ? 0.85 : 0.2);
       if (shot === "crowd-cheer") bed.react("cheer");
       // The first cut to the crowd comes right after liftoff: they cheer as the rocket clears the pad.
       else if (shot === "crowd-field") bed.react("cheer", 0.7);
@@ -548,13 +522,9 @@ export function MissionControlScene({
     let hide = 0;
     const id = window.setInterval(() => {
       const now = (performance.now() - ignitionAt) / 1000;
-      // Inside the capsule (the astronaut's view) the control room is not in the picture, so its voice and
-      // the crowd stay out of it: the keyword still shows, but nothing is said over the cabin shots.
-      const inCabin = shotAt(now).id.startsWith("cabin");
-      if (inCabin) stopRadio();
       for (const call of calloutsDue(last, Math.min(now, burnEnd))) {
         const lang = localeRef.current;
-        if (!inCabin) radioCall(call.line, lang, call.voice);
+        radioCall(call.line, lang, call.voice);
         setKeyword({ id: ++keywordId.current, text: call.keyword[lang] });
         window.clearTimeout(hide);
         hide = window.setTimeout(() => setKeyword(null), KEYWORD_SECONDS * 1000);
@@ -878,7 +848,7 @@ export function MissionControlScene({
         title={m.orbitTitle}
         description={format(m.orbitBody, { km: config.orbitKm })}
         continueLabel={m.continue}
-        onContinue={assessment.overBudget ? () => setPhase("budget-cut") : launchedOk}
+        onContinue={assessment.overBudget ? () => setPhase("budget-cut") : onComplete}
       />
     </section>
   );

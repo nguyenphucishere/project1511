@@ -53,7 +53,7 @@ export const FLY_SECONDS = 1.9;
 /** Total length of the sequence in seconds (smoke is still drifting at the end). */
 export const EXPLOSION_SECONDS = 31;
 
-export function puff(color: string, size = 128, soft = 0.55) {
+function puff(color: string, size = 128, soft = 0.55) {
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
   const c = canvas.getContext("2d")!;
@@ -68,7 +68,7 @@ export function puff(color: string, size = 128, soft = 0.55) {
   return tex;
 }
 
-export function ringTexture() {
+function ringTexture() {
   const size = 256;
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
