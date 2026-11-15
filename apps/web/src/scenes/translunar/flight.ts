@@ -91,8 +91,17 @@ export const T = {
   FILM_END: 352,
 } as const;
 
+/**
+ * The film passes from the high air over the Earth to the sea set a few seconds before the drogues: the
+ * capsule falls through a white wash of cloud and comes out below it, still free-falling, over the water.
+ * Everything that happens to the parachutes then happens where the sea can be seen.
+ */
+export const SEA_ARRIVAL_BEFORE_DROGUES = 3;
+
 /** Seconds from the drogues to the main parachutes in the film (the real gap was 48 s). */
 export const MAIN_DELAY = 6;
+/** Film time the capsule arrives in the sea set. */
+export const SEA_ARRIVAL = T.CHUTES - SEA_ARRIVAL_BEFORE_DROGUES;
 /** Film seconds of the entry, from the interface to the drogues. */
 export const ENTRY_SPAN = T.CHUTES - T.REENTRY;
 /** The film time a fraction (0 to 1) of the way through the entry. */
@@ -304,7 +313,7 @@ export function skyAir(altKm: number): number {
  * The hard cuts of the flight home, each softened by dipping through black: the jump of two and a half
  * days to the top of the air, and the cut from space to the sea under the parachutes.
  */
-export const HOME_CUTS = [T.CHUTES];
+export const HOME_CUTS = [SEA_ARRIVAL];
 const DIP_IN = 0.8;
 const DIP_OUT = 1.0;
 
@@ -332,9 +341,26 @@ export function landedTilt(t: number): number {
 }
 
 /** Parachute descent at the splashdown set. */
+/** Altitude (world units) and vertical speed (units a second, down) at the key moments of the fall in the sea set. */
+const FALL_KEYS: [number, number, number][] = [
+  [SEA_ARRIVAL, 150, 14], // free fall, heat shield first
+  [T.CHUTES, 112, 12], // the drogues fire
+  [T.CHUTES + MAIN_DELAY, 62, 7], // the mains open
+  [T.CHUTES + MAIN_DELAY + 10, 30, 2.5],
+  [T.TOUCHDOWN, 0.4, 1],
+];
 export function capsuleAltitude(t: number) {
-  const k = clamp01((t - T.CHUTES) / (T.TOUCHDOWN - T.CHUTES));
-  return lerp(34, 0.4, k * k * (3 - 2 * k) * 0.6 + k * 0.4);
+  const first = FALL_KEYS[0]!;
+  if (t <= first[0]) return first[1];
+  for (let i = 1; i < FALL_KEYS.length; i++) {
+    const [t1, a1, v1] = FALL_KEYS[i]!;
+    if (t <= t1) {
+      const [t0, a0, v0] = FALL_KEYS[i - 1]!;
+      const dt = t1 - t0;
+      return hermite(a0, a1, -v0 * dt, -v1 * dt, (t - t0) / dt);
+    }
+  }
+  return FALL_KEYS[FALL_KEYS.length - 1]![1];
 }
 
 /* ---------------------------------------------------------------- cameras */
@@ -382,7 +408,7 @@ export const SHOT_STARTS: [number, string][] = [
   [entryAt(0.32), "reentry-low"],
   [entryAt(0.48), "entry-fall"],
   [entryAt(0.72), "reentry"],
-  [T.CHUTES, "chutes"],
+  [SEA_ARRIVAL, "drop"],
   [T.CHUTES + 22, "heli"],
   [T.CHUTES + 38, "splash"],
   [T.TOUCHDOWN + 2, "recovery"],
@@ -392,7 +418,7 @@ export const SHOT_STARTS: [number, string][] = [
 export function viewKind(t: number): ViewKind {
   const id = shotIdAt(t);
   if (id === "earthrise" || id === "cabin-window" || id === "cabin-crew") return "cabin";
-  if (id === "chutes" || id === "heli" || id === "splash" || id === "recovery") return "sea";
+  if (id === "drop" || id === "heli" || id === "splash" || id === "recovery") return "sea";
   return "space";
 }
 
@@ -434,8 +460,52 @@ export function cabinEye(t: number): Vec {
   return [0, 0.2 * s, 0.05 + 1.0 * s];
 }
 
+/** Seconds a shot takes to glide out of the previous one's view instead of cutting to its own. */
+const BLEND_S = 2.8;
+
+const around = (p: Vec, c: Vec) => {
+  const r = sub(p, c);
+  const d = Math.max(1e-6, Math.hypot(r[0], r[1], r[2]));
+  return { d, az: Math.atan2(r[0], r[2]), el: Math.asin(Math.max(-1, Math.min(1, r[1] / d))) };
+};
+const fromAround = (c: Vec, d: number, az: number, el: number): Vec => [c[0] + d * Math.cos(el) * Math.sin(az), c[1] + d * Math.sin(el), c[2] + d * Math.cos(el) * Math.cos(az)];
+
+/**
+ * The camera at film time t. Each shot is its own pure function of t, so a bare cut jumps the camera tens
+ * of units and swings the view by a hundred degrees or more. Within the flight home a new shot therefore
+ * glides out of the previous one: the camera swings round the subject (the ship, the capsule) through the
+ * shorter arc, drawing in or out, and the two shots' aim and lens blend, over BLEND_S seconds. Cuts into a
+ * different world (space to the sea) or into the cabin stay cuts, softened by the dip to white.
+ */
 export function frameAt(t: number): Shot {
-  const id = shotIdAt(t);
+  let i = 0;
+  for (let k = 0; k < SHOT_STARTS.length; k++) if (t >= SHOT_STARTS[k]![0]) i = k;
+  const [t0, id] = SHOT_STARTS[i]!;
+  const frame = rawFrameAt(t, id);
+  const prev = SHOT_STARTS[i - 1]?.[1];
+  if (!prev || t0 < T.OUTBOUND_END || t - t0 >= BLEND_S) return frame;
+  const before = rawFrameAt(t, prev);
+  if (before.kind !== frame.kind || frame.kind === "cabin") return frame;
+  const w = smooth((t - t0) / BLEND_S);
+  const subject: Vec = frame.kind === "sea" ? add(SEA, [0, capsuleAltitude(t) + 1.4, 0]) : homePosition(t);
+  const a = around(before.pos, subject);
+  const b = around(frame.pos, subject);
+  let dAz = (b.az - a.az) % (2 * Math.PI);
+  if (dAz > Math.PI) dAz -= 2 * Math.PI;
+  if (dAz < -Math.PI) dAz += 2 * Math.PI;
+  const aimA = sub(before.aim, subject);
+  const aimB = sub(frame.aim, subject);
+  return {
+    ...frame,
+    pos: fromAround(subject, a.d * Math.pow(b.d / a.d, w), a.az + dAz * w, lerp(a.el, b.el, w)),
+    aim: add(subject, [lerp(aimA[0], aimB[0], w), lerp(aimA[1], aimB[1], w), lerp(aimA[2], aimB[2], w)]),
+    fov: lerp(before.fov, frame.fov, w),
+    shake: lerp(before.shake, frame.shake, w),
+    up: WORLD_UP,
+  };
+}
+
+function rawFrameAt(t: number, id: string): Shot {
   const pose = shipPose(t);
   const stage = stagePosition(t);
   const k = (from: number, to: number) => clamp01((t - from) / (to - from));
@@ -549,9 +619,20 @@ export function frameAt(t: number): Shot {
       const p = reentryPosition(t);
       return { ...base, kind: "space", pos: add(p, [-13, -3, 11]), aim: add(p, [0, 0.4, 1.5]), fov: 36, shake: 0.016 };
     }
-    case "chutes": {
+    case "drop": {
+      // From the water's edge, tracking the capsule down: first a speck high in the sky in free fall, then the
+      // drogues, then the mains, the camera drawing in as it comes down.
       const alt = capsuleAltitude(t);
-      return { ...base, kind: "sea", pos: add(SEA, [10, 2.5, 18]), aim: add(SEA, [0, alt + 12, 0]), fov: 52 };
+      const u = 1 - clamp01((alt - 34) / (150 - 34));
+      const e = u * u * (3 - 2 * u);
+      return {
+        ...base,
+        kind: "sea",
+        pos: add(SEA, [40 - 30 * e, 3 - 0.5 * e, 70 - 52 * e]),
+        aim: add(SEA, [0, alt + 1.4 + 9 * e, 0]),
+        fov: 32 + 20 * e,
+        shake: 0.01,
+      };
     }
     case "heli": {
       // The recovery helicopter's view: high over the water, drifting round to the capsule under its chutes.

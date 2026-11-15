@@ -189,3 +189,57 @@ describe("the radio log of the entry and recovery", () => {
     expect(last.t).toBeLessThan(T.FILM_END);
   });
 });
+
+describe("the cuts of the flight home", () => {
+  const sub3 = (a: number[], b: number[]) => [a[0]! - b[0]!, a[1]! - b[1]!, a[2]! - b[2]!];
+  const len3 = (a: number[]) => Math.hypot(a[0]!, a[1]!, a[2]!);
+  const unit = (a: number[]) => a.map((x) => x / (len3(a) || 1));
+  const turnDeg = (a: number[], b: number[]) => (Math.acos(Math.max(-1, Math.min(1, a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!))) * 180) / Math.PI;
+  const dir = (t: number) => {
+    const f = frameAt(t);
+    return unit(sub3(f.aim, f.pos));
+  };
+
+  it("never jump the camera or swing the view at a cut inside one world", async () => {
+    const { SHOT_STARTS } = await import("./flight");
+    const trouble: string[] = [];
+    for (let i = 1; i < SHOT_STARTS.length; i++) {
+      const [t, id] = SHOT_STARTS[i]!;
+      if (t < T.OUTBOUND_END) continue;
+      const a = frameAt(t - 0.02);
+      const b = frameAt(t + 0.02);
+      if (a.kind !== b.kind) continue; // a change of world has its own dip
+      const jump = len3(sub3(b.pos, a.pos));
+      const turn = turnDeg(dir(t - 0.02), dir(t + 0.02));
+      if (jump > 2 || turn > 5) trouble.push(`${id} at ${t}: camera jumps ${jump.toFixed(1)} units, view swings ${turn.toFixed(0)} deg`);
+    }
+    expect(trouble).toEqual([]);
+  });
+
+  it("keep the camera's pace sane while a shot glides in (no whip pans)", async () => {
+    const { SHOT_STARTS } = await import("./flight");
+    const trouble: string[] = [];
+    for (let i = 1; i < SHOT_STARTS.length; i++) {
+      const [t, id] = SHOT_STARTS[i]!;
+      if (t < T.OUTBOUND_END) continue;
+      for (let x = t; x < t + 3; x += 0.1) {
+        const a = frameAt(x);
+        const b = frameAt(x + 0.1);
+        if (a.kind !== b.kind) continue;
+        const step = len3(sub3(b.pos, a.pos));
+        const turn = turnDeg(dir(x), dir(x + 0.1));
+        if (step > 14 || turn > 18) trouble.push(`${id} at ${x.toFixed(1)}: ${step.toFixed(1)} units, ${turn.toFixed(0)} deg in 0.1 s`);
+      }
+    }
+    expect(trouble).toEqual([]);
+  });
+
+  it("show the parachutes in two stages: the drogues, then the mains, with the fall slowing in between", async () => {
+    const { capsuleAltitude, SEA_ARRIVAL, MAIN_DELAY } = await import("./flight");
+    const speed = (t: number) => (capsuleAltitude(t - 0.5) - capsuleAltitude(t + 0.5));
+    expect(speed(SEA_ARRIVAL + 1)).toBeGreaterThan(speed(T.CHUTES + MAIN_DELAY - 0.5));
+    expect(speed(T.CHUTES + MAIN_DELAY - 0.5)).toBeGreaterThan(speed(T.CHUTES + MAIN_DELAY + 12));
+    for (let t = SEA_ARRIVAL; t < T.TOUCHDOWN; t += 0.5) expect(capsuleAltitude(t + 0.5)).toBeLessThanOrEqual(capsuleAltitude(t) + 1e-9);
+    expect(capsuleAltitude(T.TOUCHDOWN)).toBeLessThan(1);
+  });
+});

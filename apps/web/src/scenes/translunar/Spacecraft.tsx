@@ -20,7 +20,10 @@ import { Plasma } from "./Plasma";
 import {
   SEA,
   T,
+  SEA_ARRIVAL,
   capsuleAltitude,
+  clamp01,
+  MAIN_DELAY,
   homePosition,
   landedTilt,
   norm,
@@ -378,19 +381,37 @@ export function ReentryCapsule() {
   const heat = useRef(0);
   const chutes = useRef<Group>(null);
   const sm = useRef<Group>(null);
+  const drogues = useRef<Group>(null);
+  const mains = useRef<Group>(null);
   const flow = useRef<Group>(null);
   useFrame(({ clock }) => {
     const t = filmClock.t;
     const g = group.current;
     if (!g) return;
     // From the service module's separation the command module flies alone, heat shield first, along the path home.
-    const burning = t >= T.SM_SEP && t < T.CHUTES;
-    const landing = t >= T.CHUTES;
+    const burning = t >= T.SM_SEP && t < SEA_ARRIVAL;
+    const landing = t >= SEA_ARRIVAL;
     g.visible = burning || landing;
     const alt0 = landing ? capsuleAltitude(t) : 0;
     if (chutes.current) {
-      chutes.current.visible = landing && alt0 > 1.2;
+      chutes.current.visible = landing && t >= T.CHUTES && alt0 > 1.2;
       chutes.current.position.set(SEA[0], alt0 + 1.4, SEA[2]);
+      // Two stages: the small drogues bloom at once, are cut away as the three big mains open (with a little
+      // overshoot as each fills).
+      const bloom = (x: number) => {
+        const k = clamp01(x);
+        return k * k * (3 - 2 * k);
+      };
+      const ds = bloom((t - T.CHUTES) / 1) * (1 - bloom((t - (T.CHUTES + MAIN_DELAY + 0.4)) / 0.6));
+      const ms = bloom((t - (T.CHUTES + MAIN_DELAY)) / 1.8);
+      if (drogues.current) {
+        drogues.current.visible = ds > 0.01;
+        drogues.current.scale.setScalar(0.3 * Math.max(0.01, ds));
+      }
+      if (mains.current) {
+        mains.current.visible = ms > 0.01;
+        mains.current.scale.setScalar(0.1 + 0.9 * ms * (1 + 0.1 * Math.sin(Math.PI * ms)));
+      }
     }
     if (sm.current && !burning) sm.current.visible = false;
     if (!g.visible) return;
@@ -451,9 +472,15 @@ export function ReentryCapsule() {
       </mesh>
     </group>
     <group ref={chutes}>
-      <Canopy x={-4.2} z={0} lean={0.12} />
-      <Canopy x={4.2} z={0} lean={-0.12} />
-      <Canopy x={0} z={-2.2} lean={0.05} />
+      <group ref={drogues} visible={false}>
+        <Canopy x={-3.4} z={0} lean={0.1} />
+        <Canopy x={3.4} z={0} lean={-0.1} />
+      </group>
+      <group ref={mains} visible={false}>
+        <Canopy x={-4.2} z={0} lean={0.12} />
+        <Canopy x={4.2} z={0} lean={-0.12} />
+        <Canopy x={0} z={-2.2} lean={0.05} />
+      </group>
     </group>
     <group ref={group}>
       <group ref={body} scale={3}>

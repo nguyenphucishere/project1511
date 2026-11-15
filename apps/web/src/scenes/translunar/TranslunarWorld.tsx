@@ -28,7 +28,7 @@ import { Recovery } from "./Recovery";
 import { SEA_SUN, SeaSet } from "./SeaSet";
 import { ReentryCapsule, Ship, Stage } from "./Spacecraft";
 import { filmClock } from "./clock";
-import { R_EARTH, SUN, T, cabinEye, cabinLook, frameAt, entryState, mul, plasma, shipPose, viewKind } from "./flight";
+import { R_EARTH, SUN, T, cabinEye, cabinLook, frameAt, SEA_ARRIVAL, entryState, mul, plasma, shipPose, viewKind } from "./flight";
 
 const MILKY_TINT = new Color(2.2, 2.3, 2.7);
 
@@ -165,7 +165,7 @@ function FilmCamera({
       if (skyRef.current) {
         skyRef.current.position.copy(camera.position);
         // Falling into the air the stars go out: full in space, dim in the stratosphere, nearly gone below.
-        const alt = t >= T.REENTRY && t < T.CHUTES ? entryState(t).altKm : 999;
+        const alt = t >= T.REENTRY && t < SEA_ARRIVAL ? entryState(t).altKm : 999;
         const stars = alt > 100 ? 1 : Math.max(0.06, (alt - 15) / 85);
         ((skyRef.current.material as MeshBasicMaterial).color as Color).copy(MILKY_TINT).multiplyScalar(stars);
         // And the sky itself takes colour behind them.

@@ -181,9 +181,9 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
         );
       })()}
 
-      {/* The cuts of the flight home dip through black instead of jumping */}
+      {/* The one hard cut of the flight home (down through the cloud to the sea) dips through white instead of jumping */}
       {part === "return" && (
-        <div aria-hidden className="pointer-events-none absolute inset-0 z-[9] bg-black transition-opacity duration-100 ease-linear" style={{ opacity: cutDip(now) }} />
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-[9] bg-[#e6f0f9] transition-opacity duration-100 ease-linear" style={{ opacity: cutDip(now) }} />
       )}
 
       {/* Letterbox bars */}

@@ -5,7 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { DoubleSide, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import { filmClock } from "./clock";
 import { Helicopter } from "./Helicopter";
-import { SEA, T } from "./flight";
+import { SEA, SEA_ARRIVAL, T } from "./flight";
 
 /** Where a helicopter is at film time t: in from far off, then circling the capsule at a hover. */
 function helicopterAt(t: number, phase: number): [number, number, number, number] {
@@ -34,7 +34,7 @@ export function Recovery() {
     const t = filmClock.t;
     const g = root.current;
     if (!g) return;
-    g.visible = t >= T.CHUTES - 0.5;
+    g.visible = t >= SEA_ARRIVAL - 0.5;
     if (!g.visible) return;
     heli.forEach((ref, i) => {
       const h = ref.current;

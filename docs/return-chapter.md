@@ -230,3 +230,32 @@ Bỏ hẳn các cảnh nhìn từ trong khoang trong lúc tái nhập (phần nh
 
 ### Lửa chỉ bắt đầu khi vào khí quyển
 Ở điểm vào khí quyển (122 km) không khí còn rất loãng: tàu sạch và tối, không có lửa. Độ nóng tính theo mật độ không khí × tốc độ³: bắt đầu thấy ánh sáng quanh tấm chắn nhiệt từ khoảng 90 km, dữ dội lúc 60 km, yếu dần khi giảm tốc, hết khi xuống dưới khoảng 14 km. Cảnh nhìn từ trong khoang bị bỏ hẳn khỏi phần đốt về nhà (nay là góc phía trước nhìn lại Mặt Trăng).
+
+---
+
+## Phân tích chuyển cảnh (đo thật) và cách sửa
+
+**Đo trước khi sửa** (khoảng cách camera nhảy / góc nhìn xoay tại từng điểm cắt, đơn vị thế giới của phim):
+
+| Điểm cắt | Camera nhảy | Hướng nhìn xoay |
+|---|---|---|
+| đốt về nhà → bay quanh tàu (158) | 24 | **153°** |
+| bay quanh → nhìn về Trái Đất (171) | 9 | 60° |
+| nhìn về Trái Đất → thả mô-đun (184) | 11 | 83° |
+| chase → fly cam vòng trên (215) | 22 | 109° |
+| vòng trên → góc thấp (230) | 24 | 113° |
+| góc thấp → máy cố định (242) | 19 | 22° |
+| chase (cuối) → **bung dù (280)** | **8.478** | 115° |
+| bung dù → trực thăng (302) | 113 | 85° |
+| trực thăng → hạ cánh → vớt (318, 334) | 46, 41 | 18°, 82° |
+
+**Nguyên nhân gốc:**
+1. Mỗi góc máy là một hàm độc lập theo thời gian, không liên quan đến góc máy trước nó, nên mỗi lần cắt camera nhảy 10–25 đơn vị và hướng nhìn xoay 80–150° (vượt "trục 180°", chủ thể đổi mặt đột ngột).
+2. Cắt sang cảnh biển là **dịch chuyển tức thời 8,5 km** giữa hai thế giới, chỉ che bằng một lần tối đen; tàu trước đó đang rơi không dù, sau cắt đã có dù mở sẵn: **sự kiện bung dù không bao giờ được chiếu**.
+3. Dù hai giai đoạn (dù hãm, dù chính) không có hình: ba tán dù giống nhau xuất hiện cùng lúc, và độ cao trên bảng (7,3 km) không khớp với hình (tàu cách mặt nước vài chục đơn vị).
+4. Trong cảnh biển, các cú cắt trực thăng / hạ cánh / vớt lại nhảy 40–110 đơn vị.
+
+**Sửa:**
+- **Trượt thay vì cắt:** trong cùng một thế giới, góc máy mới trượt ra khỏi góc máy trước trong 2,8 giây: camera quay vòng quanh chủ thể theo cung ngắn nhất, kéo gần hoặc xa, hướng nhìn và ống kính hòa trộn. Sau sửa, mọi điểm cắt trong cùng thế giới nhảy ≤ 1 đơn vị và xoay 0°. Có test giữ điều này.
+- **Một điểm cắt duy nhất giữa hai thế giới**, được dẫn dắt bằng "tàu rơi xuyên lớp mây": màn trắng thay cho màn đen, cắt sớm 3 giây trước dù hãm; tàu vào cảnh biển khi còn đang rơi tự do.
+- **Dựng sự kiện bung dù:** rơi tự do (tàu là một chấm nhỏ trên trời, camera ở mép nước hướng lên) → dù hãm bung ra → hai dù hãm bị cắt, ba dù chính nở (có chút nảy) → tàu chậm dần. Tốc độ rơi giảm theo từng giai đoạn; camera kéo gần theo tàu.
