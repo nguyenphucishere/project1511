@@ -276,18 +276,25 @@ export function reentryPosition(t: number): Vec {
   return [0, R_EARTH + altKm * 0.18, lerp(-60, 60, u)];
 }
 /**
- * How hot the capsule glows, 0 to 1: nothing at the entry interface (122 km, a trace of air), a glow from
- * about 90 km, fierce by 60 km, fading as the speed is shed and gone before the parachutes.
+ * How hot the capsule glows, 0 to 1. It is never switched on or off: the glow creeps up out of nothing as the
+ * first air arrives (a faint warmth from about 95 km, building over some twenty-five seconds of film to its peak
+ * in the thick air near 60 km), holds there through the two load peaks with the heating following the air's
+ * density and the capsule's speed, and then dies away slowly over the last third of the entry as the speed is
+ * shed and the shield cools, still glowing a dull red long after the plasma has gone, until the parachutes.
  */
 export function plasma(t: number) {
-  if (t < T.REENTRY) return 0;
+  if (t < T.REENTRY || t >= T.CHUTES) return 0;
+  const f = (t - T.REENTRY) / ENTRY_SPAN;
+  const ss = (a: number, b: number, x: number) => smooth(clamp01((x - a) / (b - a)));
+  // The envelope: a slow rise, a peak, a long decline. Shaped like the real thing, never a step.
+  const rise = Math.pow(ss(0.07, 0.43, f), 1.4);
+  const decline = 1 - Math.pow(ss(0.56, 1.0, f), 1.15);
+  // A little of the physics rides on top: the heating follows density times speed cubed, so it swells and eases
+  // with the two load peaks instead of sitting flat at the top.
   const { altKm, speedKms } = entryState(t);
   const rho = 1.225 * Math.exp(-altKm / 7.2);
-  // Heating goes as density times speed cubed: next to nothing in the trace of air at the interface (the
-  // capsule is dark and clean there), a glow from about 90 km, fierce by 60 km, and fading as the speed is
-  // shed, gone under the parachutes.
-  const heating = Math.min(1, (rho * speedKms ** 3) / 0.18) ** 0.6;
-  return heating * smooth((speedKms - 1.4) / 3.2);
+  const physics = Math.min(1, (rho * speedKms ** 3) / 0.18) ** 0.5;
+  return rise * decline * (0.82 + 0.18 * physics);
 }
 
 export type AtmosphereLayer = "thermosphere" | "mesosphere" | "stratosphere" | "troposphere";

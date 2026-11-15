@@ -259,3 +259,6 @@ Bỏ hẳn các cảnh nhìn từ trong khoang trong lúc tái nhập (phần nh
 - **Trượt thay vì cắt:** trong cùng một thế giới, góc máy mới trượt ra khỏi góc máy trước trong 2,8 giây: camera quay vòng quanh chủ thể theo cung ngắn nhất, kéo gần hoặc xa, hướng nhìn và ống kính hòa trộn. Sau sửa, mọi điểm cắt trong cùng thế giới nhảy ≤ 1 đơn vị và xoay 0°. Có test giữ điều này.
 - **Một điểm cắt duy nhất giữa hai thế giới**, được dẫn dắt bằng "tàu rơi xuyên lớp mây": màn trắng thay cho màn đen, cắt sớm 3 giây trước dù hãm; tàu vào cảnh biển khi còn đang rơi tự do.
 - **Dựng sự kiện bung dù:** rơi tự do (tàu là một chấm nhỏ trên trời, camera ở mép nước hướng lên) → dù hãm bung ra → hai dù hãm bị cắt, ba dù chính nở (có chút nảy) → tàu chậm dần. Tốc độ rơi giảm theo từng giai đoạn; camera kéo gần theo tàu.
+
+### Lửa tăng và giảm dần (không bật/tắt như bóng đèn)
+Độ nóng là một đường cong liền mạch theo thời gian của cú rơi: gần như 0 ở 206 s (điểm vào), lên từ từ (0,07 ở 218 s, 0,44 ở 226 s, 0,89 ở 234 s), đỉnh ở khoảng 246 s, rồi giảm chậm trong hơn 30 giây (0,63 ở 262 s, 0,25 ở 270 s, 0,10 ở 274 s) và về 0 đúng lúc mở dù. Phần giảm là lúc tàu hãm tốc và lớp chắn nhiệt nguội dần. Có test: lửa chỉ lên một lần tới đỉnh rồi xuống một lần, mỗi giây thay đổi không quá 0,16, lúc lên và lúc xuống đều kéo dài đáng kể.

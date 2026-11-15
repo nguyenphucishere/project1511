@@ -36,8 +36,7 @@ const VERT = /* glsl */ `
     // Turbulence that grows with distance, so the edge is ragged and alive.
     p.xy += 0.32 * age * vec2(sin(uTime * 7.3 + aSeed.x * 61.0), cos(uTime * 6.1 + aSeed.y * 47.0));
     vAge = age;
-    // Below a faint heat there is no glow at all: the air is still too thin to burn.
-    float h = smoothstep(0.05, 0.55, uHeat);
+    float h = uHeat;
     vAlpha = h * 0.32 * pow(1.0 - age, 1.5) * smoothstep(0.0, 0.03, age);
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     float size = (0.55 + 1.0 * aSeed.z) * (1.0 - 0.5 * age);
@@ -94,8 +93,7 @@ export function Plasma({ heat, flowRef }: { heat: React.RefObject<number>; flowR
 
   useFrame(({ clock, camera, size }) => {
     const raw = heat.current ?? 0;
-    const k = Math.min(1, Math.max(0, (raw - 0.05) / 0.5));
-    const h = k * k * (3 - 2 * k);
+    const h = raw;
     // Through the material itself: the uniforms the renderer actually holds (as the sea does).
     const u = mat.current?.uniforms;
     if (u) {

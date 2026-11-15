@@ -448,7 +448,7 @@ export function ReentryCapsule() {
       const hot = plasma(t);
       if (wake.current) {
         // From inside the cabin the fire is not a shape around you but light at the window (see the scene's overlay).
-        wake.current.visible = hot > 0.02 && viewKind(t) !== "cabin";
+        wake.current.visible = hot > 0.004 && viewKind(t) !== "cabin";
       }
       heat.current = hot;
     } else {

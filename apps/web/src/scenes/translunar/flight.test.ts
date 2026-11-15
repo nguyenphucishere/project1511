@@ -243,3 +243,46 @@ describe("the cuts of the flight home", () => {
     expect(capsuleAltitude(T.TOUCHDOWN)).toBeLessThan(1);
   });
 });
+
+describe("the fire of the entry comes and goes gradually", () => {
+  it("is nothing at the interface and at the parachutes, with one rise to a peak and one slow decline", async () => {
+    const { plasma, ENTRY_SPAN } = await import("./flight");
+    expect(plasma(T.REENTRY)).toBe(0);
+    expect(plasma(T.CHUTES)).toBe(0);
+    const step = 0.25;
+    let peakAt = 0;
+    let peak = 0;
+    for (let t = T.REENTRY; t < T.CHUTES; t += step) {
+      const h = plasma(t);
+      if (h > peak) {
+        peak = h;
+        peakAt = t;
+      }
+    }
+    expect(peak).toBeGreaterThan(0.9);
+    // Up to the peak the glow never falls by more than a flutter; after it, it never grows back.
+    let prev = 0;
+    for (let t = T.REENTRY; t < peakAt; t += step) {
+      expect(plasma(t)).toBeGreaterThanOrEqual(prev - 0.03);
+      prev = Math.max(prev, plasma(t));
+    }
+    prev = peak;
+    for (let t = peakAt; t < T.CHUTES; t += step) {
+      expect(plasma(t)).toBeLessThanOrEqual(prev + 0.03);
+      prev = Math.min(prev, plasma(t));
+    }
+    // And no light-switch anywhere: the glow changes by at most a modest amount every second.
+    let fastest = 0;
+    for (let t = T.REENTRY; t < T.CHUTES - 1; t += step) fastest = Math.max(fastest, Math.abs(plasma(t + 1) - plasma(t)));
+    expect(fastest).toBeLessThan(0.16);
+    // The build-up takes real time (more than a fifth of the entry to get from a trace to most of the peak) and so does the fade.
+    const at = (target: number, from: number, to: number, up: boolean) => {
+      for (let t = from; t < to; t += step) if (up ? plasma(t) >= target : plasma(t) <= target) return t;
+      return to;
+    };
+    const rise = at(0.8 * peak, T.REENTRY, peakAt, true) - at(0.1 * peak, T.REENTRY, peakAt, true);
+    const fall = at(0.1 * peak, peakAt, T.CHUTES, false) - at(0.8 * peak, peakAt, T.CHUTES, false);
+    expect(rise).toBeGreaterThan(0.12 * ENTRY_SPAN);
+    expect(fall).toBeGreaterThan(0.2 * ENTRY_SPAN);
+  });
+});
