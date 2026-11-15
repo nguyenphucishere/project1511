@@ -91,7 +91,6 @@ const HULL = "#d8c27a";
 const HULL_DARK = "#8f7b3d";
 const FLAME = "#ffb03a";
 const FLAME_HOT = "#fff1b0";
-const EARTH = "#2f6fb3";
 
 function Stars() {
   const pts = [
@@ -114,12 +113,22 @@ function Stars() {
   );
 }
 
+/** The Moon photo, faded at the rim so its black backdrop vanishes against the night sky. */
 function Earth({ cx, cy, r }: { cx: number; cy: number; r: number }) {
+  const id = `moon-fade-${cx}-${cy}`;
+  const d = r * 2.9;
   return (
-    <g>
-      <circle cx={cx} cy={cy} r={r} fill={EARTH} />
-      <rect x={cx - r * 0.5} y={cy - r * 0.3} width={r * 0.7} height={3} fill="#e8ecf4" opacity={0.8} />
-      <rect x={cx - r * 0.1} y={cy + r * 0.25} width={r * 0.6} height={3} fill="#e8ecf4" opacity={0.8} />
+    <g style={{ mixBlendMode: "screen" }}>
+      <defs>
+        <radialGradient id={id}>
+          <stop offset="58%" stopColor="#fff" />
+          <stop offset="72%" stopColor="#000" />
+        </radialGradient>
+        <mask id={`${id}-m`}>
+          <circle cx={cx} cy={cy} r={d / 2} fill={`url(#${id})`} />
+        </mask>
+      </defs>
+      <image href="/assets/env/moon.jpg" x={cx - d / 2} y={cy - d / 2} width={d} height={d} mask={`url(#${id}-m)`} />
     </g>
   );
 }
