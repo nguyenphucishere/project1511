@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { CharacterPortrait } from "@/components/cutscene/CharacterPortrait";
 import { useEffect } from "react";
-import { useT } from "@/i18n/useT";
 import { useVoiceLine } from "@/hooks/useVoiceLine";
 import { playSfx } from "@/game/sfx";
 import type { CharacterId } from "@/game/characters";
@@ -44,11 +43,9 @@ export function SignOffDialog({
   description,
   continueLabel,
   onContinue,
-  demo = false,
   status = "go",
   children,
 }: SignOffDialogProps) {
-  const t = useT();
   // The narrator reads the result as the card opens.
   useVoiceLine(open ? description : null);
   useEffect(() => {
@@ -70,11 +67,6 @@ export function SignOffDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         {children}
-        {demo && (
-          <StatusBadge status="demo" className="w-fit">
-            {t.common.demoData}
-          </StatusBadge>
-        )}
         <DialogFooter>
           <Button size="lg" onClick={onContinue}>
             {continueLabel}

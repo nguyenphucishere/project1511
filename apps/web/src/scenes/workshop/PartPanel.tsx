@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ScanLine, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CharacterPortrait } from "@/components/cutscene/CharacterPortrait";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
@@ -62,7 +61,7 @@ export function PartPanel({ part, next, onNext, onClose, onQuiz }: PartPanelProp
 
       <div className="flex items-start gap-3 pr-8">
         <div className="h-12 w-10 shrink-0">
-          <CharacterPortrait character="workshop-chief" />
+          <CharacterPortrait character="workshop-chief" avatar />
         </div>
         <div>
           <p className="text-xs text-foreground/65">{localize(part.section)}</p>
@@ -95,7 +94,7 @@ export function PartPanel({ part, next, onNext, onClose, onQuiz }: PartPanelProp
       )}
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <StatusBadge status="demo">{t.common.demoData}</StatusBadge>
+        <span aria-hidden />
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="secondary" onClick={() => setInside((v) => !v)} aria-pressed={inside}>
             <ScanLine className="mr-1.5 h-4 w-4" aria-hidden />

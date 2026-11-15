@@ -26,9 +26,11 @@ export function TopBar() {
         </Link>
       </Button>
       <div className="pointer-events-auto flex items-center gap-2">
-        <StatusBadge status={calculated ? "calculated" : "demo"} className="whitespace-nowrap bg-space-deep/80">
-          {calculated ? t.common.calculatedData : t.common.demoData}
-        </StatusBadge>
+        {calculated && (
+          <StatusBadge status="calculated" className="whitespace-nowrap bg-space-deep/80">
+            {t.common.calculatedData}
+          </StatusBadge>
+        )}
         <SoundToggle />
         <PixelToggle />
         <LocaleToggle className="bg-space-deep/80" />
