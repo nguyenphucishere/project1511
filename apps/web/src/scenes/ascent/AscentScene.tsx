@@ -155,7 +155,7 @@ export function AscentScene({ onComplete, failure, orbitKm: orbitOverride }: Asc
       if (f.mode === "orbit" && phaseRef.current === "ride") setPhase("orbit");
     }, 100);
     return () => window.clearInterval(id);
-  }, [orbitKm]);
+  }, [orbitKm, failure?.code]);
 
   const textFor = useCallback(
     (id: AscentEventId) => {
