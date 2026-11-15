@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/hud/TopBar";
 import { SceneRouter } from "@/game/SceneRouter";
+import { voiceTracer } from "@/game/sfx";
 import { useGameStore } from "@/game/gameStore";
 import { useT } from "@/i18n/useT";
 
@@ -17,6 +18,11 @@ export default function PlayPage() {
   useEffect(() => {
     if (hydrated && !stepId) router.replace("/");
   }, [hydrated, stepId, router]);
+
+  // The independent voice watcher needs to know where the scenes change, to tell a line that outlives its scene.
+  useEffect(() => {
+    if (stepId) voiceTracer.scene(stepId);
+  }, [stepId]);
 
   if (!hydrated || !stepId) {
     return (

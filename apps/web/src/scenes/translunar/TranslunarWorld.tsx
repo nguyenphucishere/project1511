@@ -15,6 +15,8 @@ import {
   type Group,
   type Mesh,
   type PointLight,
+  AdditiveBlending,
+  type MeshBasicMaterial,
 } from "three";
 import { Earth } from "@/components/viewport/Earth";
 import { useSceneStore, type CameraRig } from "@/game/sceneStore";
@@ -22,12 +24,35 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { Warmup } from "../mission-control/Warmup";
 import { Cabin, WINDOW_Z } from "./Cabin";
 import { MoonBody } from "./MoonBody";
+import { Recovery } from "./Recovery";
 import { SEA_SUN, SeaSet } from "./SeaSet";
 import { ReentryCapsule, Ship, Stage } from "./Spacecraft";
 import { filmClock } from "./clock";
-import { R_EARTH, SUN, cabinEye, cabinLook, frameAt, mul, shipPose, viewKind } from "./flight";
+import { R_EARTH, SUN, T, cabinEye, cabinLook, frameAt, SEA_ARRIVAL, entryState, mul, plasma, shipPose, viewKind } from "./flight";
 
 const MILKY_TINT = new Color(2.2, 2.3, 2.7);
+
+/** The colour of the sky behind the capsule as it falls: black in space, then deepening blue, then daylight by the thick air. */
+const SKY_STOPS: [number, Color][] = [
+  [100, new Color("#000000")],
+  [70, new Color("#03060d")],
+  [45, new Color("#040c1e")],
+  [25, new Color("#102f5e")],
+  [12, new Color("#4a82bf")],
+  [7, new Color("#c7dff3")],
+];
+const skyScratch = new Color();
+function skyAt(altKm: number): Color {
+  if (altKm >= SKY_STOPS[0]![0]) return skyScratch.copy(SKY_STOPS[0]![1]);
+  for (let i = 1; i < SKY_STOPS.length; i++) {
+    const [a1, c1] = SKY_STOPS[i]!;
+    if (altKm >= a1) {
+      const [a0, c0] = SKY_STOPS[i - 1]!;
+      return skyScratch.copy(c0).lerp(c1, (a0 - altKm) / (a0 - a1));
+    }
+  }
+  return skyScratch.copy(SKY_STOPS[SKY_STOPS.length - 1]![1]);
+}
 
 /** The NASA/ESA Milky Way panorama on a huge inverted sphere that travels with the camera. */
 function Stars({ skyRef }: { skyRef: React.RefObject<Mesh | null> }) {
@@ -37,7 +62,7 @@ function Stars({ skyRef }: { skyRef: React.RefObject<Mesh | null> }) {
   return (
     <mesh ref={skyRef} rotation={[0.6, 0.4, 0.2]} renderOrder={-3} frustumCulled={false}>
       <sphereGeometry args={[4200, 48, 32]} />
-      <meshBasicMaterial map={tex} side={BackSide} depthWrite={false} toneMapped={false} color={MILKY_TINT} />
+      <meshBasicMaterial map={tex} side={BackSide} depthWrite={false} toneMapped={false} color={MILKY_TINT} transparent blending={AdditiveBlending} />
     </mesh>
   );
 }
@@ -137,7 +162,15 @@ function FilmCamera({
         camera.up.set(...shot.up);
         camera.lookAt(shot.aim[0], shot.aim[1], shot.aim[2]);
       }
-      if (skyRef.current) skyRef.current.position.copy(camera.position);
+      if (skyRef.current) {
+        skyRef.current.position.copy(camera.position);
+        // Falling into the air the stars go out: full in space, dim in the stratosphere, nearly gone below.
+        const alt = t >= T.REENTRY && t < SEA_ARRIVAL ? entryState(t).altKm : 999;
+        const stars = alt > 100 ? 1 : Math.max(0.06, (alt - 15) / 85);
+        ((skyRef.current.material as MeshBasicMaterial).color as Color).copy(MILKY_TINT).multiplyScalar(stars);
+        // And the sky itself takes colour behind them.
+        scene.background = alt < 100 ? skyAt(alt) : null;
+      }
     };
     setCameraRig(rig);
     return () => setCameraRig(null);
@@ -201,6 +234,7 @@ export function TranslunarWorld({ startAt, from, to, onReady }: TranslunarWorldP
       <ReentryCapsule />
       <Cabin ref={cabinRef} />
       <SeaSet />
+      <Recovery />
       <Warmup />
     </>
   );

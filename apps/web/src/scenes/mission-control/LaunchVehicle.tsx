@@ -28,6 +28,7 @@ import {
 import { CabinView } from "./CabinView";
 import { Capsule, LunarModule, VaporCone } from "./DockedParts";
 import { LaunchSmoke } from "./LaunchSmoke";
+import { BREAK_AT, boomFilm } from "./boomFilm";
 import { SeparationLamp, SeparationRig } from "./SeparationRig";
 import {
   AdapterPanels,
@@ -197,6 +198,18 @@ export function LaunchVehicle({
         ? Math.min(1, t / 0.6) * 900 * flicker * Math.max(0, 1 - rise / 120)
         : 0;
       light.current.position.y = rise + 0.5;
+    }
+
+    // Dev boom film: the engines sputter as the leak takes hold, then the vehicle is gone.
+    if (boomFilm.t !== null && t >= boomFilm.t - 1.3) {
+      if (flame1.current && t < boomFilm.t) {
+        const choke = 0.55 + 0.45 * Math.abs(Math.sin(t * 23) * Math.sin(t * 9.7));
+        flame1.current.scale.y *= choke;
+      }
+      if (t >= boomFilm.t + BREAK_AT) {
+        for (const g of [upper, stage1, inter, stage2, flame1, flame2, flame3]) if (g.current) g.current.visible = false;
+        if (light.current) light.current.intensity = 0;
+      }
     }
 
     // Rumble while the vehicle is low and loud: keep the trauma topped up, it decays itself.

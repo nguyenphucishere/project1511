@@ -1,4 +1,6 @@
 import { FLOW, stepIndex, type SceneId } from "@/game/flow";
+import { useSettingsStore } from "@/game/settingsStore";
+import { warmAllVoices } from "@/game/sfx";
 import { SCENE_ASSETS } from "./assets";
 import { WORKSHOP_FILES, WORKSHOP_TEXTURE_GROUPS, STUDIO_HDR } from "./workshop/assets";
 
@@ -128,7 +130,7 @@ export function preloadScene(scene: SceneId): Promise<void> {
   const job = JOBS[scene];
   if (!job) return Promise.resolve();
 
-  const total = job.chunkWeight + job.files.reduce((n, f) => n + f.weight, 0);
+  const total = job.chunkWeight + VOICE_WEIGHT + job.files.reduce((n, f) => n + f.weight, 0);
   let loaded = 0;
   const advance = (weight: number) => {
     loaded += weight;
@@ -145,7 +147,9 @@ export function preloadScene(scene: SceneId): Promise<void> {
       .then(() => advance(f.weight)),
   );
 
-  const promise = Promise.all([chunk, ...files])
+  const voices = Promise.race([ensureVoicesWarm(), new Promise((r) => window.setTimeout(r, VOICE_WAIT_MS))]).then(() => advance(VOICE_WEIGHT));
+
+  const promise = Promise.all([chunk, voices, ...files])
     .then(() => job.fillCaches())
     .catch(() => undefined)
     .then(() => publish(scene, DONE));
@@ -204,6 +208,7 @@ export function warmUpcoming(stepId: string): void {
   if (typeof window === "undefined") return;
   const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
   if (saveData) return;
+  void ensureVoicesWarm();
   const scenes = scenesToPreload(stepId).slice(0, 2).filter((s) => !warmQueued.has(s));
   for (const s of scenes) warmQueued.add(s);
   let chainWarm: Promise<void> = Promise.resolve();

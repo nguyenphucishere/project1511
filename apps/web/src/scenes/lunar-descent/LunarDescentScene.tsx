@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WorldCanvas } from "@/components/viewport/WorldCanvas";
 import { ObjectivePanel } from "@/components/hud/ObjectivePanel";
+import { DecisionOverlay } from "@/components/cutscene/DecisionOverlay";
+import { LandingFilm } from "./film/LandingFilm";
 import { SignOffDialog, SignOffDetails } from "@/components/hud/SignOffDialog";
 import { format } from "@/i18n";
 import { useLocalized, useT } from "@/i18n/useT";
@@ -69,6 +71,8 @@ const DIALOG_DELAY_MS = 1600;
 const PANEL_TICK_MS = 80;
 /** Controls that are done once the lander is on the ground with the engine cut. */
 const ALL_STEPS = DESCENT_STEPS.length;
+/** The step the player starts at: the third control, the low gate (steps 0 and 1 are in the film). */
+const LOW_GATE_STEP = 2;
 /** Mission time of the low gate, where the player takes over (the engine profile's). */
 const gateT = () => KEYFRAMES[2]!.t;
 
@@ -177,13 +181,14 @@ function readGamepad(): PadReading {
   };
 }
 
-export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
+function LunarDescentPlay({ onComplete }: { onComplete: () => void }) {
   const t = useT();
   const d = t.lunarDescent;
   const localize = useLocalized();
   const recordLanding = useGameStore((s) => s.recordLanding);
 
-  const [clock, setClock] = useState<DescentClock>({ stepsDone: 0, segmentStart: null });
+  // The films have flown the powered descent and the pitch-over: the player takes over at the low gate.
+  const [clock, setClock] = useState<DescentClock>(() => ({ stepsDone: LOW_GATE_STEP, segmentStart: performance.now() - 60_000 }));
   const [phase, setPhase] = useState<Phase>("hold");
   const [siteId, setSiteId] = useState<SiteId>("A");
   const [attempt, setAttempt] = useState(0);
@@ -338,6 +343,11 @@ export function LunarDescentScene({ onComplete }: { onComplete: () => void }) {
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
   }, [finishFlight]);
+
+  // The descent engine has been burning since the film: keep its roar going until engine stop.
+  useEffect(() => {
+    engine.current = startLoop("engine");
+  }, []);
 
   useEffect(
     () => () => {

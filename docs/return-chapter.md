@@ -1,0 +1,264 @@
+# Chương 7 "Trở về Trái Đất": phân tích kịch bản và đề xuất
+
+Tài liệu này đánh giá chương trở về hiện có, kiểm tra nó với số liệu thật của Apollo 11, rồi đề xuất cách làm cho nó **hay hơn** và **chính xác hơn**. Phần cuối nói rõ đã làm gì trong code và việc nào cần bạn quyết định trước.
+
+Chú thích độ tin cậy dùng xuyên suốt:
+- ✅ đã đối chiếu với nguồn của NASA hoặc tài liệu của chính dự án (liệt kê ở mục 9);
+- ⚠️ nguồn chưa thống nhất, hoặc mình nhớ nhưng chưa tìm được nguồn: **cần kiểm lại trước khi đưa lên màn hình hay giọng đọc**;
+- ❌ đang sai so với lịch sử.
+
+---
+
+## 1. Tóm tắt
+
+1. Chương này hiện là **một đoạn phim 32 giây chỉ để xem**: đốt về nhà, vào khí quyển, dù, hạ cánh. Người chơi không làm gì, và nó nằm sau một màn "cắm cờ" rất hoành tráng.
+2. **Nó đang dùng số liệu của Apollo 8, không phải Apollo 11**: đồng hồ nhiệm vụ chạy từ 89:15 tới 147:00 (Apollo 8), trong khi Apollo 11 đốt về nhà ở 135:23:42 và hạ cánh ở 195:18:35. Mục này **đã sửa trong code**.
+3. **Thiếu đúng đoạn nguy hiểm nhất của chuyến về**: cất cánh khỏi Mặt Trăng (động cơ không có dự phòng), hẹn gặp trên quỹ đạo, ghép nối với Columbia. Chính văn bản kết thúc số 1 của game đã hứa điều này ("chuẩn bị cho chuyến bay lên kết nối với Collins").
+4. **Thiếu hẳn nửa sau cảm xúc**: biển, thợ lặn, tàu Hornet, bộ đồ cách ly, cửa sổ xe cách ly, 21 ngày cách ly.
+5. **Michael Collins vắng mặt** trong cả chương, dù câu chuyện của ông (một mình phía sau Mặt Trăng) là chất liệu kịch tốt nhất của chuyến về.
+6. Một con số đang được **đọc thành tiếng** là hơi lệch: phụ đề "bốn phút mất liên lạc" (thực tế khoảng 3,5 phút).
+
+Đề xuất: mở rộng từ 32 giây thành khoảng 5 phút gồm 8 nhịp, trong đó 2–3 nhịp có người chơi tham gia (mục 5). Chi phí tập trung ở **lời thoại mới (khoảng 28 câu, tầm 2.300 ký tự mỗi ngôn ngữ)** và hai cảnh mới (cất cánh và hẹn gặp).
+
+---
+
+## 2. Hiện trạng (đã đọc code)
+
+| Phần | Nội dung | Nơi trong code |
+|---|---|---|
+| Luồng | `epilogue` (2 câu) → `return-briefing` (2 câu) → `return-scene` → `end` | `game/flow.ts` |
+| Briefing | "Cờ đã cắm, mẫu đã cất. Đến lúc về nhà." / "Động cơ phải nổ thêm một lần nữa, sau lưng Mặt Trăng… Nếu nó hỏng, sẽ không ai tới đón." Mục tiêu duy nhất: "Bay về nhà". | `game/script.ts` |
+| Phim | `ReturnScene` = phần phim từ giây 140 đến 172 (32 s): đốt TEI (140–150), vào khí quyển và plasma (150–158), dù và biển (158–172). Có nút Skip. | `scenes/translunar/` |
+| Giọng đọc | Ba phụ đề giai đoạn ("Đốt về nhà", "Vào khí quyển: bốn phút mất liên lạc", "Hạ xuống Thái Bình Dương") do người dẫn chuyện đọc, và đoạn chốt "Welcome home" | `story.ts`, `translunar.returnDoneBody` |
+| Kết thúc | Hộp thoại "Welcome home" rồi sang màn kết thúc (ending 1: "Căn cứ Yên Bình") | `TranslunarScene.tsx`, `game/endings.ts` |
+
+Điểm tốt đã có: câu "Nếu nó hỏng, sẽ không ai tới đón" là một câu mở rất đúng tinh thần (động cơ TEI là một điểm hỏng duy nhất ✅); hiệu ứng plasma, dù và cảnh biển đã có mô hình 3D.
+
+---
+
+## 3. Kiểm tra độ chính xác
+
+| # | Chi tiết | Game | Thực tế Apollo 11 | Kết luận |
+|---|---|---|---|---|
+| 1 | Đồng hồ nhiệm vụ lúc về | 89:15 → 146:40 → 147:00 | TEI **135:23:42**, hạ cánh **195:18:35** | ❌ (số của Apollo 8) → **đã sửa** |
+| 2 | Cất cánh khỏi Mặt Trăng | không có | Eagle cất cánh **124:22**, động cơ chạy **435 s**, vào quỹ đạo khoảng 11 × 55 dặm | ❌ thiếu |
+| 3 | Hẹn gặp, ghép nối | không có | Ghép với Columbia ở vòng quay thứ 27, **128:03:00** | ❌ thiếu |
+| 4 | Thả Eagle | không có | Phi hành đoàn chuyển mẫu và thiết bị, rồi bỏ lại tầng cất cánh (thời điểm chính xác ⚠️) | ❌ thiếu |
+| 5 | Đốt TEI | sau lưng Mặt Trăng, "nếu hỏng không ai tới đón" | Đốt ở 135:23:42, kéo dài khoảng **151 s**, Δv ≈ **1.000 m/s** (3.279 ft/s) | ✅ đúng tinh thần; **đã thêm số liệu** |
+| 6 | Mất liên lạc khi vào khí quyển | "bốn phút" (đang được đọc thành tiếng) | **195:03:25 → 195:06:56**, tức khoảng **3,5 phút** | ⚠️ nên là "ba phút rưỡi" (phải ghi âm lại) |
+| 7 | Vào khí quyển | chỉ hình | Chạm khí quyển ở 400.000 ft (**121,9 km**), **36.194 ft/s** (11,03 km/s), góc −6,5°. Tải đỉnh dự kiến 6,1 g, tái dựng sau chuyến bay khoảng 6,7 g; đỉnh thứ hai khoảng 6 g ở 12.390 ft/s | ✅ **đã thêm bảng số liệu** (đỉnh hiển thị ≈6,5 g) |
+| 8 | Dù | chỉ hình | Dù hãm **195:12:04**, dù chính **195:12:52** (bản ghi NASA). Độ cao mở dù hãm: các nguồn mâu thuẫn (khoảng 24–25 nghìn ft so với khoảng 16 nghìn ft) | ✅ giờ; ⚠️ độ cao (game hiển thị tròn 7 km và 3 km) |
+| 9 | Hạ cánh | "biển lặng, trời rộng" | **195:18:35** (16:50:35 UTC), mục tiêu 13°19′N 169°10′W, cách tàu Hornet khoảng **13 hải lý (24 km)** (nguồn lệch 12–15). Khoang **rơi úp** (Stable 2, đỉnh xuống) rồi được **bóng hơi lật lại** sau vài phút (5–8 phút tuỳ nguồn) | ✅; ⚠️ khoảng cách và thời gian lật |
+| 10 | Sau hạ cánh | không có | Thợ lặn, phao nổi, bộ đồ cách ly (BIG), xe cách ly di động (Airstream) trên tàu Hornet, cách ly khoảng 3 tuần (21 ngày, mốc tính khác nhau giữa các nguồn) | ❌ thiếu; ⚠️ mốc tính 21 ngày |
+| 11 | Collins | không có | Một mình trên quỹ đạo khoảng 28 giờ (từ lúc Eagle tách tới lúc ghép lại, ⚠️ giờ tách ≈100:12 nhớ chứ chưa tìm được nguồn). Mỗi vòng, khoảng 45–47 phút mất liên lạc phía sau Mặt Trăng ✅ (catalog của dự án) | ❌ thiếu |
+| 12 | Phần đi (ngoài phạm vi chương này) | phụ đề "Christmas Eve, 1968" và đoạn đọc Sáng thế ký | Đó là Apollo 8. Apollo 11 diễn ra tháng 7 năm 1969 | ⚠️ lẫn hai chuyến bay: nên đổi hoặc chú thích |
+| 13 | Tổng thời gian | — | **8,14 ngày**; trên bề mặt 21 giờ 36 phút, một lần đi bộ 2 giờ 31 phút ✅ (catalog của dự án) | dùng cho thẻ cuối |
+
+Ngoài ra, hai chi tiết "có thật nhưng mình chưa kiểm được nguồn": lá cờ bị khí thải động cơ cất cánh thổi đổ (theo lời Aldrin) ⚠️, và câu Nixon nói ở cửa sổ xe cách ly (⚠️ **đừng trích dẫn** cho tới khi có nguồn: một câu thường được trích dẫn về "tuần lễ vĩ đại nhất kể từ Sáng thế" mình tìm không ra nguồn).
+
+---
+
+## 4. Phân tích kịch bản và nhịp
+
+**Điểm mạnh**
+- Một câu mở tốt (động cơ nổ khi không ai nghe thấy). Nó lập tức đặt người chơi vào trạng thái "một lần duy nhất".
+- Cấu trúc ba cảnh (đốt, plasma, biển) có hình ảnh và nhịp rõ ràng.
+
+**Vấn đề**
+1. **Bị động.** Cả chương không có quyết định hay thao tác nào, trong khi các chương trước (hạ cánh thủ công, các quyết định) đã dạy người chơi rằng mình có thể ảnh hưởng.
+2. **Nhảy cóc.** Từ "cắm cờ" thẳng tới "đốt về nhà" bỏ qua lần cất cánh: lần duy nhất trong cả sứ mệnh mà **động cơ cất cánh không có dự phòng**. Game còn có sẵn "bản nháp thảm họa" của Safire (ending 2 và trang debrief) để làm đối trọng: nó là lý do khiến lần cất cánh có sức nặng.
+3. **Thiếu một nhân vật.** Collins là người duy nhất không được ở trong khung hình, dù ông phải chờ trong im lặng và là người mở cửa đón hai bạn.
+4. **Kết thúc hụt hơi.** Sau 32 giây là một hộp thoại. Không có nghi thức trở về (thợ lặn, Hornet, cửa sổ xe cách ly) và cũng không có "cái giá" nào được nhắc tới (cách ly 21 ngày).
+5. **Số liệu bị đọc sai và đồng hồ sai** (mục 3).
+
+---
+
+## 5. Cấu trúc đề xuất: 8 nhịp, khoảng 5 phút
+
+| Nhịp | Thời lượng | POV | Nội dung | Người chơi làm gì | Số liệu thật (✅/⚠️) |
+|---|---|---|---|---|---|
+| 0. Tranquility Base, lần cuối | 45 s | Armstrong | Danh sách kiểm tra cuối. Cất cánh: tầng đáp bị bỏ lại làm bệ phóng. Lá cờ đổ (⚠️ theo Aldrin). | Bấm đúng lúc để **kích hoạt động cơ cất cánh** (một điểm hỏng duy nhất): bấm trong cửa sổ thời gian thì thành công, còn trượt kích hoạt nhánh kết thúc (xem 5.1). | Cất cánh 124:22; động cơ 435 s; quỹ đạo ≈ 11 × 55 dặm ✅ |
+| 1. Hẹn gặp trên quỹ đạo | 60 s | **Collins** | Collins một mình phía sau Mặt Trăng, 45–47 phút im lặng mỗi vòng. Eagle xuất hiện như một đốm sáng. | Căn chỉnh và ghép nối (tái dùng toán học trong `docking.ts`, hoặc chế độ "dẫn tay" đơn giản). | Ghép 128:03:00 ✅ |
+| 2. Mẫu vật và cánh cửa | 20 s | Cả ba | Chuyển 21,55 kg mẫu qua cửa hầm; bỏ Eagle lại. Câu "Tạm biệt, Eagle." | — | 21,55 kg ✅ (catalog) |
+| 3. Sau lưng Mặt Trăng | 25 s | Armstrong/Collins | Đốt TEI. Giữ câu hiện có "Nếu nó hỏng…". Khi tàu ló ra, Houston gọi lại. | Xác nhận lệnh đốt. | 135:23:42; 151 s; ≈1.000 m/s ✅ |
+| 4. Hai ngày rưỡi | 15 s | Collins | Dựng đoạn gấp: Trái Đất lớn dần từ đồng xu thành chiếc đĩa; hiệu chỉnh giữa chặng; chương trình truyền hình từ tàu. | — | Chặng về ≈ 59:55 ✅ |
+| 5. Hành lang vào khí quyển | 30 s + 3,5 phút nén | Armstrong | Góc vào −6,5°: quá dốc thì tải g vọt lên, quá nông thì khoang nảy khỏi khí quyển. Lái bằng nghiêng khoang để giữ tải g trong khoảng an toàn (dùng lại cần điều khiển đã làm cho màn hạ cánh). Mất liên lạc: cắt về phòng điều khiển im lặng, Houston chờ. | **Giữ tải g** trong dải (có thể là chế độ tuỳ chọn, mặc định phim). | EI 121,9 km; 11,03 km/s; −6,5°; mất liên lạc 195:03:25 → 195:06:56 ✅ |
+| 6. Dù và biển | 30 s | Armstrong | Dù hãm, dù chính, chạm biển, khoang úp, bóng hơi lật lại. | — | 195:12:04, 195:12:52, 195:18:35 ✅; ⚠️ khoảng cách Hornet |
+| 7. Về nhà | 45 s | Nhiều | Thợ lặn mở cửa, bộ đồ cách ly, trực thăng, Hornet; cửa sổ xe cách ly (không trích Nixon); thẻ cuối với số liệu cả chuyến. | — | 8,14 ngày; 21 giờ 36 phút trên bề mặt; ⚠️ 21 ngày cách ly |
+
+### 5.1 Các nhánh có thể mở rộng
+- **Cất cánh trượt** (nhịp 0): dùng lại bản nháp của Safire đã có trong game như lời kết, nhưng nhớ rằng đây là hư cấu dựa trên tài liệu thật ("In Event of Moon Disaster", 1969).
+- **Hành lang vào khí quyển** (nhịp 5): hai kết thúc xấu (quá dốc, quá nông) theo mẫu 5 cảnh bay hỏng mới làm, với số liệu g và đồng hồ riêng.
+- **Mang theo hậu quả từ chương trước**: nhiên liệu còn lại sau hạ cánh (ending 1 ghi 5,6%, dự phòng 25 s) và cấu hình phóng ở chương 3 quyết định biên an toàn của TEI. Engine đã có sẵn hàm ngân sách Δv trong `sim-core/mission_design.rs`.
+
+---
+
+## 6. Kịch bản đề xuất (song ngữ, mỗi câu ≤ 2,5 giây khi đọc)
+
+> Đây là **lời thoại của game, không phải bản ghi thật** (trừ khi có chú thích). Mỗi câu ngắn để vừa với quy tắc "câu nói nằm trọn trong cảnh" đã áp dụng cho các cảnh bay hỏng. Cần ghi âm trước khi dùng (xem mục 8).
+
+| Nhịp | Vai | Tiếng Anh | Tiếng Việt |
+|---|---|---|---|
+| 0 | Armstrong | Ascent engine armed. | Động cơ cất cánh đã sẵn sàng. |
+| 0 | Houston | Eagle, Houston. You are go. | Eagle, Houston đây. Các bạn được phép. |
+| 0 | Armstrong | Ignition. Eagle is climbing. | Đã nổ máy. Eagle đang lên. |
+| 0 | Aldrin | The flag went over, Neil. | Lá cờ đổ rồi, Neil. *(⚠️ theo lời Aldrin, kiểm lại)* |
+| 1 | Collins | Forty-seven minutes of silence. | Bốn mươi bảy phút im lặng. *(catalog: 45,5–47,5)* |
+| 1 | Collins | Eagle, Columbia. Do you read? | Eagle, Columbia đây. Có nghe không? |
+| 1 | Armstrong | Columbia, Eagle. We see you. | Columbia, Eagle đây. Chúng tôi thấy anh. |
+| 1 | Collins | Easy. Come on in. | Cứ từ từ. Vào đi nào. |
+| 1 | Người dẫn | Docked. | Đã ghép nối. |
+| 2 | Aldrin | Samples aboard. Twenty-one kilos of Moon. | Mẫu đã lên tàu. Hai mươi mốt ký Mặt Trăng. |
+| 2 | Armstrong | Goodbye, Eagle. | Tạm biệt, Eagle. |
+| 3 | Houston | Columbia, you are go for TEI. | Columbia, các bạn được phép đốt về nhà. |
+| 3 | Collins | See you on the other side. | Hẹn gặp ở phía bên kia. |
+| 3 | Người dẫn | No backup engine. One burn. | Không có động cơ dự phòng. Chỉ một lần đốt. |
+| 3 | Armstrong | Burn complete. We are going home. | Đốt xong. Chúng ta về nhà. |
+| 4 | Người dẫn | Two and a half days. | Hai ngày rưỡi. |
+| 4 | Collins | A small nudge. Midcourse. | Một cú hích nhỏ. Hiệu chỉnh giữa chặng. |
+| 5 | Houston | Columbia, entry corridor looks good. | Columbia, hành lang vào khí quyển ổn. |
+| 5 | Armstrong | Holding six and a half degrees. | Giữ góc sáu phẩy năm độ. |
+| 5 | Người dẫn | Three and a half minutes of silence. | Ba phút rưỡi im lặng. |
+| 5 | Houston | Apollo 11, Houston. Standing by. | Apollo 11, Houston. Đang chờ. |
+| 5 | Houston | Columbia, we have you. | Columbia, chúng tôi bắt được tín hiệu rồi. |
+| 6 | Người dẫn | Drogues. Mains. | Dù hãm. Dù chính. |
+| 6 | Armstrong | We are upside down. Bags inflating. | Chúng tôi đang úp. Bóng hơi đang phồng. |
+| 6 | Thợ lặn | Hornet, we have the spacecraft. | Hornet, chúng tôi đã tới khoang tàu. |
+| 7 | Người dẫn | Twenty-one days of quarantine. | Hai mươi mốt ngày cách ly. |
+| 7 | Người dẫn | Then the whole world. | Rồi cả thế giới. |
+
+Thay thế đề xuất cho câu đang có: "Reentry: four minutes of radio blackout" → "**three and a half** minutes of radio blackout" (⚠️ cần ghi âm lại; hiện đang phát bản "bốn phút").
+
+---
+
+## 7. Gợi ý bổ sung để hay hơn
+
+**Âm thanh**
+- Dùng **im lặng làm công cụ**: ba phút rưỡi mất liên lạc là khoảnh khắc mạnh nhất của chuyến về. Tắt nhạc, chỉ để tiếng nhiễu radio và nhịp tim (đã có `startHeartbeat`).
+- Bộ lọc radio cho giọng Houston (đã có), và **không có bộ lọc** cho giọng trong khoang để phân biệt hai thế giới.
+- Một nền âm riêng cho mỗi nhịp, như đã làm với 5 cảnh bay hỏng (động cơ, nhiễu, gió).
+
+**Hình ảnh**
+- Giữ bảng số liệu và nhật ký vừa làm; thêm **vệt plasma đổi màu theo tải g**.
+- Tăng dần kích thước Trái Đất trong nhịp 4 (từ đồng xu thành chiếc đĩa): ghi chú lên màn hình thay cho lời thoại.
+- Thẻ cuối: một dòng thời gian cả chuyến đi (8,14 ngày) có đánh dấu những mốc người chơi đã tự tay làm.
+
+**Cấu trúc**
+- Cho Collins hai cảnh để tạo nhịp "người ở lại".
+- Đừng ép tất cả vào một lượt: mỗi nhịp là một bước trong `flow.ts` để chơi lại từng đoạn (nhảy chương đã có sẵn).
+
+**Chất lượng**
+- Áp dụng cho chương này bộ kiểm thử đã dùng cho các cảnh bay hỏng: câu thoại nằm trọn trong cảnh, không chồng nhau, các nhịp khác nhau.
+- Ghi nguồn cho mọi con số hiển thị (mục 9) và đánh dấu ≈ cho những số ước lượng (đã làm với "tải đỉnh").
+
+---
+
+## 8. Đã làm trong code lần này, và việc còn lại
+
+**Đã làm (không cần ghi âm thêm, vì chữ mới chỉ hiện trên màn hình)**
+- Đồng hồ nhiệm vụ lúc về theo Apollo 11: 135:23:42 (lúc động cơ nổ) → 195:03:25 (vào khí quyển) → 195:18:35 (chạm biển); đoạn "hai ngày rưỡi sau" nhảy trong một giây kèm dòng chữ báo. (`scenes/translunar/flight.ts`)
+- **Bảng số liệu lúc vào khí quyển**: độ cao, tốc độ và tải g theo các mốc thật (đỉnh ≈6,5 g, đỉnh thứ hai ≈6 g ở 3,8 km/s).
+- **Nhật ký nhiệm vụ** với mốc giờ thật (8 sự kiện: đốt TEI, vào khí quyển, mất và có lại liên lạc, dù, chạm biển). Mốc tải đỉnh đánh dấu ≈ vì là ước lượng.
+- Hiển thị **lý do mất liên lạc**: "Sau lưng Mặt Trăng, động cơ nổ mà không ai nghe thấy" khi đốt TEI, và "Mất liên lạc do plasma ≈ ba phút rưỡi" khi vào khí quyển (độ dài tính từ chính đồng hồ, nên đúng 211 giây).
+- Bài kiểm thử cho các mục trên (7 bài mới).
+
+**Chưa làm, cần bạn chọn**
+1. **Nhịp 0–2 (cất cánh, hẹn gặp, thả Eagle) và Collins**: cảnh mới, cần mô hình tàu cất cánh (3D), một cảnh ghép nối và lời thoại mới.
+2. **Hành lang vào khí quyển có thao tác** (nhịp 5), kèm hai kết thúc xấu.
+3. **Ghi âm lời thoại mới** (khoảng 28 câu × 2 ngôn ngữ, khoảng 2.300 ký tự mỗi ngôn ngữ) và ghi âm lại câu "bốn phút". Việc này dùng khoá API AIMAX của dự án, **nên cần bạn đồng ý trước**.
+4. Sửa phụ đề phần đi ("Christmas Eve 1968") nếu bạn muốn nhất quán với Apollo 11.
+
+---
+
+## 9. Nguồn
+
+- NASA Apollo Flight Journal, đốt TEI (135:23:42, PAD 3.283,6 ft/s, 2 phút 28 giây): <https://www.nasa.gov/history/afj/ap11fj/video/21day6-tei.html>
+- NASA SP-4029, pha về Trái Đất (ngắt động cơ 135:26:13.69; 151,41 s; Δv 3.279,0 ft/s): <https://www.nasa.gov/wp-content/uploads/static/history/SP-4029/Apollo_11h_Transearth_Phase.htm>
+- NASA Apollo Flight Journal, ghép nối: <https://www.nasa.gov/history/afj/ap11fj/19day6-rendezvs-dock.html> và tổng quan nhiệm vụ <https://www.nasa.gov/missions/apollo/apollo-11/apollo-11-mission-overview/>
+- NASA Apollo Flight Journal, vào khí quyển (36.194 ft/s, −6,5°, mất liên lạc 195:03:25 → 195:06:56, dù 195:12:04 và 195:12:52): <https://www.nasa.gov/history/afj/ap11fj/27day9-entry.html>
+- NASA Apollo Flight Journal, hạ cánh và hồi phục (195:18:35): <https://www.nasa.gov/history/afj/ap11fj/26day9-reentry.html>
+- Hải quân Mỹ, báo cáo thu hồi Apollo 11 (mục tiêu 13°19′N 169°10′W, tàu Hornet): <https://history.navy.mil/research/archives/digital-exhibits-highlights/apollo-11/reports/tf-130-apollo-11.html>
+- Tài liệu của dự án: `apollo_program_technical_research_simulation_telemetry_catalog.md` (thời lượng pha, mất liên lạc phía sau Mặt Trăng 45,5–47,5 phút, thời gian trên bề mặt).
+- Về cách ly: Space.com <https://www.space.com/apollo-11-astronauts-quarantined-after-splashdown.html> và NASA SP-4214 <https://www.nasa.gov/wp-content/uploads/static/history/SP-4214/ch9-7.html> (mốc 21 ngày tính khác nhau giữa các nguồn).
+
+---
+
+## Cập nhật: phim bay về 4 phút (đã làm)
+
+Phim bay về dài khoảng 3 phút 52 giây (film 140 s → 372 s), chia thành: đốt về nhà (18 s) → hai ngày rưỡi bay (fly cam, đồng hồ chạy nhanh) → thả mô-đun phục vụ → tái nhập 74 s (góc bám theo, POV trong khoang với ánh lửa ở cửa sổ, fly cam từ trên nhìn xuống, góc thấp nhìn tấm chắn nhiệt) → mở dù (góc thấp, góc trực thăng) → hạ xuống biển → vớt tàu (tàu đổ úp mũi, túi hơi lật đứng, vòng phao, thợ lặn, trực thăng, tàu sân bay ở xa).
+
+### Lời thoại không đối đất: nay dùng bản ghi thật
+Nguồn: NASA, *Apollo 11 Technical Air-to-Ground Voice Transcription* (GOSS NET 1, băng 125), https://www.nasa.gov/wp-content/uploads/static/history/alsj/a11/a11transcript_tec.html. Mốc GET theo bản ghi (ngày/giờ/phút/giây, ngày 8 giờ 3 = 195 h).
+
+| GET | Người nói | Lời (bản ghi) |
+|---|---|---|
+| 195:03:00 | CAPCOM | "We'll have you for about 3 or 4 minutes through Redstone and then pick you up after blackout through ARIA." |
+| 195:03:03 | CAPCOM | "You're looking mighty fine to us." |
+| 195:03:06 | Armstrong | "See you later." |
+| 195:07:15 | CAPCOM | "Apollo 11, Houston through ARIA." (gọi lặp lại nhiều lần, không có hồi âm) |
+| 195:09:08 | CAPCOM | "...Standing by. Over." |
+| 195:09:45 | CAPCOM | "Apollo 11, Houston in the blind. Air Boss has visual contact." |
+| 195:12:09 | CAPCOM | "Drogues." |
+| 195:15:03 | Hornet | "Apollo 11, Apollo 11. This is Hornet. Over." |
+| 195:15:07 | Armstrong | "Hello, Hornet. This is Apollo 11 reading you loud and clear." |
+| 195:15:45 | Hornet | "...What's your error of splashdown and condition of crew? Over." |
+| 195:16:48 | Hornet | "Roger. 2500 on chutes." |
+| 195:17:56 | Swim 1 | "Roger. You're looking real good." |
+| 195:18:18 | Swim 1 | "SPLASHDOWN!" |
+
+Ba câu trước mất liên lạc được đặt vào vài giây ngay trước điểm vào khí quyển (trên phim, giờ nhiệm vụ trôi quá nhanh để đặt đúng mốc). Các câu bị cắt hoặc nhiễu trong bản ghi được bỏ qua. Điều đáng chú ý thật: sau mất liên lạc, Houston gọi suốt gần 5 phút mà không nghe hồi âm cho tới khi dù mở.
+
+---
+
+## Chốt: đầu nào của tàu chúi xuống lúc tái nhập, và hình dạng lửa
+
+**Quyết định:** tàu vào khí quyển **đáy rộng (tấm chắn nhiệt) hướng về phía trước**, đỉnh nhọn (mũi có cổng nối) **chổng ra sau**. Mũi nhọn chúi xuống trước là sai về vật lý: phần nhọn không chịu được nhiệt, còn tấm chắn nhiệt bằng vật liệu cháy dần (ablator) chỉ có ở mặt đáy. Tàu không bay thẳng hàng với luồng khí mà **nghiêng khoảng 17–20° so với hướng bay** ("lift-up": đáy hơi chúi xuống, đỉnh hất lên sau), nhờ đó tạo lực nâng để kéo dài đường bay và giảm tải g (~6,5 g thay vì hơn 10 g nếu rơi thẳng).
+
+**Hình dạng lửa (từ trước ra sau):**
+1. **Sóng xung kích tách rời phía trước đáy:** lớp khí cực nóng, sáng trắng-vàng, hình chỏm cầu dẹt nằm cách mặt đáy một khoảng nhỏ, dày nhất ở giữa.
+2. **Màng khí nóng ôm hai bên thân nón:** mỏng, cam.
+3. **Vệt lửa phía sau:** rộng nhất ngay sau vai tàu, thon dần và mờ dần khi trôi xa, đi theo hướng **luồng khí** (không theo trục tàu: vì tàu nghiêng nên vệt hơi lệch khỏi trục).
+4. Cường độ theo mật độ không khí và tốc độ (độ nóng ∝ √ρ·v³): gần như không có ở 120 km, đạt đỉnh từ khoảng 90 km xuống 20 km, tắt hẳn khi mở dù.
+
+**Dưới dù:** đáy hướng xuống, đỉnh hướng lên. Chạm nước thì đổ úp mũi xuống ("Stable 2"), rồi túi hơi lật đứng.
+
+### Cập nhật hiệu ứng lửa (lần 2)
+Lửa không còn là các hình nón mờ: nay là **luồng hạt cháy** (khoảng 1.800 hạt, trắng nóng → vàng → cam → đỏ sẫm, mỏng dần theo khoảng cách) đi theo hướng luồng khí, cộng với **chỏm sáng trắng-vàng phía trước tấm chắn nhiệt**. Không có lửa trước điểm vào khí quyển (122 km); lửa tăng dần trong 4 giây đầu. Trong khoang, lửa chỉ làm ánh cam nhấp nháy lên mặt phi hành đoàn, không còn lớp phủ mờ lên toàn màn hình. Sau khi tách mô-đun phục vụ, tàu quay đầu ngược lại khoảng 10 giây để đưa tấm chắn nhiệt lên trước.
+
+### Cảnh rơi từ ngoài vũ trụ xuống (đã dựng lại)
+Bỏ hẳn các cảnh nhìn từ trong khoang trong lúc tái nhập (phần nhìn trong khoang chỉ còn ở lúc đốt về nhà). Toàn bộ cú rơi nhìn từ ngoài, liền mạch: chase cam lửa mới bùng → fly cam vòng từ trên nhìn xuống → góc thấp sát tấm chắn nhiệt → máy cố định, tàu vụt qua và rơi xuống → chase cam lửa nguội dần. Bầu trời đổi màu theo độ cao (đen ở 100 km, xanh thẫm ở tầng bình lưu, xanh dịu rồi sáng ở dưới 12 km) và sao tắt dần; lửa chuyển từ trắng nóng sang cam rồi nhạt khi xuống.
+
+### Lửa chỉ bắt đầu khi vào khí quyển
+Ở điểm vào khí quyển (122 km) không khí còn rất loãng: tàu sạch và tối, không có lửa. Độ nóng tính theo mật độ không khí × tốc độ³: bắt đầu thấy ánh sáng quanh tấm chắn nhiệt từ khoảng 90 km, dữ dội lúc 60 km, yếu dần khi giảm tốc, hết khi xuống dưới khoảng 14 km. Cảnh nhìn từ trong khoang bị bỏ hẳn khỏi phần đốt về nhà (nay là góc phía trước nhìn lại Mặt Trăng).
+
+---
+
+## Phân tích chuyển cảnh (đo thật) và cách sửa
+
+**Đo trước khi sửa** (khoảng cách camera nhảy / góc nhìn xoay tại từng điểm cắt, đơn vị thế giới của phim):
+
+| Điểm cắt | Camera nhảy | Hướng nhìn xoay |
+|---|---|---|
+| đốt về nhà → bay quanh tàu (158) | 24 | **153°** |
+| bay quanh → nhìn về Trái Đất (171) | 9 | 60° |
+| nhìn về Trái Đất → thả mô-đun (184) | 11 | 83° |
+| chase → fly cam vòng trên (215) | 22 | 109° |
+| vòng trên → góc thấp (230) | 24 | 113° |
+| góc thấp → máy cố định (242) | 19 | 22° |
+| chase (cuối) → **bung dù (280)** | **8.478** | 115° |
+| bung dù → trực thăng (302) | 113 | 85° |
+| trực thăng → hạ cánh → vớt (318, 334) | 46, 41 | 18°, 82° |
+
+**Nguyên nhân gốc:**
+1. Mỗi góc máy là một hàm độc lập theo thời gian, không liên quan đến góc máy trước nó, nên mỗi lần cắt camera nhảy 10–25 đơn vị và hướng nhìn xoay 80–150° (vượt "trục 180°", chủ thể đổi mặt đột ngột).
+2. Cắt sang cảnh biển là **dịch chuyển tức thời 8,5 km** giữa hai thế giới, chỉ che bằng một lần tối đen; tàu trước đó đang rơi không dù, sau cắt đã có dù mở sẵn: **sự kiện bung dù không bao giờ được chiếu**.
+3. Dù hai giai đoạn (dù hãm, dù chính) không có hình: ba tán dù giống nhau xuất hiện cùng lúc, và độ cao trên bảng (7,3 km) không khớp với hình (tàu cách mặt nước vài chục đơn vị).
+4. Trong cảnh biển, các cú cắt trực thăng / hạ cánh / vớt lại nhảy 40–110 đơn vị.
+
+**Sửa:**
+- **Trượt thay vì cắt:** trong cùng một thế giới, góc máy mới trượt ra khỏi góc máy trước trong 2,8 giây: camera quay vòng quanh chủ thể theo cung ngắn nhất, kéo gần hoặc xa, hướng nhìn và ống kính hòa trộn. Sau sửa, mọi điểm cắt trong cùng thế giới nhảy ≤ 1 đơn vị và xoay 0°. Có test giữ điều này.
+- **Một điểm cắt duy nhất giữa hai thế giới**, được dẫn dắt bằng "tàu rơi xuyên lớp mây": màn trắng thay cho màn đen, cắt sớm 3 giây trước dù hãm; tàu vào cảnh biển khi còn đang rơi tự do.
+- **Dựng sự kiện bung dù:** rơi tự do (tàu là một chấm nhỏ trên trời, camera ở mép nước hướng lên) → dù hãm bung ra → hai dù hãm bị cắt, ba dù chính nở (có chút nảy) → tàu chậm dần. Tốc độ rơi giảm theo từng giai đoạn; camera kéo gần theo tàu.
+
+### Lửa tăng và giảm dần (không bật/tắt như bóng đèn)
+Độ nóng là một đường cong liền mạch theo thời gian của cú rơi: gần như 0 ở 206 s (điểm vào), lên từ từ (0,07 ở 218 s, 0,44 ở 226 s, 0,89 ở 234 s), đỉnh ở khoảng 246 s, rồi giảm chậm trong hơn 30 giây (0,63 ở 262 s, 0,25 ở 270 s, 0,10 ở 274 s) và về 0 đúng lúc mở dù. Phần giảm là lúc tàu hãm tốc và lớp chắn nhiệt nguội dần. Có test: lửa chỉ lên một lần tới đỉnh rồi xuống một lần, mỗi giây thay đổi không quá 0,16, lúc lên và lúc xuống đều kéo dài đáng kể.

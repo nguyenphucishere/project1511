@@ -36,6 +36,8 @@ export interface ShotFrame {
   zoom: number;
   /** Engine rumble shaking the camera, metres of jitter. */
   shake: number;
+  /** Use `zoom` as is: no automatic telephoto on far subjects. */
+  lock?: boolean;
 }
 
 export interface Shot {
