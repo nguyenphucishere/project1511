@@ -267,17 +267,18 @@ export function reentryPosition(t: number): Vec {
   return [0, R_EARTH + altKm * 0.18, lerp(-60, 60, u)];
 }
 /**
- * How hot the capsule glows, 0 to 1. Heating comes from compressing the air in front of the heat
- * shield, so it follows how dense the air is and how fast the capsule goes (convective heating goes as
- * the square root of density times speed cubed). Almost nothing at 122 km where the air is a trace, a
- * long glow through the thick part from about 90 km down to 20, and gone under the parachutes.
+ * How hot the capsule glows, 0 to 1: nothing at the entry interface (122 km, a trace of air), a glow from
+ * about 90 km, fierce by 60 km, fading as the speed is shed and gone before the parachutes.
  */
 export function plasma(t: number) {
-  // Nothing before the entry interface, and a few seconds to build as the first air arrives.
   if (t < T.REENTRY) return 0;
   const { altKm, speedKms } = entryState(t);
   const rho = 1.225 * Math.exp(-altKm / 7.2);
-  return clamp01((Math.sqrt(rho) * speedKms ** 3) / 8) * smooth((t - T.REENTRY) / 4);
+  // Heating goes as density times speed cubed: next to nothing in the trace of air at the interface (the
+  // capsule is dark and clean there), a glow from about 90 km, fierce by 60 km, and fading as the speed is
+  // shed, gone under the parachutes.
+  const heating = Math.min(1, (rho * speedKms ** 3) / 0.18) ** 0.6;
+  return heating * smooth((speedKms - 1.4) / 3.2);
 }
 
 export type AtmosphereLayer = "thermosphere" | "mesosphere" | "stratosphere" | "troposphere";
@@ -370,7 +371,7 @@ export const SHOT_STARTS: [number, string][] = [
   [T.CABIN, "cabin-window"],
   [126, "cabin-crew"],
   [T.OUTBOUND_END, "tei"],
-  [T.OUTBOUND_END + 9, "tei-cabin"],
+  [T.OUTBOUND_END + 9, "tei-wide"],
   [T.TEI_END, "coast-fly"],
   [T.TEI_END + 13, "coast-earth"],
   [T.SM_SEP, "sm-sep"],
@@ -390,7 +391,7 @@ export const SHOT_STARTS: [number, string][] = [
 /** Which set the camera is in: out in space, inside the cabin looking out, or at the sea. */
 export function viewKind(t: number): ViewKind {
   const id = shotIdAt(t);
-  if (id === "earthrise" || id === "cabin-window" || id === "cabin-crew" || id === "tei-cabin") return "cabin";
+  if (id === "earthrise" || id === "cabin-window" || id === "cabin-crew") return "cabin";
   if (id === "chutes" || id === "heli" || id === "splash" || id === "recovery") return "sea";
   return "space";
 }
@@ -505,8 +506,10 @@ export function frameAt(t: number): Shot {
       const q = t - T.OUTBOUND_END;
       return { ...base, kind: "space", pos: shipAt(pose, 3.6 + q * 0.25, 0.8, -0.2 - q * 0.15), aim: shipAt(pose, 0, 0, -0.5), fov: 38, shake: 0.01 };
     }
-    case "tei-cabin": {
-      return { ...base, kind: "cabin", pos: pose.pos, aim: add(pose.pos, cabinLook(t, pose)), up: pose.up, fov: 42 };
+    case "tei-wide": {
+      // Ahead of the ship, looking back along its flame at the Moon it has just left.
+      const q = t - (T.OUTBOUND_END + 9);
+      return { ...base, kind: "space", pos: add(pose.pos, [-5 + q * 0.1, 2.2, 15 + q * 0.5]), aim: add(pose.pos, [0, 0, -3]), fov: 36, shake: 0.008 };
     }
     case "coast-fly": {
       // A fly cam around the ship as it glides home: the Moon behind, the Earth growing ahead.

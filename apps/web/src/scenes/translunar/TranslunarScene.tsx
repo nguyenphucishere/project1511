@@ -124,7 +124,7 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
 
   if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
     // Dev-only: window.__tl.seek(t) jumps the film (use with a frozen performance.now).
-    (window as unknown as { __tl?: unknown }).__tl = { seek, t: () => filmClock.t, frame: (t: number) => frameAt(t), home: (t: number) => homePosition(t) };
+    (window as unknown as { __tl?: unknown }).__tl = { seek, t: () => filmClock.t, frame: (t: number) => frameAt(t), home: (t: number) => homePosition(t), plasma: (t: number) => plasma(t) };
   }
 
   const phase = captionAt(PHASES, now);

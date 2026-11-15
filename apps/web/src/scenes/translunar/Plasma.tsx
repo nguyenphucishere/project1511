@@ -36,7 +36,9 @@ const VERT = /* glsl */ `
     // Turbulence that grows with distance, so the edge is ragged and alive.
     p.xy += 0.32 * age * vec2(sin(uTime * 7.3 + aSeed.x * 61.0), cos(uTime * 6.1 + aSeed.y * 47.0));
     vAge = age;
-    vAlpha = min(1.0, uHeat * 1.1) * 0.32 * pow(1.0 - age, 1.5) * smoothstep(0.0, 0.03, age);
+    // Below a faint heat there is no glow at all: the air is still too thin to burn.
+    float h = smoothstep(0.05, 0.55, uHeat);
+    vAlpha = h * 0.32 * pow(1.0 - age, 1.5) * smoothstep(0.0, 0.03, age);
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     float size = (0.55 + 1.0 * aSeed.z) * (1.0 - 0.5 * age);
     gl_PointSize = clamp(size * uScale / -mv.z, 1.0, 70.0);
@@ -91,12 +93,14 @@ export function Plasma({ heat, flowRef }: { heat: React.RefObject<number>; flowR
   const uniforms = useMemo(() => ({ uTime: { value: 0 }, uHeat: { value: 0 }, uScale: { value: 600 } }), []);
 
   useFrame(({ clock, camera, size }) => {
-    const h = heat.current ?? 0;
+    const raw = heat.current ?? 0;
+    const k = Math.min(1, Math.max(0, (raw - 0.05) / 0.5));
+    const h = k * k * (3 - 2 * k);
     // Through the material itself: the uniforms the renderer actually holds (as the sea does).
     const u = mat.current?.uniforms;
     if (u) {
       u.uTime!.value = clock.elapsedTime;
-      u.uHeat!.value = h;
+      u.uHeat!.value = raw;
       const fov = camera instanceof PerspectiveCamera ? camera.fov : 40;
       u.uScale!.value = size.height / (2 * Math.tan((fov * Math.PI) / 360));
     }

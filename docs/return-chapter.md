@@ -227,3 +227,6 @@ Lửa không còn là các hình nón mờ: nay là **luồng hạt cháy** (kho
 
 ### Cảnh rơi từ ngoài vũ trụ xuống (đã dựng lại)
 Bỏ hẳn các cảnh nhìn từ trong khoang trong lúc tái nhập (phần nhìn trong khoang chỉ còn ở lúc đốt về nhà). Toàn bộ cú rơi nhìn từ ngoài, liền mạch: chase cam lửa mới bùng → fly cam vòng từ trên nhìn xuống → góc thấp sát tấm chắn nhiệt → máy cố định, tàu vụt qua và rơi xuống → chase cam lửa nguội dần. Bầu trời đổi màu theo độ cao (đen ở 100 km, xanh thẫm ở tầng bình lưu, xanh dịu rồi sáng ở dưới 12 km) và sao tắt dần; lửa chuyển từ trắng nóng sang cam rồi nhạt khi xuống.
+
+### Lửa chỉ bắt đầu khi vào khí quyển
+Ở điểm vào khí quyển (122 km) không khí còn rất loãng: tàu sạch và tối, không có lửa. Độ nóng tính theo mật độ không khí × tốc độ³: bắt đầu thấy ánh sáng quanh tấm chắn nhiệt từ khoảng 90 km, dữ dội lúc 60 km, yếu dần khi giảm tốc, hết khi xuống dưới khoảng 14 km. Cảnh nhìn từ trong khoang bị bỏ hẳn khỏi phần đốt về nhà (nay là góc phía trước nhìn lại Mặt Trăng).
