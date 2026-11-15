@@ -75,11 +75,16 @@
       "zoom": 1.8
     },
     "workshop-chief": {
-      "status": "placeholder",
-      "src": "/assets/characters/portraits/workshop-chief.png",
+      "status": "final",
+      "src": "/assets/characters/portraits/workshop-chief.webp",
       "displayName": "Workshop Chief",
       "usage": "NPC who explains rocket parts in Scene 2",
-      "credit": "Character artist"
+      "credit": "Character artist",
+      "focus": [
+        42,
+        22
+      ],
+      "zoom": 1.9
     }
   }
 }

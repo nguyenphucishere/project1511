@@ -62,7 +62,7 @@ export function PartPanel({ part, next, onNext, onClose, onQuiz }: PartPanelProp
 
       <div className="flex items-start gap-3 pr-8">
         <div className="h-12 w-10 shrink-0">
-          <CharacterPortrait character="workshop-chief" />
+          <CharacterPortrait character="workshop-chief" avatar />
         </div>
         <div>
           <p className="text-xs text-foreground/65">{localize(part.section)}</p>
