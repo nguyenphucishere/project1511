@@ -28,6 +28,7 @@ import { Recovery } from "./Recovery";
 import { SEA_SUN, SeaSet } from "./SeaSet";
 import { ReentryCapsule, Ship, Stage } from "./Spacecraft";
 import { filmClock } from "./clock";
+import { filmTimeAt } from "./flight";
 import { R_EARTH, SUN, T, cabinEye, cabinLook, frameAt, SEA_ARRIVAL, entryState, mul, plasma, shipPose, viewKind } from "./flight";
 
 const MILKY_TINT = new Color(2.2, 2.3, 2.7);
@@ -70,7 +71,7 @@ function Stars({ skyRef }: { skyRef: React.RefObject<Mesh | null> }) {
 /** Writes the film clock first thing every frame, so everything else reads one instant. */
 function FilmClock({ startAt, from, to }: { startAt: number | null; from: number; to: number }) {
   useFrame(() => {
-    filmClock.t = startAt === null ? from : Math.min(to - 0.001, from + (performance.now() - startAt) / 1000);
+    filmClock.t = startAt === null ? from : Math.min(to - 0.001, filmTimeAt(from, (performance.now() - startAt) / 1000));
   }, -100);
   return null;
 }

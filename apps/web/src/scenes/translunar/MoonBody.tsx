@@ -2,8 +2,12 @@
 
 import { useMemo } from "react";
 import { useTexture } from "@react-three/drei";
-import { SRGBColorSpace, type WebGLProgramParametersWithUniforms } from "three";
+import { SRGBColorSpace, Vector2, type WebGLProgramParametersWithUniforms } from "three";
 import { MOON, R_MOON } from "./flight";
+import { MOON_COLOR, MOON_NORMAL } from "../assets";
+
+/** How strongly the elevation model shades the surface (the map itself already exaggerates relief 4x). */
+const MOON_NORMAL_SCALE = new Vector2(1, 1);
 
 /**
  * The 4K Moon map is only enough from far away; flying a hundred kilometres above it needs finer
@@ -61,11 +65,12 @@ function patch(shader: WebGLProgramParametersWithUniforms) {
     .replace(
       "#include <map_fragment>",
       `#include <map_fragment>
-       float detailFade = 1.0 - smoothstep(6.0, 70.0, length(vViewPosition));
+       // Only a fine grain now: the real relief comes from the elevation model's normal map.
+       float detailFade = 1.0 - smoothstep(4.0, 30.0, length(vViewPosition));
        // Far views (most of the film) skip the noise entirely; near views compute it once for both uses.
        float hh = 0.0;
        if (detailFade > 0.0) hh = moonHeight(vObj);
-       diffuseColor.rgb *= 1.0 + hh * 0.38 * detailFade;`,
+       diffuseColor.rgb *= 1.0 + hh * 0.12 * detailFade;`,
     )
     .replace(
       "#include <normal_fragment_maps>",
@@ -81,22 +86,29 @@ function patch(shader: WebGLProgramParametersWithUniforms) {
          float det = dot(dp1, r1);
          float sgn = det < 0.0 ? -1.0 : 1.0;
          vec3 grad = sgn * (dh1 * r1 + dh2 * r2);
-         normal = normalize(abs(det) * normal - 0.035 * grad);
+         normal = normalize(abs(det) * normal - 0.012 * grad);
        }`,
     );
 }
 
-/** The Moon: LRO imagery on a sphere that keeps its near side turned toward the Earth. */
+/**
+ * The Moon: the LRO colour mosaic on a sphere that keeps its near side turned toward the Earth,
+ * with the relief from the LOLA elevation model (NASA CGI Moon Kit) as a normal map, so craters
+ * and mountains are shaded by the film's own Sun rather than by light baked into the picture.
+ */
 export function MoonBody() {
-  const map = useTexture("/assets/textures/moon_4k.jpg", (t) => {
+  const map = useTexture(MOON_COLOR, (t) => {
     t.colorSpace = SRGBColorSpace;
+    t.anisotropy = 16;
+  });
+  const normalMap = useTexture(MOON_NORMAL, (t) => {
     t.anisotropy = 16;
   });
   const key = useMemo(() => "moon-detail", []);
   return (
     <mesh position={MOON} rotation={[0, -Math.PI / 2, 0]}>
       <sphereGeometry args={[R_MOON, 96, 72]} />
-      <meshStandardMaterial map={map} color="#cfcfd4" roughness={1} metalness={0} onBeforeCompile={patch} customProgramCacheKey={() => key} />
+      <meshStandardMaterial map={map} normalMap={normalMap} normalScale={MOON_NORMAL_SCALE} color="#d8d8dc" roughness={1} metalness={0} onBeforeCompile={patch} customProgramCacheKey={() => key} />
     </mesh>
   );
 }

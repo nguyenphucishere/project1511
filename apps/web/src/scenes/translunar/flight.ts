@@ -116,6 +116,50 @@ export const OUTBOUND_END = T.OUTBOUND_END;
 export const OUTBOUND_FILM_END = OUTBOUND_END;
 export const FILM_END = T.FILM_END;
 
+/* ---------------------------------------------------------------- the Genesis reading */
+
+/** The crew's broadcast from lunar orbit (Apollo 8, NASA, public domain): the opening and Genesis 1:1-10. */
+export const GENESIS_AUDIO = "/assets/audio/apollo8-genesis.mp3";
+/** Length of that recording, in seconds. */
+export const GENESIS_AUDIO_S = 98.2;
+/**
+ * The stretch of film the broadcast plays over, in the cabin. The film clock runs slow here (the
+ * surface drifts by under the window) so the reading is heard in full, not cut to fit the shot.
+ */
+export const READING_FILM: [number, number] = [T.CABIN + 0.5, T.OUTBOUND_END - 2.5];
+const READ_RATE = (READING_FILM[1] - READING_FILM[0]) / GENESIS_AUDIO_S;
+
+/** Seconds into the recording at a film time (negative before it starts). */
+export const readingAudioTime = (film: number) => (film - READING_FILM[0]) / READ_RATE;
+/** Film time at a moment of the recording. */
+export const readingFilmTime = (audioS: number) => READING_FILM[0] + audioS * READ_RATE;
+
+/** Real seconds from the start of the film to a film time (the reading stretch plays slow). */
+function realAt(film: number): number {
+  const [a, b] = READING_FILM;
+  if (film <= a) return film;
+  if (film <= b) return a + (film - a) / READ_RATE;
+  return a + (b - a) / READ_RATE + (film - b);
+}
+
+function filmAtReal(real: number): number {
+  const [a, b] = READING_FILM;
+  if (real <= a) return real;
+  const slow = (b - a) / READ_RATE;
+  if (real <= a + slow) return a + (real - a) * READ_RATE;
+  return b + (real - a - slow);
+}
+
+/** The film time `elapsed` real seconds after a film that began at `from` started playing. */
+export function filmTimeAt(from: number, elapsed: number): number {
+  return filmAtReal(realAt(from) + elapsed);
+}
+
+/** Real seconds a film that began at `from` takes to reach `film` (inverse of filmTimeAt). */
+export function elapsedTo(from: number, film: number): number {
+  return realAt(film) - realAt(from);
+}
+
 /** Orbit angle around the Moon (0 = the point facing the Earth, π = the far side). */
 const PHI_KEYS: [number, number][] = [
   [T.ORBIT_IN, Math.PI / 2],

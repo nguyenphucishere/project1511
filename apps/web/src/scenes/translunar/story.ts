@@ -1,6 +1,6 @@
 import type { LocalizedText } from "@/i18n";
 import type { ScoreMood } from "@/game/sfx";
-import { MAIN_DELAY, T, filmAtMet, hms } from "./flight";
+import { MAIN_DELAY, T, filmAtMet, hms, readingFilmTime } from "./flight";
 
 /** A caption shown over the film between two film times. */
 export interface Caption {
@@ -19,7 +19,7 @@ export const PHASES: Caption[] = [
   { from: 66, to: T.LOS, text: { en: "The Moon fills the sky", vi: "Mặt Trăng choán cả bầu trời" } },
   { from: T.LOS, to: T.AOS, text: { en: "Behind the Moon: orbit insertion burn", vi: "Sau lưng Mặt Trăng: đốt nhập quỹ đạo" } },
   { from: T.AOS, to: T.CABIN, text: { en: "Fourth orbit: the Earth rises", vi: "Vòng quỹ đạo thứ tư: Trái Đất mọc" } },
-  { from: T.CABIN, to: T.OUTBOUND_END, text: { en: "Christmas Eve, 1968", vi: "Đêm Giáng Sinh, 1968" } },
+  { from: T.CABIN, to: T.OUTBOUND_END, text: { en: "Lunar orbit: a message from the crew", vi: "Quỹ đạo Mặt Trăng: thông điệp từ phi hành đoàn" } },
   { from: T.OUTBOUND_END, to: T.TEI_END, text: { en: "Trans-Earth injection: homeward", vi: "Đốt về nhà: hướng về Trái Đất" } },
   { from: T.TEI_END, to: T.SM_SEP, text: { en: "Two and a half days home", vi: "Hai ngày rưỡi trên đường về" } },
   { from: T.SM_SEP, to: T.REENTRY, text: { en: "Service module jettisoned", vi: "Thả mô-đun phục vụ" } },
@@ -28,13 +28,41 @@ export const PHASES: Caption[] = [
   { from: T.TOUCHDOWN, to: T.FILM_END, text: { en: "Recovery: swimmers and the carrier Hornet", vi: "Vớt tàu: thợ lặn và tàu sân bay Hornet" } },
 ];
 
-/** The reading from the cabin on Christmas Eve (Genesis 1:1–4, King James Version, public domain). */
-export const READING: Caption[] = [
-  { from: 119.5, to: 124.5, text: { en: "In the beginning God created the heaven and the earth.", vi: "Ban đầu, Đức Chúa Trời dựng nên trời và đất." } },
-  { from: 124.5, to: 130, text: { en: "And the earth was without form, and void; and darkness was upon the face of the deep.", vi: "Đất còn vô hình và trống không, bóng tối bao trùm mặt vực." } },
-  { from: 130, to: 135, text: { en: "And God said, Let there be light: and there was light.", vi: "Đức Chúa Trời phán: Phải có ánh sáng; thì có ánh sáng." } },
-  { from: 135, to: 139.6, text: { en: "And God saw the light, that it was good.", vi: "Đức Chúa Trời thấy ánh sáng là tốt lành." } },
+/**
+ * The broadcast from lunar orbit, in full: Anders' opening and Genesis 1:1-10 as the crew read it
+ * (King James Version; Vietnamese from the 1925 Bible, both public domain), phrase by phrase. Times
+ * are seconds into the recording (public/assets/audio/apollo8-genesis.mp3), taken from a word-level
+ * transcription of it. Anders reads verses 1-4, Lovell 5-8 and Borman 9-10. The sign-off is not used.
+ * While the recording plays, the captions follow the sound itself (see TranslunarScene).
+ */
+export const READING_AUDIO: Caption[] = [
+  { from: 0.3, to: 4.4, text: { en: "We are now approaching lunar sunrise,", vi: "Chúng tôi đang tiến tới bình minh trên Mặt Trăng," } },
+  { from: 4.8, to: 8.7, text: { en: "and for all the people back on Earth,", vi: "và gửi tới mọi người trên Trái Đất," } },
+  { from: 8.9, to: 13.6, text: { en: "the crew of Apollo 8 has a message that we would like to send to you.", vi: "phi hành đoàn Apollo 8 có một thông điệp muốn gửi đến các bạn." } },
+  { from: 14.4, to: 18.9, text: { en: "In the beginning God created the heaven and the earth.", vi: "Ban đầu Đức Chúa Trời dựng nên trời đất." } },
+  { from: 19.1, to: 22.8, text: { en: "And the earth was without form, and void;", vi: "Vả, đất là vô hình và trống không," } },
+  { from: 22.9, to: 25.8, text: { en: "and darkness was upon the face of the deep.", vi: "sự mờ tối ở trên mặt vực;" } },
+  { from: 26.4, to: 30.3, text: { en: "And the Spirit of God moved upon the face of the waters.", vi: "Thần Đức Chúa Trời vận hành trên mặt nước." } },
+  { from: 30.4, to: 35.6, text: { en: "And God said, Let there be light: and there was light.", vi: "Đức Chúa Trời phán rằng: Phải có sự sáng; thì có sự sáng." } },
+  { from: 36.0, to: 39.4, text: { en: "And God saw the light, that it was good:", vi: "Đức Chúa Trời thấy sự sáng là tốt lành," } },
+  { from: 39.5, to: 42.6, text: { en: "and God divided the light from the darkness.", vi: "bèn phân sáng ra cùng tối." } },
+  { from: 46.0, to: 50.9, text: { en: "And God called the light Day, and the darkness he called Night.", vi: "Đức Chúa Trời đặt tên sự sáng là ngày; sự tối là đêm." } },
+  { from: 51.2, to: 54.6, text: { en: "And the evening and the morning were the first day.", vi: "Vậy, có buổi chiều và buổi mai; ấy là ngày thứ nhứt." } },
+  { from: 55.0, to: 58.3, text: { en: "And God said, Let there be a firmament in the midst of the waters,", vi: "Đức Chúa Trời lại phán rằng: Phải có một khoảng không ở giữa nước" } },
+  { from: 58.4, to: 61.3, text: { en: "and let it divide the waters from the waters.", vi: "đặng phân rẽ nước cách với nước." } },
+  { from: 61.5, to: 67.0, text: { en: "And God made the firmament, and divided the waters which were under the firmament", vi: "Ngài làm nên khoảng không, phân rẽ nước ở dưới khoảng không" } },
+  { from: 67.1, to: 71.1, text: { en: "from the waters which were above the firmament: and it was so.", vi: "cách với nước ở trên khoảng không; thì có như vậy." } },
+  { from: 71.2, to: 73.6, text: { en: "And God called the firmament Heaven.", vi: "Đức Chúa Trời đặt tên khoảng không là trời." } },
+  { from: 73.7, to: 77.8, text: { en: "And the evening and the morning were the second day.", vi: "Vậy, có buổi chiều và buổi mai; ấy là ngày thứ nhì." } },
+  { from: 79.9, to: 84.3, text: { en: "And God said, Let the waters under the heavens be gathered together unto one place,", vi: "Đức Chúa Trời lại phán rằng: Những nước ở dưới trời phải tụ lại một nơi," } },
+  { from: 84.4, to: 88.0, text: { en: "and let the dry land appear: and it was so.", vi: "và phải có chỗ khô cạn bày ra; thì có như vậy." } },
+  { from: 88.3, to: 91.5, text: { en: "And God called the dry land Earth;", vi: "Đức Chúa Trời đặt tên chỗ khô cạn là đất," } },
+  { from: 91.6, to: 94.8, text: { en: "and the gathering together of the waters called he Seas:", vi: "còn nơi nước tụ lại là biển." } },
+  { from: 94.9, to: 98.2, text: { en: "and God saw that it was good.", vi: "Đức Chúa Trời thấy điều đó là tốt lành." } },
 ];
+
+/** The same captions in film time (the film's clock runs slow through the cabin to fit the recording). */
+export const READING: Caption[] = READING_AUDIO.map((c) => ({ ...c, from: readingFilmTime(c.from), to: readingFilmTime(c.to) }));
 
 /** The corner panel for the radio: Houston, the recovery ships and the swimmers. */
 export const HOUSTON = {

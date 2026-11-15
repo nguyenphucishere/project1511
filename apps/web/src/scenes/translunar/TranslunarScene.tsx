@@ -11,8 +11,10 @@ import { playSfx, startRumble, startScore, type Rumble, type Score } from "@/gam
 import { useLocalized, useT } from "@/i18n/useT";
 import { cn } from "@/lib/utils";
 import { filmClock } from "./clock";
+import { GENESIS_AUDIO, READING_FILM, elapsedTo, readingAudioTime } from "./flight";
+import { playBroadcast, preloadBroadcast, type Broadcast } from "@/game/broadcastAudio";
 import { ATMOSPHERE, ENTRY_BLACKOUT, FILM_END, MAIN_DELAY, frameAt, homePosition, plasma, viewKind, cutDip, OUTBOUND_END, OUTBOUND_FILM_END, RETURN_LOG, SIGNAL_LOST, T, TEI_LOS, atmosphereLayer, entryState, formatMet, skyAir, missionElapsed, thrust } from "./flight";
-import { CUES, HOUSTON, HOME_NOTES, PHASES, RADIO_WHO, radioLineAt, READING, captionAt, moodAt } from "./story";
+import { CUES, HOUSTON, HOME_NOTES, PHASES, RADIO_WHO, radioLineAt, READING, READING_AUDIO, captionAt, moodAt } from "./story";
 import { TranslunarWorld } from "./TranslunarWorld";
 
 /** The camera is a scripted rig; the store just needs a viewpoint to exist. */
@@ -76,6 +78,22 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
     [],
   );
 
+  // The crew's broadcast: heard in the cabin, in step with the film clock (it runs slow there to fit it).
+  const broadcast = useRef<Broadcast | null>(null);
+  useEffect(() => {
+    if (part === "outbound") preloadBroadcast(GENESIS_AUDIO);
+    return () => broadcast.current?.stop(0.3);
+  }, [part]);
+  useEffect(() => {
+    if (part !== "outbound" || startAt === null) return;
+    const inside = now >= READING_FILM[0] && now < READING_FILM[1];
+    if (inside && !broadcast.current) broadcast.current = playBroadcast(GENESIS_AUDIO, () => readingAudioTime(filmClock.t));
+    if (!inside && broadcast.current) {
+      broadcast.current.stop(0.8);
+      broadcast.current = null;
+    }
+  }, [part, startAt, now]);
+
   // Panel clock, sound cues and the end of the film. The 3D view runs off the same film clock.
   useEffect(() => {
     if (startAt === null) return;
@@ -118,7 +136,7 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
   }, [startAt, from, to]);
 
   const seek = useCallback(
-    (film: number) => setStartAt(performance.now() - (film - from) * 1000),
+    (film: number) => setStartAt(performance.now() - elapsedTo(from, film) * 1000),
     [from],
   );
 
@@ -128,10 +146,17 @@ function FlightFilm({ part, onComplete }: { part: Part; onComplete: () => void }
   }
 
   const phase = captionAt(PHASES, now);
-  const reading = captionAt(READING, now) ?? (part === "return" ? captionAt(HOME_NOTES, now) : undefined);
-  // The narrator reads each stretch's title and the cabin reading as they appear, one after the other.
-  useVoiceLine(phase ? localize(phase.text) : null, { queue: true });
-  useVoiceLine(reading ? localize(reading.text) : null, { queue: true });
+  // In the cabin the captions follow the crew's recording itself (where it is as heard), so they match
+  // the voice even if it started late; with the sound off they follow the film clock instead.
+  const heard = broadcast.current?.position() ?? null;
+  const reading =
+    part === "outbound" ? (heard !== null ? captionAt(READING_AUDIO, heard) : captionAt(READING, now)) : captionAt(HOME_NOTES, now);
+  // The narrator reads each stretch's title as it appears, but never over the crew: in the cabin the
+  // reading is the crew's own broadcast (the recording below), and the captions only follow it.
+  const inReading = part === "outbound" && now >= READING_FILM[0] - 1.5 && now < READING_FILM[1] + 0.5;
+  const crewReading = part === "outbound";
+  useVoiceLine(phase && !inReading ? localize(phase.text) : null, { queue: true });
+  useVoiceLine(reading && !crewReading ? localize(reading.text) : null, { queue: true });
   // The air-to-ground traffic of the entry and recovery: on a channel of its own, heard with the narrator.
   const radioLine = part === "return" ? radioLineAt(now) : undefined;
   useVoiceLine(radioLine ? localize(radioLine.text) : null, { queue: true, radio: true, channel: "radio" });
