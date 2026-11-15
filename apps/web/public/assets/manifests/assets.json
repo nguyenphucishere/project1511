@@ -39,18 +39,28 @@
       "credit": "Character artist"
     },
     "engineer": {
-      "status": "placeholder",
-      "src": "/assets/characters/portraits/engineer.png",
+      "status": "final",
+      "src": "/assets/characters/portraits/engineer.webp",
       "displayName": "Engineer",
       "usage": "Briefing for Scene 2 (player POV)",
-      "credit": "Character artist"
+      "credit": "Character artist",
+      "focus": [
+        42,
+        22
+      ],
+      "zoom": 1.9
     },
     "flight-director": {
-      "status": "placeholder",
-      "src": "/assets/characters/portraits/flight-director.png",
+      "status": "final",
+      "src": "/assets/characters/portraits/flight-director.webp",
       "displayName": "Flight Director",
       "usage": "Briefing for Scene 3 (player POV)",
-      "credit": "Character artist"
+      "credit": "Character artist",
+      "focus": [
+        42,
+        22
+      ],
+      "zoom": 1.9
     },
     "doctor": {
       "status": "final",
