@@ -9,7 +9,7 @@ export type StarfieldMode = "drift" | "rise" | "still";
 export interface ParallaxCanvasProps {
   /** drift: slow sideways float. rise: stars stream down, as if climbing. still: no motion. */
   mode?: StarfieldMode;
-  /** Draws a lunar horizon with Earth in the sky. */
+  /** Draws a lunar horizon with the Moon photo in the sky. */
   horizon?: boolean;
   className?: string;
 }
@@ -100,20 +100,6 @@ export function ParallaxCanvas({ mode = "drift", horizon = false, className }: P
       ctx.globalAlpha = 1;
 
       if (horizon) {
-        // Earth, high in the black sky.
-        const ex = Math.round(w * 0.82);
-        const ey = Math.round(h * 0.2);
-        const er = Math.max(6, Math.round(Math.min(w, h) * 0.07));
-        ctx.fillStyle = colors.blue;
-        ctx.beginPath();
-        ctx.arc(ex, ey, er, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = colors.mist;
-        ctx.globalAlpha = 0.8;
-        ctx.fillRect(ex - Math.round(er * 0.5), ey - Math.round(er * 0.3), Math.round(er * 0.6), 2);
-        ctx.fillRect(ex - Math.round(er * 0.1), ey + Math.round(er * 0.2), Math.round(er * 0.5), 2);
-        ctx.globalAlpha = 1;
-
         // Grey-blue ground with a stepped ridge and a few craters.
         const base = Math.round(h * 0.76);
         ctx.fillStyle = colors.blue;
@@ -195,6 +181,15 @@ export function ParallaxCanvas({ mode = "drift", horizon = false, className }: P
       />
       {/* Soft darkening so text and the stars on top stay readable. */}
       <div className="absolute inset-0 bg-gradient-to-b from-space-deep/30 via-transparent to-space-deep/50" />
+      {horizon && (
+        // eslint-disable-next-line @next/next/no-img-element -- static, pre-sized
+        <img
+          src="/assets/env/moon.jpg"
+          alt=""
+          draggable={false}
+          className="pointer-events-none absolute right-[10%] top-[8%] aspect-square w-[min(26vw,26vh)] select-none rounded-full mix-blend-screen [mask-image:radial-gradient(circle,#000_58%,transparent_72%)]"
+        />
+      )}
       <canvas ref={canvasRef} className="absolute inset-0 block h-full w-full [image-rendering:pixelated]" />
     </div>
   );
