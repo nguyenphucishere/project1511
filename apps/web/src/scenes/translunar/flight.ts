@@ -108,8 +108,12 @@ export const ENTRY_SPAN = T.CHUTES - T.REENTRY;
 export const entryAt = (f: number) => T.REENTRY + f * ENTRY_SPAN;
 
 export const OUTBOUND_END = T.OUTBOUND_END;
-/** The outbound film ends once the ship is in lunar orbit and behind the Moon, ready for the descent. */
-export const OUTBOUND_FILM_END = 88;
+/**
+ * The outbound film runs to the end of its stretch: lunar orbit, the pass behind the Moon, the
+ * Earthrise and the Genesis reading from the cabin (READING, 119.5-139.6 s), as on main. Ending it
+ * at 88 s cut the reading.
+ */
+export const OUTBOUND_FILM_END = OUTBOUND_END;
 export const FILM_END = T.FILM_END;
 
 /** Orbit angle around the Moon (0 = the point facing the Earth, π = the far side). */
