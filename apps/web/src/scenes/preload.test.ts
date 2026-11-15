@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { getPreloadState, overallProgress, scenesToPreload } from "./preload";
 import { WORKSHOP_FILES, WORKSHOP_TEXTURE_GROUPS, hallTextureUrls } from "./workshop/assets";
 
@@ -36,5 +36,22 @@ describe("scene preloading", () => {
     ]);
     expect(WORKSHOP_TEXTURE_GROUPS).toHaveLength(6);
     expect(new Set(WORKSHOP_FILES.map((f) => f.url)).size).toBe(WORKSHOP_FILES.length);
+  });
+});
+
+describe("title-screen warm-up", () => {
+  it("reaches 100% once the warmed scenes are downloaded (never stalls at 2/7 = 29%)", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => new Response("x"));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("window", { setTimeout: (fn: () => void, ms: number) => setTimeout(fn, ms) });
+    const { warmUpcoming, warmProgress } = await import("./preload");
+    expect(warmProgress()).toBe(0);
+    warmUpcoming("intro-video");
+    for (let i = 0; i < 20 && warmProgress() < 100; i++) await vi.advanceTimersByTimeAsync(1000);
+    expect(warmProgress()).toBe(100);
+    expect(fetchMock).toHaveBeenCalled();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 });
